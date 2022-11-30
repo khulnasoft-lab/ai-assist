@@ -10,8 +10,6 @@ from utils.codegen import CodeGenProxy
 from utils.gitlab import GitLab
 from config.config import Config
 
-PREFIX_BEARER_HEADER = "bearer"
-
 config = Config()
 
 logging.config.dictConfig(config.uvicorn_logger)
@@ -34,14 +32,6 @@ app = FastAPI(
 )
 
 
-def get_token(header):
-    bearer, _, token = header.partition(" ")
-    if bearer.lower() != PREFIX_BEARER_HEADER:
-        raise ValueError('Invalid token')
-
-    return token
-
-
 @app.post("/v1/completions")
 async def completions(data: OpenAIinput, request: Request):
     data = data.dict()
@@ -51,17 +41,7 @@ async def completions(data: OpenAIinput, request: Request):
     user = hashlib.sha1(request.client.host.encode("utf-8")).hexdigest()
     print(f"{user} - Received request")
 
-    try:
-        header = request.headers.get('authorization', '')
-        token = get_token(header)
-        user_is_allowed = gitlab.user_is_allowed(token=token)
-    except ValueError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=str(e),
-        )
-
-    if user_is_allowed:
+    if gitlab.user_is_allowed(token=request.headers.get('authorization', '')):
         try:
             content = codegen(data=data)
         except codegen.TokensExceedsMaximum as E:

@@ -44,6 +44,9 @@ class GitLab:
             logging.debug("External auth is disabled, allowing user")
             return True
 
+        if not token.lower().startswith("bearer"):
+            return False
+
         if self.cache.get_cached_token(key=token) is True:
             return True
 
