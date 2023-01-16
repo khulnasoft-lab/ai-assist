@@ -84,8 +84,9 @@ build-docker-triton-tmp:
   cache: { }
   variables:
     TARGET_IMAGE: "$DOCKER_TRITON_SERVER_TMP:$CI_COMMIT_SHORT_SHA"
+    LATEST_IMAGE: "$DOCKER_TRITON_SERVER:latest"
   script:
-    - docker build -t $TARGET_IMAGE triton/.
+    - docker build -t $TARGET_IMAGE --cache-from $LATEST_IMAGE triton/.
     - docker push $TARGET_IMAGE
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
