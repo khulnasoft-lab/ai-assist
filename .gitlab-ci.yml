@@ -72,6 +72,12 @@ lint:
     - poetry install --with lint
     - poetry run flake8 codesuggestions
 
+clean-docker:
+  extends: .docker
+  stage: lint
+  script:
+    - docker system prune --all --volumes
+
 install:
   extends: .poetry
   stage: build
@@ -86,7 +92,6 @@ build-docker-triton-tmp:
     TARGET_IMAGE: "$DOCKER_TRITON_SERVER_TMP:$CI_COMMIT_SHORT_SHA"
     LATEST_IMAGE: "$DOCKER_TRITON_SERVER:latest"
   script:
-    - docker image prune --filter label=stage=intermediate
     - docker build -t $TARGET_IMAGE --cache-from $LATEST_IMAGE triton/.
     - docker push $TARGET_IMAGE
   rules:
