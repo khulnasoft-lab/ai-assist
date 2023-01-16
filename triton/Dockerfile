@@ -1,5 +1,5 @@
 FROM moyix/triton_with_ft:22.09
 
-RUN pip3 install --no-cache-dir \
-                            accelerate==0.15.0 \
-                            transformers==4.25.1
+RUN python3 -m pip install --no-cache-dir \
+    accelerate==0.15.0 \
+    transformers==4.25.1
