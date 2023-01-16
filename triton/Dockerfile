@@ -1,6 +1,5 @@
-FROM nvcr.io/nvidia/tritonserver:22.11-pyt-python-py3
+FROM moyix/triton_with_ft:22.09
 
-RUN pip install --no-cache-dir \
-                            torch==1.13.0 \
+RUN pip3 install --no-cache-dir \
                             accelerate==0.15.0 \
                             transformers==4.25.1
