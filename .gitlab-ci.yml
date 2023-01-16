@@ -76,7 +76,7 @@ clean-docker:
   extends: .docker
   stage: lint
   script:
-    - docker system prune --all --volumes
+    - yes | docker system prune --all --volumes
 
 install:
   extends: .poetry
