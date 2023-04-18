@@ -7,16 +7,16 @@ from codesuggestions.api.middleware import (
     MiddlewareAuthentication,
     MiddlewareLogRequest,
 )
-from codesuggestions.api.v2.api import api_router as api_router_v2
+from codesuggestions.api.v2 import APIRouterBuilderV2
 from codesuggestions.deps import FastApiContainer
 
 __all__ = [
-    "create_fast_api_server",
+    "create_code_suggestions_api_server",
 ]
 
 
 @inject
-def create_fast_api_server(
+def create_code_suggestions_api_server(
     config: dict = Provide[FastApiContainer.config.fastapi],
     auth_middleware: MiddlewareAuthentication = Provide[
         FastApiContainer.auth_middleware
@@ -37,7 +37,13 @@ def create_fast_api_server(
     )
 
     fastapi_app.include_router(http_suggestions_router, prefix="/v1")
-    fastapi_app.include_router(api_router_v2)
     fastapi_app.include_router(http_monitoring_router)
+
+    api_router_v2 = (
+        APIRouterBuilderV2()
+        .with_gl_code_suggestions()
+        .router
+    )
+    fastapi_app.include_router(api_router_v2)
 
     return fastapi_app
