@@ -65,6 +65,10 @@ class Config:
             bypass=Config._str_to_bool(Config._get_value("AUTH_BYPASS_EXTERNAL", "False"))
         )
 
+    @property
+    def is_generative_ai_only(self) -> bool:
+        return Config._str_to_bool(Config._get_value("GENERATIVE_AI_ONLY", "False"))
+
     @staticmethod
     def _get_value(value: str, default: Optional[Any]):
         return os.environ.get(value, default)

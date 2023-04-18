@@ -3,7 +3,7 @@ from logging.config import dictConfig
 from dotenv import load_dotenv
 
 from codesuggestions import Config
-from codesuggestions.api import create_code_suggestions_api_server
+from codesuggestions.api import create_code_suggestions_api_server, create_generative_ai_api_server
 from codesuggestions.deps import FastApiContainer, CodeSuggestionsContainer
 
 from codesuggestions.structured_logging import setup_logging
@@ -26,8 +26,11 @@ def main():
     code_suggestions_container = CodeSuggestionsContainer()
     code_suggestions_container.config.triton.from_value(config.triton._asdict())
 
-    app = create_code_suggestions_api_server()
-    setup_logging(app, json_logs=True, log_level="INFO")
+    if config.is_generative_ai_only:
+        app = create_generative_ai_api_server()
+        setup_logging(app, json_logs=True, log_level="INFO")
+    else:
+        app = create_code_suggestions_api_server()
 
     @app.on_event("startup")
     def on_server_startup():
