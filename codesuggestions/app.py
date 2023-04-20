@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 from codesuggestions import Config
 from codesuggestions.api import create_code_suggestions_api_server, create_generative_ai_api_server
-from codesuggestions.deps import FastApiContainer, CodeSuggestionsContainer
+from codesuggestions.deps import FastApiContainer, CodeSuggestionsContainer, GenerativeAiContainer
 
 from codesuggestions.structured_logging import setup_logging
 
@@ -26,6 +26,9 @@ def main():
     code_suggestions_container = CodeSuggestionsContainer()
     code_suggestions_container.config.triton.from_value(config.triton._asdict())
 
+    generative_ai_container = GenerativeAiContainer()
+    generative_ai_container.config.palm_text_model.from_value(config.palm_text_model._asdict())
+
     if config.is_generative_ai_only:
         app = create_generative_ai_api_server()
         setup_logging(app, json_logs=True, log_level="INFO")
@@ -36,11 +39,13 @@ def main():
     def on_server_startup():
         fast_api_container.init_resources()
         code_suggestions_container.init_resources()
+        generative_ai_container.init_resources()
 
     @app.on_event("shutdown")
     def on_server_shutdown():
         fast_api_container.shutdown_resources()
         code_suggestions_container.shutdown_resources()
+        generative_ai_container.shutdown_resources()
 
     uvicorn.run(app, host=config.fastapi.api_host, port=config.fastapi.api_port, log_config=config.fastapi.uvicorn_logger)
 

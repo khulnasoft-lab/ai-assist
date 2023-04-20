@@ -2,12 +2,14 @@ from dependency_injector import containers, providers
 
 from codesuggestions.auth import GitLabAuthProvider
 from codesuggestions.api import middleware
-from codesuggestions.models import grpc_connect_triton, Codegen
+from codesuggestions.models import grpc_connect_triton, vertex_ai_connect, Codegen, PalmTextGenModel
 from codesuggestions.suggestions import CodeSuggestionsUseCase
+from codesuggestions.generative import PalmTextGenUseCase
 
 __all__ = [
     "FastApiContainer",
     "CodeSuggestionsContainer",
+    "GenerativeAiContainer",
 ]
 
 _PROBS_ENDPOINTS = [
@@ -19,6 +21,12 @@ def _init_triton_grpc_client(host: str, port: int):
     client = grpc_connect_triton(host, port)
     yield client
     client.close()
+
+
+def _init_vertex_ai_client(api_endpoint: str):
+    client = vertex_ai_connect(api_endpoint)
+    yield client
+    client.transport.close()
 
 
 class FastApiContainer(containers.DeclarativeContainer):
@@ -69,4 +77,32 @@ class CodeSuggestionsContainer(containers.DeclarativeContainer):
     usecase = providers.Singleton(
         CodeSuggestionsUseCase,
         model=model_codegen,
+    )
+
+
+class GenerativeAiContainer(containers.DeclarativeContainer):
+    wiring_config = containers.WiringConfiguration(
+        modules=[
+            "codesuggestions.api.v2.endpoints.generative",
+        ]
+    )
+
+    config = providers.Configuration()
+
+    vertex_client = providers.Resource(
+        _init_vertex_ai_client,
+        api_endpoint=config.palm_text_model.api_endpoint,
+    )
+
+    palm_text_model = providers.Singleton(
+        PalmTextGenModel,
+        client=vertex_client,
+        project=config.palm_text_model.project,
+        location=config.palm_text_model.location,
+        endpoint_id=config.palm_text_model.endpoint_id,
+    )
+
+    palm_text_usecase = providers.Singleton(
+        PalmTextGenUseCase,
+        text_model=palm_text_model,
     )

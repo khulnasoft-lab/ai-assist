@@ -6,6 +6,8 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, constr, Field
 
+from codesuggestions.generative import PalmTextGenUseCase
+from codesuggestions.deps import GenerativeAiContainer
 
 __all__ = [
     "router",
@@ -19,7 +21,7 @@ router = APIRouter(
 
 class PalmTextModelInput(BaseModel):
     name: Literal["text-bison-001"]
-    content: str = constr(max_length=100000)
+    content: constr(min_length=2, max_length=100_000)
     temperature: float = Field(0.2, ge=0, le=1)
     max_decode_steps: int = Field(16, ge=1, le=1024)
     top_p: float = Field(0.95, ge=0, le=1)
@@ -30,7 +32,6 @@ class PalmTextModelOutput(BaseModel):
     class Choice(BaseModel):
         text: str
         index: int = 0
-        finish_reason: str = "length"
 
     name: str
     choices: list[Choice]
@@ -49,10 +50,27 @@ class PalmGenerativeResponse(BaseModel):
 
 
 @router.post("/palm", response_model=PalmGenerativeResponse)
+@inject
 async def palm(
     req: PalmGenerativeRequest,
+    palm_text_generation: PalmTextGenUseCase = Depends(
+        Provide[GenerativeAiContainer.palm_text_usecase]
+    ),
 ):
+    generated = palm_text_generation(
+        req.model.content,
+    )
+    choices = [PalmTextModelOutput.Choice(
+        text=g.text,
+        index=i,
+    ) for i, g in enumerate(generated)]
+
     return PalmGenerativeResponse(
         id=uuid.uuid4().hex,
+        objective=palm_text_generation.objective.name.lower(),
         created=int(time()),
+        model=PalmTextModelOutput(
+            name=req.model.name,
+            choices=choices,
+        )
     )
