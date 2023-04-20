@@ -29,6 +29,12 @@ class AuthConfig(NamedTuple):
     bypass: bool
 
 
+class PalmTextModelConfig(NamedTuple):
+    api_endpoint: str
+    project: str
+    location: str
+    endpoint_id: str
+
 class Config:
     BOOLEAN_STATES = {
         '1': True, 'yes': True, 'true': True, 'on': True,
@@ -68,6 +74,15 @@ class Config:
     @property
     def is_generative_ai_only(self) -> bool:
         return Config._str_to_bool(Config._get_value("GENERATIVE_AI_ONLY", "False"))
+
+    @property
+    def palm_text_model(self) -> PalmTextModelConfig:
+        return PalmTextModelConfig(
+            api_endpoint=Config._get_value("PALM_TEXT_API_ENDPOINT", "us-central1-aiplatform.googleapis.com"),
+            project=Config._get_value("PALM_TEXT_PROJECT", "cloud-large-language-models"),
+            location=Config._get_value("PALM_TEXT_LOCATION", "us-central1"),
+            endpoint_id=Config._get_value("PALM_TEXT_ENDPOINT_ID", "4511608470067216384"),
+        )
 
     @staticmethod
     def _get_value(value: str, default: Optional[Any]):
