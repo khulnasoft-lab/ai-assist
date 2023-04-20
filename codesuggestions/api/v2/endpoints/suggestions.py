@@ -25,8 +25,8 @@ class CurrentFile(BaseModel):
 
 class SuggestionsRequest(BaseModel):
     prompt_version: int = 1
-    project_path: constr(strip_whitespace=True, max_length=255)
-    project_id: int
+    repository_name: constr(strip_whitespace=True, max_length=255)
+    repository_id: int
     current_file: CurrentFile
 
 
