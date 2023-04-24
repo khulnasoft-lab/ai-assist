@@ -108,7 +108,7 @@ class BasicAuthProvider(AuthProvider):
     def authenticate(self, token: str) -> bool:
         try:
             decoded = base64.b64decode(token).decode("ascii")
-        except Exception as _:
+        except Exception:
             return False
 
         username, _, password = decoded.partition(":")
