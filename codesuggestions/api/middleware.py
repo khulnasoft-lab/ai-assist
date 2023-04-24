@@ -99,13 +99,19 @@ class MiddlewareLogRequest(Middleware):
 
 class MiddlewareAuthentication(Middleware):
     class AuthBackend(AuthenticationBackend):
-        PREFIX_BEARER_HEADER = "bearer"
         AUTH_HEADER = "Authorization"
 
-        def __init__(self, auth_provider: AuthProvider, bypass_auth: bool, path_resolver: _PathResolver):
+        def __init__(
+            self,
+            auth_provider: AuthProvider,
+            bypass_auth: bool,
+            path_resolver: _PathResolver,
+            schema: str,
+        ):
             self.auth_provider = auth_provider
             self.bypass_auth = bypass_auth
             self.path_resolver = path_resolver
+            self.schema = schema.lower()
 
         async def authenticate(self, conn: HTTPConnection):
             """
@@ -123,8 +129,8 @@ class MiddlewareAuthentication(Middleware):
                 raise AuthenticationError("No authorization header presented")
 
             header = conn.headers[self.AUTH_HEADER]
-            bearer, _, token = header.partition(" ")
-            if bearer.lower() != self.PREFIX_BEARER_HEADER:
+            schema, _, token = header.partition(" ")
+            if schema.lower() != self.schema:
                 raise AuthenticationError('Invalid authorization header')
 
             is_auth = self.auth_provider.authenticate(token)
@@ -143,11 +149,12 @@ class MiddlewareAuthentication(Middleware):
         auth_provider: AuthProvider,
         bypass_auth: bool = False,
         skip_endpoints: Optional[list] = None,
+        schema: str = "bearer",
     ):
         path_resolver = _PathResolver.from_optional_list(skip_endpoints)
 
         super().__init__(
             AuthenticationMiddleware,
-            backend=MiddlewareAuthentication.AuthBackend(auth_provider, bypass_auth, path_resolver),
+            backend=MiddlewareAuthentication.AuthBackend(auth_provider, bypass_auth, path_resolver, schema),
             on_error=MiddlewareAuthentication.on_auth_error,
         )

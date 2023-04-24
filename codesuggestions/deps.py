@@ -16,6 +16,8 @@ _PROBS_ENDPOINTS = [
     "/monitoring/healthz"
 ]
 
+_AUTH_SCHEMA_CODE_SUGGESTIONS = "bearer"
+
 
 def _init_triton_grpc_client(host: str, port: int):
     client = grpc_connect_triton(host, port)
@@ -44,6 +46,7 @@ class FastApiContainer(containers.DeclarativeContainer):
         auth_provider,
         bypass_auth=config.auth.bypass,
         skip_endpoints=_PROBS_ENDPOINTS,
+        schema=_AUTH_SCHEMA_CODE_SUGGESTIONS,
     )
 
     log_middleware = providers.Factory(
