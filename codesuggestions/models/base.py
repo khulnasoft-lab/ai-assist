@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from typing import NamedTuple
-from enum import Enum
 
 import numpy as np
 from tritonclient.utils import np_to_triton_dtype

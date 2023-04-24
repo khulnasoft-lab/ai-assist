@@ -35,6 +35,7 @@ class PalmTextModelConfig(NamedTuple):
     location: str
     endpoint_id: str
 
+
 class Config:
     BOOLEAN_STATES = {
         '1': True, 'yes': True, 'true': True, 'on': True,
