@@ -1,3 +1,5 @@
+import secrets
+import base64
 import os
 import logging
 import urllib.parse
@@ -12,6 +14,7 @@ from codesuggestions.auth.cache import LocalAuthCache
 __all__ = [
     "AuthProvider",
     "GitLabAuthProvider",
+    "BasicAuthProvider",
 ]
 
 
@@ -83,3 +86,34 @@ class GitLabAuthProvider(AuthProvider):
             self._cache_auth(key, token)
 
         return is_allowed
+
+
+class BasicAuthProvider(AuthProvider):
+    def __init__(self, username: str, password: str):
+        self.b_username = username.encode("utf8")
+        self.b_password = password.encode("utf8")
+
+    def _is_correct_username(self, username: str) -> bool:
+        b_username = username.encode("utf8")
+        return secrets.compare_digest(
+            b_username, self.b_username
+        )
+
+    def _is_correct_password(self, password: str) -> bool:
+        b_password = password.encode("utf8")
+        return secrets.compare_digest(
+            b_password, self.b_password
+        )
+
+    def authenticate(self, token: str) -> bool:
+        try:
+            decoded = base64.b64decode(token).decode("ascii")
+        except Exception as _:
+            return False
+
+        username, _, password = decoded.partition(":")
+
+        return (
+            self._is_correct_username(username)
+            and self._is_correct_password(password)
+        )
