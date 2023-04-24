@@ -1,4 +1,6 @@
 import os
+import string
+import random
 
 from typing import Optional, Any, NamedTuple
 
@@ -34,6 +36,11 @@ class PalmTextModelConfig(NamedTuple):
     project: str
     location: str
     endpoint_id: str
+
+
+class GenerativeAiBasicAuthConfig(NamedTuple):
+    username: str
+    password: str
 
 
 class Config:
@@ -83,6 +90,21 @@ class Config:
             project=Config._get_value("PALM_TEXT_PROJECT", "cloud-large-language-models"),
             location=Config._get_value("PALM_TEXT_LOCATION", "us-central1"),
             endpoint_id=Config._get_value("PALM_TEXT_ENDPOINT_ID", "4511608470067216384"),
+        )
+
+    @property
+    def basic_auth_generative_ai(self) -> GenerativeAiBasicAuthConfig:
+        username = Config._get_value("GENERATIVE_AI_USERNAME", None)
+        if username is None:
+            username = ''.join(random.choice(string.ascii_letters) for _ in range(12))
+
+        password = Config._get_value("GENERATIVE_AI_PASSWORD", None)
+        if password is None:
+            password = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(12))
+
+        return GenerativeAiBasicAuthConfig(
+            username=username,
+            password=password,
         )
 
     @staticmethod

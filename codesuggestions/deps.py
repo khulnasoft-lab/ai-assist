@@ -1,6 +1,6 @@
 from dependency_injector import containers, providers
 
-from codesuggestions.auth import GitLabAuthProvider
+from codesuggestions.auth import GitLabAuthProvider, BasicAuthProvider
 from codesuggestions.api import middleware
 from codesuggestions.models import grpc_connect_triton, vertex_ai_connect, Codegen, PalmTextGenModel
 from codesuggestions.suggestions import CodeSuggestionsUseCase
@@ -17,6 +17,7 @@ _PROBS_ENDPOINTS = [
 ]
 
 _AUTH_SCHEMA_CODE_SUGGESTIONS = "bearer"
+_AUTH_SCHEMA_GENERATIVE_AI = "basic"
 
 
 def _init_triton_grpc_client(host: str, port: int):
@@ -87,10 +88,24 @@ class GenerativeAiContainer(containers.DeclarativeContainer):
     wiring_config = containers.WiringConfiguration(
         modules=[
             "codesuggestions.api.v2.endpoints.generative",
+            "codesuggestions.api.server",
         ]
     )
 
     config = providers.Configuration()
+
+    auth_provider = providers.Singleton(
+        BasicAuthProvider,
+        username=config.basic_auth_generative_ai.username,
+        password=config.basic_auth_generative_ai.password,
+    )
+
+    auth_middleware = providers.Singleton(
+        middleware.MiddlewareAuthentication,
+        auth_provider,
+        bypass_auth=config.auth.bypass,
+        schema=_AUTH_SCHEMA_GENERATIVE_AI,
+    )
 
     vertex_client = providers.Resource(
         _init_vertex_ai_client,

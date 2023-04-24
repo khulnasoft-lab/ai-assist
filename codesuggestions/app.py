@@ -28,6 +28,7 @@ def main():
 
     generative_ai_container = GenerativeAiContainer()
     generative_ai_container.config.palm_text_model.from_value(config.palm_text_model._asdict())
+    generative_ai_container.config.basic_auth_generative_ai.from_value(config.basic_auth_generative_ai._asdict())
 
     if config.is_generative_ai_only:
         app = create_generative_ai_api_server()

@@ -8,7 +8,7 @@ from codesuggestions.api.middleware import (
     MiddlewareLogRequest,
 )
 from codesuggestions.api.v2 import APIRouterBuilderV2
-from codesuggestions.deps import FastApiContainer
+from codesuggestions.deps import FastApiContainer, GenerativeAiContainer
 
 __all__ = [
     "create_code_suggestions_api_server",
@@ -53,6 +53,9 @@ def create_code_suggestions_api_server(
 @inject
 def create_generative_ai_api_server(
     config: dict = Provide[FastApiContainer.config.fastapi],
+    auth_middleware: MiddlewareAuthentication = Provide[
+        GenerativeAiContainer.auth_middleware
+    ],
 ):
     fastapi_app = FastAPI(
         title="GitLab AI API",
@@ -61,6 +64,9 @@ def create_generative_ai_api_server(
         docs_url=config["docs_url"],
         redoc_url=config["redoc_url"],
         swagger_ui_parameters={"defaultModelsExpandDepth": -1},
+        middleware=[
+            auth_middleware,
+        ]
     )
 
     api_router_v2 = (
