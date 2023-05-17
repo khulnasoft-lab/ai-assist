@@ -129,6 +129,15 @@ prefaced with a valid route that begins with `/`. `python-dotenv` will
 treat any value as a string, so specifying `None` maps to the Python
 value `'None'`.
 
+#### Debug parameters
+
+There are other environments that can be used to add debugging:
+
+```dotenv
+MODEL_DEBUG=1 # Logs the prompt and completion generated
+DEBUG_LOG_SUGGESTIONS=1 # Logs the input/output in the JSON logs
+```
+
 ## How to run the server locally
 
 1. Create virtualenv and init shell: `poetry shell`

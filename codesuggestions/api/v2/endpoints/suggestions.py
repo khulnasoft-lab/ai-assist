@@ -1,7 +1,8 @@
 from time import time
 
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, constr
 
 from codesuggestions.deps import CodeSuggestionsContainer
@@ -43,9 +44,23 @@ class SuggestionsResponse(BaseModel):
     choices: list[Choice]
 
 
+class CompletedSuggestionData:
+    def __init__(self, request: SuggestionsRequest, response: SuggestionsResponse):
+        self.request = request
+        self.response = response
+
+    def to_json(self):
+        return {
+            "file_data": jsonable_encoder(self.request.current_file),
+            "project_path": self.request.project_path,
+            "choices": jsonable_encoder(self.response.choices)
+        }
+
+
 @router.post("", response_model=SuggestionsResponse)
 @inject
 async def completions(
+    raw_request: Request,
     req: SuggestionsRequest,
     code_suggestions: CodeSuggestionsUseCaseV2 = Depends(
         Provide[CodeSuggestionsContainer.usecase_v2]
@@ -56,10 +71,15 @@ async def completions(
         req.current_file.file_name,
     )
 
-    return SuggestionsResponse(
+    response = SuggestionsResponse(
         id="id",
         created=int(time()),
         choices=[
             SuggestionsResponse.Choice(text=suggestion),
         ],
     )
+
+    completed_suggestion = CompletedSuggestionData(req, response)
+    raw_request.state.completed_suggestion = completed_suggestion
+
+    return response

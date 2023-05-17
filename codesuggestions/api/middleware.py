@@ -1,4 +1,5 @@
 import logging
+import os
 import structlog
 import time
 
@@ -77,6 +78,12 @@ class MiddlewareLogRequest(Middleware):
                 http_method = request.method
                 http_version = request.scope["http_version"]
                 process_time_s = process_time / 1e9
+                suggestion = None
+
+                if os.environ.get("DEBUG_LOG_SUGGESTIONS"):
+                    completed_suggestion = request.state.completed_suggestion
+                    if completed_suggestion:
+                        suggestion = completed_suggestion.to_json()
 
                 if 400 <= status_code < 500:
                     # StreamingResponse is received from the MiddlewareAuthentication, so
@@ -86,8 +93,7 @@ class MiddlewareLogRequest(Middleware):
                     structlog.contextvars.bind_contextvars(response_body=response_body[0].decode())
 
                 # Recreate the Uvicorn access log format, but add all parameters as structured information
-                access_logger.info(
-                    f"""{client_host}:{client_port} - "{http_method} {url} HTTP/{http_version}" {status_code}""",
+                fields = dict(
                     url=str(request.url),
                     path=url,
                     status_code=status_code,
@@ -99,6 +105,13 @@ class MiddlewareLogRequest(Middleware):
                     duration_s=process_time_s,
                     user_agent=request.headers.get('User-Agent')
                 )
+
+                if suggestion:
+                    fields['suggestion_data'] = suggestion
+
+                access_logger.info(
+                    f"""{client_host}:{client_port} - "{http_method} {url} HTTP/{http_version}" {status_code}""", **fields)
+
                 response.headers["X-Process-Time"] = str(process_time_s)
                 return response
 
