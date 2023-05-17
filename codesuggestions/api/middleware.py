@@ -81,9 +81,11 @@ class MiddlewareLogRequest(Middleware):
                 suggestion = None
 
                 if os.environ.get("DEBUG_LOG_SUGGESTIONS"):
-                    completed_suggestion = request.state.completed_suggestion
-                    if completed_suggestion:
+                    try:
+                        completed_suggestion = request.state.completed_suggestion
                         suggestion = completed_suggestion.to_json()
+                    except AttributeError:
+                        pass
 
                 if 400 <= status_code < 500:
                     # StreamingResponse is received from the MiddlewareAuthentication, so
