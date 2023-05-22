@@ -1,18 +1,9 @@
-# Source: ai-assist/templates/ingress-nginx.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: ai-assist-ingress-nginx
+  name: {{ include "ai-assist.fullname" . }}-ingress-nginx
   labels:
-    helm.sh/chart: ai-assist-0.1.0
-    app.kubernetes.io/name: ai-assist
-    app.kubernetes.io/instance: ai-assist
-    app.kubernetes.io/version: "0.1.0"
-    app.kubernetes.io/managed-by: Helm
-    shard: "default"
-    stage: "main"
-    tier: "sv"
-    type: "ai-assist"
+    {{- include "ai-assist.labels" . | nindent 4 }}
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
@@ -34,7 +25,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: 'ai-assist-faux-pilot'
+                name: '{{ include "ai-assist.fullname" . }}-faux-pilot'
                 port:
                   number: 8080
     - host: codesuggestions.gitlab.com
@@ -44,7 +35,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: 'ai-assist-faux-pilot'
+                name: '{{ include "ai-assist.fullname" . }}-faux-pilot'
                 port:
                   number: 8080
----
