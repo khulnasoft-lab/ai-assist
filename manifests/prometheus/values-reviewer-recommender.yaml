@@ -3,12 +3,18 @@ prometheus:
   prometheusSpec:
     replicas: 1
     retention: 1d
+    logFormat: json
+    scrapeInterval: 15s
+    evaluationInterval: 15s
     externalLabels:
       cluster: reviewer-recommender
       env: gprd
       environment: gprd
       type: suggested_reviewers
       stage: main
+      monitor: default
+      provider: gcp
+      region: us-central1
     storageSpec:
      volumeClaimTemplate:
        spec:
@@ -27,3 +33,169 @@ prometheus:
           password:
             name: remote-write-auth
             key: password
+  serviceMonitor:
+    relabelings:
+      - targetLabel: type
+        replacement: monitoring
+      - targetLabel: tier
+        replacement: inf
+      - targetLabel: stage
+        replacement: main
+      - sourceLabels:
+          - __meta_kubernetes_pod_node_name
+        targetLabel: node
+
+# Add common labels to all components
+commonLabels:
+  gitlab.com/prometheus-instance: prometheus-system
+  type: monitoring
+  tier: sv
+  stage: main
+  shard: default
+
+# We don't use coredns
+coreDns:
+  enabled: false
+
+kubeDns:
+  enabled: true
+  serviceMonitor:
+    relabelings:
+      - targetLabel: type
+        replacement: kubernetes
+      - targetLabel: tier
+        replacement: inf
+      - targetLabel: stage
+        replacement: main
+      - sourceLabels:
+          - __meta_kubernetes_pod_node_name
+        targetLabel: node
+
+# Relabelings
+prometheusOperator:
+  serviceMonitor:
+    relabelings:
+      - sourceLabels:
+          - __meta_kubernetes_pod_node_name
+        targetLabel: node
+
+kubelet:
+  serviceMonitor:
+    # https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/values.yaml#L970
+    ## MetricRelabelConfigs to apply to samples after scraping, but before ingestion.
+    ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#relabelconfig
+    ##
+    cAdvisorMetricRelabelings:
+      # Drop less useful container CPU metrics.
+      - sourceLabels: [__name__]
+        action: drop
+        # TODO: check if we can drop `container_cpu_cfs_throttled_seconds_total`
+        # regex: 'container_cpu_(cfs_throttled_seconds_total|load_average_10s|system_seconds_total|user_seconds_total)'
+        regex: 'container_cpu_(load_average_10s|system_seconds_total|user_seconds_total)'
+      # Drop less useful container / always zero filesystem metrics.
+      - sourceLabels: [__name__]
+        action: drop
+        regex: 'container_fs_(io_current|io_time_seconds_total|io_time_weighted_seconds_total|reads_merged_total|sector_reads_total|sector_writes_total|writes_merged_total)'
+      # Drop less useful / always zero container memory metrics.
+      - sourceLabels: [__name__]
+        action: drop
+        regex: 'container_memory_(mapped_file|swap)'
+      # Drop less useful container process metrics.
+      - sourceLabels: [__name__]
+        action: drop
+        regex: 'container_(file_descriptors|tasks_state|threads_max)'
+      # Drop container spec metrics that overlap with kube-state-metrics.
+      # TODO: Fix rules/alerts to use `kubelet` metrics instead of `kube-state-metrics`
+      # - sourceLabels: [__name__]
+      #   action: drop
+      #   regex: 'container_spec.*'
+      # Drop cgroup metrics with no pod.
+      - sourceLabels: [id, pod]
+        action: drop
+        regex: '.+;'
+    cAdvisorRelabelings:
+      - sourceLabels: [__metrics_path__]
+        targetLabel: metrics_path
+      - sourceLabels:
+          - __meta_kubernetes_pod_node_name
+        targetLabel: node
+    probesRelabelings:
+      - sourceLabels: [__metrics_path__]
+        targetLabel: metrics_path
+      - sourceLabels:
+          - __meta_kubernetes_pod_node_name
+        targetLabel: node
+    resource: false
+    relabelings:
+      - targetLabel: type
+        replacement: kubernetes
+      - targetLabel: tier
+        replacement: inf
+      - targetLabel: stage
+        replacement: main
+      - sourceLabels: [__metrics_path__]
+        targetLabel: metrics_path
+      - sourceLabels:
+          - __meta_kubernetes_pod_node_name
+        targetLabel: node
+
+kubeControllerManager:
+  serviceMonitor:
+    relabelings:
+      - sourceLabels:
+          - __meta_kubernetes_pod_node_name
+        targetLabel: node
+
+kubeStateMetrics:
+  serviceMonitor:
+    relabelings:
+      - sourceLabels:
+          - __meta_kubernetes_pod_node_name
+        targetLabel: node
+
+nodeExporter:
+  serviceMonitor:
+    relabelings:
+      - sourceLabels:
+          - __meta_kubernetes_pod_node_name
+        targetLabel: node
+
+prometheus-node-exporter:
+  extraArgs:
+    - --collector.filesystem.ignored-mount-points=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+|run/.*|home/kubernetes/.+)($|/)
+    - --collector.filesystem.ignored-fs-types=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$
+    - --log.format=json
+  podLabels:
+    type: monitoring
+    tier: sv
+    stage: main
+    shard: default
+  prometheus:
+    monitor:
+      additionalLabels:
+        gitlab.com/prometheus-instance: prometheus-system
+      relabelings:
+      - sourceLabels:
+          - __meta_kubernetes_pod_node_name
+        targetLabel: node
+
+kube-state-metrics:
+  metricLabelsAllowlist:
+    - ingresses=[*]
+    - nodes=[*]
+    - pods=[*]
+    - horizontalpodautoscalers=[*]
+    - deployments=[*]
+  podLabels:
+    type: monitoring
+    tier: sv
+    stage: main
+    shard: default
+  prometheus:
+    monitor:
+      additionalLabels:
+        gitlab.com/prometheus-instance: prometheus-system
+      relabelings:
+      - sourceLabels:
+          - __meta_kubernetes_pod_node_name
+        targetLabel: node
