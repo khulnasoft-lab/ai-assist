@@ -17,6 +17,7 @@ __all__ = [
 ]
 
 REQUEST_TIMEOUT_SECONDS = 10
+LOCAL_AUTH_CACHE_CAPACITY = 1000000
 
 
 class AuthProvider(ABC):
@@ -31,7 +32,7 @@ class GitLabAuthProvider(AuthProvider):
     def __init__(self, base_url: str, expiry_seconds: int = 3600):
         self.base_url = base_url
         self.expiry_seconds = expiry_seconds
-        self.cache = LocalAuthCache()
+        self.cache = LocalAuthCache(name='gitlab_auth_provider', capacity=LOCAL_AUTH_CACHE_CAPACITY)
         self.salt = os.urandom(16)
 
     def _request_code_suggestions_allowed(self, token: str) -> bool:
@@ -96,7 +97,7 @@ class GitLabOidcProvider(AuthProvider):
     def __init__(self, base_url: str, expiry_seconds: int = 86400):
         self.base_url = base_url
         self.expiry_seconds = expiry_seconds
-        self.cache = LocalAuthCache()
+        self.cache = LocalAuthCache(name='gitlab_oidc_provider', capacity=LOCAL_AUTH_CACHE_CAPACITY)
 
     def authenticate(self, token: str) -> bool:
         jwks = self._jwks()
