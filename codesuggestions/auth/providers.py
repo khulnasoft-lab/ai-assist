@@ -8,7 +8,7 @@ from hashlib import pbkdf2_hmac
 import requests
 from jose import JWTError, jwt
 
-from codesuggestions.auth.cache import LocalAuthCache
+from codesuggestions.auth.cache import LocalAuthCache, RedisAuthCache
 
 __all__ = [
     "AuthProvider",
@@ -28,10 +28,13 @@ class AuthProvider(ABC):
 class GitLabAuthProvider(AuthProvider):
     REQUEST_TIMEOUT_SECONDS = 1
 
-    def __init__(self, base_url: str, expiry_seconds: int = 3600):
+    def __init__(self, base_url: str, auth_cache_mode: str, auth_cache_url: str, expiry_seconds: int = 3600):
         self.base_url = base_url
         self.expiry_seconds = expiry_seconds
-        self.cache = LocalAuthCache()
+        if auth_cache_mode =='redis':
+            self.cache = RedisAuthCache(auth_cache_url)
+        else:
+            self.cache = LocalAuthCache()
         self.salt = os.urandom(16)
 
     def _request_code_suggestions_allowed(self, token: str) -> bool:

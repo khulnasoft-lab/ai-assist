@@ -30,6 +30,8 @@ class AuthConfig(NamedTuple):
     gitlab_base_url: str
     gitlab_api_base_url: str
     bypass: bool
+    auth_cache_mode: str
+    auth_cache_url: str
 
 
 class Config:
@@ -68,7 +70,9 @@ class Config:
         return AuthConfig(
             gitlab_base_url=Config._get_value("GITLAB_URL", "https://gitlab.com/"),
             gitlab_api_base_url=Config._get_value("GITLAB_API_URL", "https://gitlab.com/api/v4/"),
-            bypass=Config._str_to_bool(Config._get_value("AUTH_BYPASS_EXTERNAL", "False"))
+            bypass=Config._str_to_bool(Config._get_value("AUTH_BYPASS_EXTERNAL", "False")),
+            auth_cache_mode=Config._get_value("AUTH_CACHE_MODE", "inmemory"),
+            auth_cache_url=Config._get_value("AUTH_CACHE_URL", "redis://localhost:6379"),
         )
 
     @staticmethod

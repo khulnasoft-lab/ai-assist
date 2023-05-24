@@ -33,6 +33,8 @@ class FastApiContainer(containers.DeclarativeContainer):
     auth_provider = providers.Singleton(
         GitLabAuthProvider,
         base_url=config.auth.gitlab_api_base_url,
+        auth_cache_mode=config.auth.auth_cache_mode,
+        auth_cache_url=config.auth.auth_cache_url
     )
 
     oidc_provider = providers.Singleton(
