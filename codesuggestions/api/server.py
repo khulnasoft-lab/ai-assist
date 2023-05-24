@@ -1,5 +1,7 @@
 from dependency_injector.wiring import Provide, inject
 from fastapi import FastAPI
+from fastapi_profiler import PyInstrumentProfilerMiddleware
+
 from starlette.middleware import Middleware
 from starlette_context.middleware import RawContextMiddleware
 
@@ -37,10 +39,10 @@ def create_fast_api_server(
         swagger_ui_parameters={"defaultModelsExpandDepth": -1},
         middleware=[
             context_middleware,
-            log_middleware,
             auth_middleware,
         ],
     )
+    fastapi_app.add_middleware(PyInstrumentProfilerMiddleware)
 
     fastapi_app.include_router(http_suggestions_router, prefix="/v1")
     fastapi_app.include_router(api_router_v2)
