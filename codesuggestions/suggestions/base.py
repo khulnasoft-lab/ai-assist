@@ -131,9 +131,8 @@ class CodeSuggestionsUseCase(RedactPiiMixin):
         return completion
 
 
-class CodeSuggestionsUseCaseV2(RedactPiiMixin, PromptEngineMixin):
+class CodeSuggestionsUseCaseV2(PromptEngineMixin):
     def __init__(self, model: Codegen):
-        RedactPiiMixin.__init__(self, PII_DETECTORS, PII_REPLACEMENTS)
         PromptEngineMixin.__init__(self)
         self.model = model
 
@@ -141,6 +140,5 @@ class CodeSuggestionsUseCaseV2(RedactPiiMixin, PromptEngineMixin):
         prompt = self.build_prompt(content, file_name)
         completion = self.model(prompt)
         completion = remove_incomplete_lines(completion)
-        completion = self.redact_pii(completion)
 
         return completion

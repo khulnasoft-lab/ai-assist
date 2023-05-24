@@ -1,6 +1,5 @@
 from dependency_injector.wiring import Provide, inject
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware import Middleware
 from starlette_context.middleware import RawContextMiddleware
 
@@ -28,12 +27,6 @@ def create_fast_api_server(
 ):
 
     context_middleware = Middleware(RawContextMiddleware)
-    cors_middleware = Middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_methods=["POST"],
-        allow_headers=["*"],
-    )
 
     fastapi_app = FastAPI(
         title="GitLab Code Suggestions",
@@ -44,7 +37,6 @@ def create_fast_api_server(
         swagger_ui_parameters={"defaultModelsExpandDepth": -1},
         middleware=[
             context_middleware,
-            cors_middleware,
             log_middleware,
             auth_middleware,
         ],
