@@ -53,7 +53,7 @@ class GitLabAuthProvider(AuthProvider):
         return is_allowed
 
     def _is_auth_required(self, key: str) -> bool:
-        record = self.cache.get(key)
+        record = self.cache.get(self._hash_token(key))
         if record is None:
             return True
 
@@ -65,7 +65,7 @@ class GitLabAuthProvider(AuthProvider):
 
     def _cache_auth(self, key: str, token: str):
         exp = datetime.now() + timedelta(seconds=self.expiry_seconds)
-        self.cache.set(key, token, exp)
+        self.cache.set(self._hash_token(key), token, exp)
 
     def _hash_token(self, token: str) -> str:
         return pbkdf2_hmac("sha256", token.encode(), self.salt, 10_000).hex()
