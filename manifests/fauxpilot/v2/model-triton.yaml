@@ -94,3 +94,20 @@ spec:
   selector:
     matchLabels:
       app: model-triton
+---
+# Headless service for GRPC round-robin
+apiVersion: v1
+kind: Service
+metadata:
+  name: model-triton-headless
+  labels:
+    app: model-triton-headless
+spec:
+  clusterIP: None 
+  ports:
+    - name: api
+      port: 8080
+      targetPort: 8001
+  selector:
+    app: model-triton
+

@@ -31,12 +31,23 @@ def grpc_requested_output(name: str) -> triton_grpc_util.InferRequestedOutput:
 
 
 def grpc_connect_triton(host: str, port: int, verbose: bool = False) -> triton_grpc_util.InferenceServerClient:
-    return triton_grpc_util.InferenceServerClient(
-        url=f"{host}:{port}",
-        verbose=verbose,
-        keepalive_options=triton_grpc_util.KeepAliveOptions(
+    keepalive_options = triton_grpc_util.KeepAliveOptions(
             keepalive_time_ms=30000,
             keepalive_timeout_ms=20000,
             keepalive_permit_without_calls=False,
             http2_max_pings_without_data=2,
-        ))
+        )
+    
+    return triton_grpc_util.InferenceServerClient(
+        url=f"{host}:{port}",
+        verbose=verbose,
+        channel_args=[
+                ('grpc.lb_policy_name', 'round_robin')
+                ('grpc.max_send_message_length', triton_grpc_util.MAX_GRPC_MESSAGE_SIZE),
+                ('grpc.max_receive_message_length', triton_grpc_util.MAX_GRPC_MESSAGE_SIZE),
+                ('grpc.keepalive_time_ms', keepalive_options.keepalive_time_ms),
+                ('grpc.keepalive_timeout_ms', keepalive_options.keepalive_timeout_ms),
+                ('grpc.keepalive_permit_without_calls', keepalive_options.keepalive_permit_without_calls),
+                ('grpc.http2.max_pings_without_data', keepalive_options.http2_max_pings_without_data),
+            ]
+        )

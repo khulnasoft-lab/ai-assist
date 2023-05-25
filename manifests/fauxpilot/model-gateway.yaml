@@ -27,7 +27,7 @@ spec:
               containerPort: 8082
           env:
             - name: TRITON_HOST
-              value: "model-k8s-triton"
+              value: "model-triton-headless"
             - name: TRITON_PORT
               value: "8080"
             - name: FASTAPI_API_PORT
