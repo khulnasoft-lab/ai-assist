@@ -62,6 +62,11 @@ spec:
           emptyDir:
             sizeLimit: "2Gi"
             medium: "Memory"
+      resources:
+            limits:
+              cpu: 500m
+            requests:
+              cpu: 400m
 ---
 apiVersion: v1
 kind: Service
@@ -111,7 +116,7 @@ spec:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 80
+        averageUtilization: 70
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

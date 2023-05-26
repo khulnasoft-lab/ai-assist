@@ -37,6 +37,11 @@ spec:
             # for profile output
             - name: GOOGLE_CLOUD_PROFILER
               value: "1"
+          resources:
+            limits:
+              cpu: 300m
+            requests:
+              cpu: 200m
 ---
 apiVersion: v1
 kind: Service
@@ -66,7 +71,7 @@ spec:
     kind: Deployment
     name: model-gateway
   minReplicas: 1
-  maxReplicas: 10
+  maxReplicas: 12
   metrics:
   - type: Resource
     resource:
