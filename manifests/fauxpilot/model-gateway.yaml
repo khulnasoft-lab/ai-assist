@@ -39,7 +39,7 @@ spec:
               value: "1"
           resources:
             limits:
-              cpu: 30m
+              cpu: 50m
             requests:
               cpu: 20m
 ---
@@ -71,14 +71,14 @@ spec:
     kind: Deployment
     name: model-gateway
   minReplicas: 1
-  maxReplicas: 12
+  maxReplicas: 15
   metrics:
   - type: Resource
     resource:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 50
+        averageUtilization: 70
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
