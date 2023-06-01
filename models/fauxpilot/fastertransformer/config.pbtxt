@@ -233,3 +233,29 @@ parameters {
     string_value: "0"
   }
 }
+parameters {
+  key: "enable_model_warmup"
+  value: {
+    string_value: "1"
+  }
+}
+model_warmup [{
+    name : "warmup sample"
+    batch_size: 1
+    inputs {
+        key: 0
+        value: {
+            data_type: TYPE_FP32
+            dims: 32
+            zero_data: true
+        }
+    }
+    inputs {
+        key: 1
+        value: {
+            data_type: TYPE_FP32
+            dims: 32
+            random_data: true
+        }
+    }
+}]
