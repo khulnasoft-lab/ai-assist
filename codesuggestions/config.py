@@ -112,16 +112,11 @@ class Config:
 
     @property
     def palm_text_model(self) -> PalmTextModelConfig:
-        # always require to set the GOOGLE_VERTEX_AI_CREDENTIALS env variable
-        filename = Config._get_value("GOOGLE_VERTEX_AI_CREDENTIALS", None)
-        if not filename:
-            raise ValueError("env GOOGLE_VERTEX_AI_CREDENTIALS not specified")
-
         return PalmTextModelConfig(
             name=Config._get_value("PALM_TEXT_MODEL_NAME", "text-bison@001"),
             project=Config._get_value("PALM_TEXT_PROJECT", "unreview-poc-390200e5"),
             location=Config._get_value("PALM_TEXT_LOCATION", "us-central1"),
-            credential_path=filename
+            credential_path=Config._get_value("GOOGLE_VERTEX_AI_CREDENTIALS", None)
         )
 
     @staticmethod

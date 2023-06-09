@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from google.oauth2 import service_account
 from typing import NamedTuple
 
+import logging
 import numpy as np
 import tritonclient.grpc as triton_grpc_util
 import vertexai
@@ -15,6 +16,8 @@ __all__ = [
     "grpc_connect_triton",
     "vertex_ai_init",
 ]
+
+logger = logging.getLogger("codesuggestions")
 
 
 class TextGenModelOutput(NamedTuple):
@@ -67,5 +70,9 @@ def grpc_connect_triton(host: str, port: int, verbose: bool = False) -> triton_g
 
 
 def vertex_ai_init(project: str, location: str, credential_path: str):
+    if not credential_path:
+        logger.warn("Vertex AI credentials not set, skipping setup")
+        return
+
     credentials = service_account.Credentials.from_service_account_file(credential_path)
     vertexai.init(project=project, location=location, credentials=credentials)
