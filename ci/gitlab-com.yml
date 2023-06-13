@@ -121,6 +121,8 @@ build-docker-model-codegen-tmp:
   rules:
     - changes:
         - models/codegen/**/*
+    - if: $CI_MERGE_REQUEST_IID
+      when: manual
 
 build-docker-model-fauxpilot-tmp:
   stage: build
@@ -136,6 +138,8 @@ build-docker-model-fauxpilot-tmp:
   rules:
     - changes:
         - models/fauxpilot/**/*
+    - if: $CI_MERGE_REQUEST_IID
+      when: manual
 
 tests:
   extends: .poetry
