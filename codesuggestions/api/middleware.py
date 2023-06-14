@@ -78,9 +78,32 @@ class GitLabUser(BaseUser):
     def is_authenticated(self) -> bool:
         return self._authenticated
 
+class GitLabMiddleware(BaseHTTPMiddleware):
+    async def _extract_payload(self, request: Request):
+        if request.headers.get('Content-Type') != 'application/json':
+            return None
+
+        # `await request.json` can only be called once per request cycle, so
+        # the first time we read it we store it on `request.state` for future
+        # middleware calls that want to access it. See https://stackoverflow.com/a/69951394
+        try:
+            access_logger.info("trying to get from state")
+            return request.state.body
+        except AttributeError:
+            try:
+                access_logger.info("trying to get from request")
+                request_body = await request.json()
+                access_logger.info("obtained from request")
+                request.state.body = request_body
+            except json.decoder.JSONDecodeError:
+                access_logger.info("JSON error")
+                request.state.body = None
+        finally:
+            access_logger.info("returning state")
+            return request.state.body
 
 class MiddlewareLogRequest(Middleware):
-    class CustomHeaderMiddleware(BaseHTTPMiddleware):
+    class CustomHeaderMiddleware(GitLabMiddleware):
         def __init__(self, path_resolver: _PathResolver, *args, **kwargs):
             self.path_resolver = path_resolver
             super().__init__(*args, **kwargs)
@@ -148,17 +171,12 @@ class MiddlewareLogRequest(Middleware):
                 return response
 
         async def _extract_project_keys(self, request: Request):
-            if request.headers.get('Content-Type') != 'application/json':
-                return
+            payload = await self._extract_payload(request)
 
-            try:
-                body = await request.body()
-                payload = json.loads(body)
+            if payload:
                 for key, value in payload.items():
                     if key.startswith('project_'):
                         context.data["meta." + key] = value
-            except json.decoder.JSONDecodeError:
-                return
 
     def __init__(self, skip_endpoints: Optional[list] = None):
         path_resolver = _PathResolver.from_optional_list(skip_endpoints)
@@ -251,23 +269,34 @@ class MiddlewareAuthentication(Middleware):
 
 
 class MiddlewareModelTelemetry(Middleware):
-    class TelemetryHeadersMiddleware(BaseHTTPMiddleware):
+    class TelemetryHeadersMiddleware(GitLabMiddleware):
         def __init__(self, path_resolver: _PathResolver, *args, **kwargs):
             self.path_resolver = path_resolver
+            self.instrumentator = TelemetryInstrumentator()
             super().__init__(*args, **kwargs)
 
         async def dispatch(self, request, call_next):
             if self.path_resolver.skip_path(request.url.path):
                 return await call_next(request)
 
-            headers = request.headers
-            if self._missing_header(headers):
+            try:
                 return await call_next(request)
+            finally:
+                telemetry = []
+                headers = request.headers
+                if not self._missing_header(headers):
+                    telemetry = [{
+                        'accept': headers.get("X-GitLab-CS-Accepts"),
+                        'requests': headers.get("X-GitLab-CS-Requests"),
+                        'errors': headers.get("X-GitLab-CS-Errors"),
+                    }]
+                # else:
+                #     payload = await self._extract_payload(request)
+                #     if payload:
+                #         telemetry = payload.get("telemetry", [])
 
-            with TelemetryInstrumentator(headers.get("X-GitLab-CS-Accepts"),
-                                         headers.get("X-GitLab-CS-Requests"),
-                                         headers.get("X-GitLab-CS-Errors")):
-                return await call_next(request)
+                if telemetry:
+                    self.instrumentator.watch(telemetry)
 
         def _missing_header(self, headers: list) -> bool:
             return any(

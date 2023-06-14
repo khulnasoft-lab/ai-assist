@@ -18,8 +18,7 @@ INFERENCE_PROMPT_HISTOGRAM = Histogram("code_suggestions_inference_prompt_size_b
                                        "Size of the prompt of an inference request in bytes", METRIC_LABELS,
                                        buckets=(32, 64, 128, 256, 512, 1024, 2048, 4096))
 
-# TODO: Label accepts counter once the client starts sending model info
-ACCEPTS_COUNTER = Counter("code_suggestions_accepts", "Accepts count by number")
+ACCEPTS_COUNTER = Counter("code_suggestions_accepts", "Accepts count by number", METRIC_LABELS)
 REQUESTS_COUNTER = Counter("code_suggestions_requests", "Requests count by number", METRIC_LABELS)
 ERRORS_COUNTER = Counter("code_suggestions_errors", "Errors count by number", METRIC_LABELS)
 
@@ -59,31 +58,23 @@ class ModelTelemetry(BaseModel):
 
 
 class TelemetryInstrumentator:
-    def __init__(self, accepted_request_count, total_request_count, error_request_count) -> None:
-        self.accepted_request_count = accepted_request_count
-        self.total_request_count = total_request_count
-        self.error_request_count = error_request_count
+    def watch(self, telemetry):
+        for stas in telemetry:
+            try:
+                fields = ModelTelemetry(
+                    accepted_request_count=stats.accepted,
+                    total_request_count=stats.total,
+                    error_request_count=stats.error,
+                )
+                labels = {
+                    "model_engine": stats.get("model_engine", context.get("model_engine", "")),
+                    "model_name": stats.get("model_engine", context.get("model_name", "")),
+                }
 
-    def __enter__(self):
-        pass
+                telemetry_logger.info("telemetry", **(fields.dict() | labels))
 
-    def __exit__(self, *exc):
-        labels = {
-            "model_engine": context.get("model_engine", ""),
-            "model_name": context.get("model_name", ""),
-        }
-
-        try:
-            fields = ModelTelemetry(
-                accepted_request_count=self.accepted_request_count,
-                total_request_count=self.total_request_count,
-                error_request_count=self.error_request_count,
-            )
-
-            telemetry_logger.info("telemetry", **(fields.dict() | labels))
-
-            ACCEPTS_COUNTER.inc(fields.accepted_request_count)
-            REQUESTS_COUNTER.labels(**labels).inc(fields.total_request_count)
-            ERRORS_COUNTER.labels(**labels).inc(fields.error_request_count)
-        except ValidationError as e:
-            telemetry_logger.error(f"failed to capture model telemetry: {e}", **labels)
+                ACCEPTS_COUNTER.labels(**labels).inc(fields.accepted_request_count)
+                REQUESTS_COUNTER.labels(**labels).inc(fields.total_request_count)
+                ERRORS_COUNTER.labels(**labels).inc(fields.error_request_count)
+            except ValidationError as e:
+                telemetry_logger.error(f"failed to capture model telemetry: {e}")

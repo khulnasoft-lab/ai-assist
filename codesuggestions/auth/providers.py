@@ -10,6 +10,7 @@ from jose import JWTError, jwt
 
 from codesuggestions.auth.cache import LocalAuthCache, AuthRecord
 from codesuggestions.auth.user import User, UserClaims
+from codesuggestions.api import extract_request_payload
 
 __all__ = [
     "AuthProvider",
