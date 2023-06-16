@@ -23,6 +23,8 @@ variables:
   DOCKER_MODEL_FAUXPILOT: "$CI_REGISTRY_IMAGE/model-fauxpilot"
   DOCKER_MODEL_FAUXPILOT_TMP: "$CI_REGISTRY_IMAGE/tmp/model-fauxpilot"
 
+  DOCKER_MODEL_TRITON: "$CI_REGISTRY_IMAGE/model-triton"
+
   SAST_EXCLUDED_PATHS: "tests, tmp, api, converter, model-loader"
 
 include:
@@ -136,6 +138,23 @@ build-docker-model-fauxpilot-tmp:
   rules:
     - changes:
         - models/fauxpilot/**/*
+
+build-triton:
+  stage: build
+  extends:
+    - .kaniko_base
+  tags:
+    # This tag will tell gitlab to use the private runners
+    - ai-assist-container-build
+  variables:
+    KANIKO_BUILD_FILE: models/triton/Dockerfile.model
+    KANIKO_BUILD_CONTEXT: models/triton/
+    KANIKO_DESTINATION: "${DOCKER_MODEL_TRITON}:${CI_COMMIT_SHORT_SHA}"
+  rules:
+    - changes:
+        - models/triton/**/*
+    - if: $CI_MERGE_REQUEST_IID
+      when: manual
 
 tests:
   extends: .poetry
