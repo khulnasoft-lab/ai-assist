@@ -22,7 +22,7 @@ __all__ = [
 log = structlog.stdlib.get_logger("codesuggestions")
 
 router = APIRouter(
-    prefix="/completions",
+    prefix="/code_completions",
     tags=["completions"],
 )
 
