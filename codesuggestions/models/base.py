@@ -30,6 +30,7 @@ class TextGenBaseModel(ABC):
     def generate(
         self,
         content: str,
+        instances: dict[str, str] = {},
         temperature: float = 0.2,
         max_decode_steps: int = 16,
         top_p: float = 0.95,

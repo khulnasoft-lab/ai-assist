@@ -84,6 +84,7 @@ class GitLabCodeGen(TextGenBaseModel):
     def generate(
         self,
         prompt: str,
+        instances: dict[str, str] = {},
         temperature: float = 0.2,
         max_decode_steps: int = 32,
         top_p: float = 0.98,

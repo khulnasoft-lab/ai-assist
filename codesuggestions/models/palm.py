@@ -105,6 +105,7 @@ class PalmCodeGenBaseModel(TextGenBaseModel):
     def generate(
         self,
         prompt: str,
+        instances: dict[str, str] = {},
         temperature: float = 0.2,
         max_decode_steps: int = 32,
         top_p: float = 0.95,
@@ -130,14 +131,15 @@ class PalmTextBisonModel(PalmCodeGenBaseModel):
     def generate(
         self,
         prompt: str,
+        instances: dict[str, str] = {},
         temperature: float = 0.2,
         max_decode_steps: int = 32,
         top_p: float = 0.95,
         top_k: int = 40
     ) -> Optional[TextGenModelOutput]:
-        input_data = {"content": prompt}
+        instances["content"] = prompt
         with self.instrumentator.watch(prompt):
-            res = self._generate(input_data, temperature, max_decode_steps, top_p, top_k)
+            res = self._generate(instances, temperature, max_decode_steps, top_p, top_k)
 
         return res
 
@@ -159,14 +161,15 @@ class PalmCodeBisonModel(PalmCodeGenBaseModel):
     def generate(
         self,
         prompt: str,
+        instances: dict[str, str] = {},
         temperature: float = 0.2,
         max_decode_steps: int = 32,
         top_p: float = 0.95,
         top_k: int = 40
     ) -> Optional[TextGenModelOutput]:
-        input_data = {"prefix": prompt}
+        instances["content"] = prompt
         with self.instrumentator.watch(prompt):
-            res = self._generate(input_data, temperature, max_decode_steps, top_p, top_k)
+            res = self._generate(instances, temperature, max_decode_steps, top_p, top_k)
 
         return res
 
@@ -188,16 +191,17 @@ class PalmCodeGeckoModel(PalmCodeGenBaseModel):
     def generate(
         self,
         prompt: str,
+        instances: dict[str, str] = {},
         temperature: float = 0.2,
         max_decode_steps: int = 32,
         top_p: float = 0.95,
         top_k: int = 40
     ) -> Optional[TextGenModelOutput]:
         # TODO: Gecko model supports infilling when suffix is passed
-        input_data = {"prefix": prompt}
+        instances["content"] = prompt
 
         with self.instrumentator.watch(prompt):
-            res = self._generate(input_data, temperature, max_decode_steps, top_p, top_k)
+            res = self._generate(instances, temperature, max_decode_steps, top_p, top_k)
 
         return res
 

@@ -99,8 +99,22 @@ class ModelEnginePalm(ModelEngineBase):
         lang_id = lang_from_filename(file_name)
         self.increment_lang_counter(file_name, lang_id)
 
+        # Fetch additional model parameters
+        instances = kwargs.get('instances', {})
+        temperature = kwargs.get('temperature', 0.2)
+        max_decode_steps = kwargs.get('max_decode_steps', 32)
+        top_p = kwargs.get('top_p', 0.95)
+        top_k = kwargs.get('top_k', 40)
+
         prompt = self._build_prompt(content, lang_id)
-        if res := self.model.generate(prompt):
+        if res := self.model.generate(
+                prompt,
+                instances,
+                temperature,
+                max_decode_steps,
+                top_p,
+                top_k,
+            ):
             return res.text
 
         return ""
