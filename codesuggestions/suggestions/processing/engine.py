@@ -108,13 +108,13 @@ class ModelEnginePalm(ModelEngineBase):
 
         prompt = self._build_prompt(content, lang_id)
         if res := self.model.generate(
-                prompt,
-                instances,
-                temperature,
-                max_decode_steps,
-                top_p,
-                top_k,
-            ):
+            prompt,
+            instances,
+            temperature,
+            max_decode_steps,
+            top_p,
+            top_k,
+        ):
             return res.text
 
         return ""

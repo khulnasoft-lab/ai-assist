@@ -54,8 +54,8 @@ def create_fast_api_server(
         ],
     )
 
-    # fastapi_app.include_router(http_suggestions_router, prefix="/v1")
+    fastapi_app.include_router(http_suggestions_router, prefix="/v1")
     fastapi_app.include_router(api_router_v2)
-    # fastapi_app.include_router(http_monitoring_router)
+    fastapi_app.include_router(http_monitoring_router)
 
     return fastapi_app

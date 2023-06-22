@@ -93,13 +93,12 @@ class CodeSuggestionsUseCase:
         if res := self.model.generate(prompt):
             return res.text
         return ""
-    
+
 
 class CompletionParameters:
     content_above_cursos: Optional[str]
     content_below_cursor: str
     file_name: str
-
 
 
 class CodeSuggestionsUseCaseV2:
@@ -116,16 +115,16 @@ class CodeSuggestionsUseCaseV2:
         file_name: str,
     ) -> str:
         return self.engine.generate_completion(content, file_name)
-    
+
     def parameterised_completion(
-            self,
-            content: str,
-            file_name: str,
-            instances: dict[str, str] = {},
-            temperature: float = 0.2,
-            max_decode_steps: int = 16,
-            top_p: float = 0.95,
-            top_k: int = 40,
+        self,
+        content: str,
+        file_name: str,
+        instances: dict[str, str] = {},
+        temperature: float = 0.2,
+        max_decode_steps: int = 16,
+        top_p: float = 0.95,
+        top_k: int = 40,
     ) -> str:
         return self.engine.generate_completion(
             content,

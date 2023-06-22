@@ -3,7 +3,6 @@ from fastapi import APIRouter
 from codesuggestions.api.v2.endpoints import internal, suggestions
 
 
-
 internal_api_router = APIRouter()
 internal_api_router.prefix = "/v2"
 internal_api_router.include_router(suggestions.router)

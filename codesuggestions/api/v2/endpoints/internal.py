@@ -10,7 +10,6 @@ from pydantic import BaseModel, constr
 from codesuggestions.api.timing import timing
 from codesuggestions.deps import CodeSuggestionsContainer
 from codesuggestions.suggestions import CodeSuggestionsUseCaseV2
-from codesuggestions.api.rollout import ModelRollout
 
 from starlette.concurrency import run_in_threadpool
 from starlette_context import context
@@ -32,12 +31,14 @@ class CurrentFile(BaseModel):
     content_above_cursor: constr(max_length=100000) = ""
     content_below_cursor: constr(max_length=100000)
 
+
 class ModelParameters(BaseModel):
     temperature: float = 0.2
     max_decode_steps: int = 16
     top_p: float = 0.95
     top_k: int = 40
     max_decode_steps: int = 16
+
 
 class CompletionsRequest(BaseModel):
     prompt_version: int = 1
