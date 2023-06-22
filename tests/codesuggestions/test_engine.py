@@ -12,7 +12,14 @@ from codesuggestions.suggestions.processing import (
 def _side_effect_few_shot_tpl(content: str, filename: str, model_output: str):
     lang_id = ops.lang_from_filename(filename)
 
-    def _fn(prompt: str):
+    def _fn(
+        prompt: str,
+        instances: dict[str, str] = {},
+        temperature: float = 0.2,
+        max_decode_steps: int = 16,
+        top_p: float = 0.95,
+        top_k: int = 40,
+    ):
         assert lang_id.name.lower() in prompt
         assert content in prompt
 
@@ -22,7 +29,14 @@ def _side_effect_few_shot_tpl(content: str, filename: str, model_output: str):
 
 
 def _side_effect_unknown_tpl(content: str, _: str, model_output: str):
-    def _fn(prompt: str):
+    def _fn(
+        prompt: str,
+        instances: dict[str, str] = {},
+        temperature: float = 0.2,
+        max_decode_steps: int = 16,
+        top_p: float = 0.95,
+        top_k: int = 40,
+    ):
         assert content == prompt
 
         return TextGenModelOutput(text=model_output)
@@ -33,7 +47,14 @@ def _side_effect_unknown_tpl(content: str, _: str, model_output: str):
 def _side_effect_lang_prepended(content: str, filename: str, model_output: str):
     lang_id = ops.lang_from_filename(filename)
 
-    def _fn(prompt: str):
+    def _fn(
+        prompt: str,
+        instances: dict[str, str] = {},
+        temperature: float = 0.2,
+        max_decode_steps: int = 16,
+        top_p: float = 0.95,
+        top_k: int = 40,
+    ):
         assert prompt.startswith(f"<{lang_id.name.lower()}>")
         assert prompt.endswith(content)
 
