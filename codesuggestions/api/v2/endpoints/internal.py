@@ -24,7 +24,7 @@ log = structlog.stdlib.get_logger("codesuggestions")
 
 router = APIRouter(
     prefix="/code_completions",
-    tags=["completions"],
+    tags=["internal"],
 )
 
 
@@ -41,7 +41,7 @@ class SuggestionsRequest(BaseModel):
     current_file: CurrentFile
     telemetry: conlist(Telemetry, max_items=10) = []
     provider: str
-    related_contents: str
+    related_contents: str = ""
 
 
 class SuggestionsResponse(BaseModel):
