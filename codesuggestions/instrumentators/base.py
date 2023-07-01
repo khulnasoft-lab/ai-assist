@@ -6,6 +6,8 @@ from starlette_context import context
 from typing import Optional, Any
 from prometheus_client import Counter, Histogram
 from pydantic import BaseModel, constr
+from transformers import T5Tokenizer
+
 
 METRIC_LABELS = ["model_engine", "model_name"]
 
@@ -24,6 +26,7 @@ REQUESTS_COUNTER = Counter("code_suggestions_requests", "Requests count by numbe
 ERRORS_COUNTER = Counter("code_suggestions_errors", "Errors count by number", METRIC_LABELS)
 
 telemetry_logger = structlog.stdlib.get_logger("telemetry")
+tokenizer = T5Tokenizer.from_pretrained('t5-11b', model_max_length=2048)
 
 
 class TextGenModelInstrumentator:
@@ -37,6 +40,7 @@ class TextGenModelInstrumentator:
         context["model_engine"] = self.labels["model_engine"]
         context["model_name"] = self.labels["model_name"]
         context["prompt_length"] = prompt_length
+        context["prompt_t5_token_count"] = self.t5_token_count(prompt)
         context.update(**kwargs)
 
         INFERENCE_PROMPT_HISTOGRAM.labels(**self.labels).observe(prompt_length)
@@ -51,6 +55,9 @@ class TextGenModelInstrumentator:
             INFERENCE_HISTOGRAM.labels(**self.labels).observe(duration)
 
             context["inference_duration_s"] = duration
+
+    def t5_token_count(self, prompt: str):
+        return len(tokenizer.encode_plus(prompt)['input_ids'])
 
 
 class Telemetry(BaseModel):

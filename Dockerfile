@@ -36,7 +36,8 @@ COPY ./scripts /scripts/
 RUN poetry install --no-interaction --no-ansi --no-cache --no-root --only main
 
 # Build tree-sitter library for the grammars supported
-COPY --from=base-image /scripts/build-tree-sitter-lib.py /tmp
+COPY --from=base-image /scripts/ /tmp
+RUN poetry run python /tmp/prepare-tokenizer.py
 RUN poetry run python /tmp/build-tree-sitter-lib.py
 
 ## 
