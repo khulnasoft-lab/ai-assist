@@ -36,7 +36,7 @@ COPY ./scripts /scripts/
 RUN poetry install --no-interaction --no-ansi --no-cache --no-root --only main
 
 # Build tree-sitter library for the grammars supported
-COPY --from=base-image /scripts/ /tmp
+COPY --from=base-image /scripts/ /tmp/
 RUN poetry run python /tmp/prepare-tokenizer.py
 RUN poetry run python /tmp/build-tree-sitter-lib.py
 
@@ -47,6 +47,7 @@ FROM base-image as final
 
 COPY --from=install-image /opt/venv /opt/venv
 COPY --from=install-image lib/*.so ./lib/
+COPY --from=install-image /root/.cache/huggingface /root/.cache/huggingface
 
 COPY poetry.lock pyproject.toml ./
 COPY codesuggestions/ codesuggestions/
