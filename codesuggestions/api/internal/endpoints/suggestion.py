@@ -95,6 +95,6 @@ async def completions(
         metadata=ResponseMetadata(
             identifier="deadbeef",
             model="none",
-            timestamp=round(time.time() * 1000)
+            timestamp=round(time() * 1000)
         )
     )
