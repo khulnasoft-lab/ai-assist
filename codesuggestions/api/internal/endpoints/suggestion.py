@@ -19,7 +19,7 @@ __all__ = [
     "router",
 ]
 
-log = structlog.stdlib.get_logger("codesuggestions")
+# log = structlog.stdlib.get_logger("codesuggestions")
 
 router = APIRouter(
     prefix="/code-suggestions",
@@ -63,6 +63,7 @@ class ResponseMetadata(BaseModel):
     model: str
     timestamp: int
 
+
 class SuggestionsResponse(BaseModel):
     response: str
     metadata: ResponseMetadata
@@ -95,4 +96,5 @@ async def completions(
             identifier="deadbeef",
             model="none",
             timestamp=round(time.time() * 1000)
+        )
     )
