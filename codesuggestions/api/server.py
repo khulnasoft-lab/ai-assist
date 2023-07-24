@@ -11,6 +11,7 @@ from codesuggestions.api.middleware import (
 )
 from codesuggestions.api.monitoring import router as http_monitoring_router
 from codesuggestions.api.v2.api import api_router as http_api_router_v2
+from codesuggestions.api.internal.api import api_router as http_api_router_internal
 from codesuggestions.deps import FastApiContainer
 
 __all__ = [
@@ -55,5 +56,6 @@ def create_fast_api_server(
 
     fastapi_app.include_router(http_api_router_v2)
     fastapi_app.include_router(http_monitoring_router)
+    fastapi_app.include_router(http_api_router_internal)
 
     return fastapi_app
