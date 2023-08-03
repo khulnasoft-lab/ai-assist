@@ -208,6 +208,7 @@ def test_python_context_visitor(
     print(actual_context)
 
     # Split again in order to have a prefix and a suffix again
+    # TODO: fix this. The target_point can't be used here anymore
     actual_prefix, actual_suffix = _split_on_point(actual_context, target_point)
     print("-----------------------")
     print("Prefix")
