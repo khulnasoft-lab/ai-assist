@@ -206,12 +206,15 @@ def _split_on_point(source_code: str, target_point: tuple[int, int]):
     return (prefix, suffix)
 
 
-def _point_to_position(mystring, target_point):
+def _point_to_position(source_code: str, target_point: tuple[int, int]):
     row, col = target_point
-    lines = mystring.splitlines()
+    lines = source_code.splitlines()
 
-    if row < len(lines):
-        line = lines[row]
-        if col <= len(line):
-            return sum(len(lines[i]) + 1 for i in range(row)) + col
-    raise ValueError("Invalid target_point")
+    if row >= len(lines) or col > len(lines[row]):
+        raise ValueError("Invalid target_point")
+
+    pos = 0
+    for i in range(row):
+        pos += len(lines[i]) + 1
+    pos += col
+    return pos
