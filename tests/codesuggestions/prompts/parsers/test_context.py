@@ -138,7 +138,7 @@ def test_base_context_visitor(
         "expected_suffix",
     ),
     [
-        (
+        ( # Test context at function level
             LanguageId.PYTHON,
             """
 def sum(a, b):
@@ -148,10 +148,33 @@ def subtract(a, b):
     return a - b
 """,
             (1, 10),
+"""
+def sum(a, b):
+    return
+""",
+            "",
+        ),
+        ( # Test context at module level
+            LanguageId.PYTHON,
             """
 def sum(a, b):
-    return""",
-            "",
+    return 
+
+def subtract(a, b):
+    return a - b
+""",
+            (2, 0),
+"""
+def sum(a, b):
+    return 
+
+""",
+"""
+
+def subtract(a, b):
+    return a - b
+
+""",
         ),
     ],
 )
@@ -163,9 +186,10 @@ def test_python_context_visitor(
     expected_suffix: str,
 ):
     print()
-    # skip the first \n
+    # skip the first \n [and last \n]
     source_code = source_code[1:]
-    expected_prefix = expected_prefix[1:]
+    expected_prefix = expected_prefix[1:-1]
+    expected_suffix = expected_suffix[1:-1]
     print(f"{target_point=}")
     print("-----------------------")
     print("source_code:")
@@ -179,6 +203,7 @@ def test_python_context_visitor(
     actual_context = context_node.text.decode("utf-8", errors="ignore")
     print("-----------------------")
     print("actual_context:")
+    print(context_node)
     print("-----------------------")
     print(actual_context)
 
@@ -188,11 +213,13 @@ def test_python_context_visitor(
     print("Prefix")
     print("-----------------------")
     print(repr(actual_prefix))
+    print(repr(expected_prefix))
 
     print("-----------------------")
     print("Suffix")
     print("-----------------------")
     print(repr(actual_suffix))
+    print(repr(expected_suffix))
 
     assert actual_prefix == expected_prefix
     assert actual_suffix == expected_suffix
