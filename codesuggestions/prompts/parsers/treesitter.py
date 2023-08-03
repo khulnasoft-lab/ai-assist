@@ -71,7 +71,12 @@ class CodeParser(BaseCodeParser):
 
         self._visit_nodes(visitor)
 
-        return visitor.extract_most_relevant_context()
+        node = visitor.extract_most_relevant_context()
+        if not node:
+            # not able to extract any meaningful context,
+            # fallback to using the root node
+            return self.tree.root_node
+        return node
 
     def _visit_nodes(self, visitor: BaseVisitor):
         tree_dfs(self.tree, visitor)

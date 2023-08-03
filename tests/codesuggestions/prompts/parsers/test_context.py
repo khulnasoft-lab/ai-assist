@@ -127,3 +127,91 @@ def test_base_context_visitor(
 
     assert len(visitor.visited_nodes) == expected_node_count
     assert actual_context.strip() == expected_context.strip()
+
+
+@pytest.mark.parametrize(
+    (
+        "lang_id",
+        "source_code",
+        "target_point",
+        "expected_prefix",
+        "expected_suffix",
+    ),
+    [
+        (
+            LanguageId.PYTHON,
+            """
+def sum(a, b):
+    return 
+
+def subtract(a, b):
+    return a - b
+""",
+            (1, 10),
+            """
+def sum(a, b):
+    return""",
+            "",
+        ),
+    ],
+)
+def test_python_context_visitor(
+    lang_id: LanguageId,
+    source_code: str,
+    target_point: tuple[int, int],
+    expected_prefix: str,
+    expected_suffix: str,
+):
+    print()
+    # skip the first \n
+    source_code = source_code[1:]
+    expected_prefix = expected_prefix[1:]
+    print(f"{target_point=}")
+    print("-----------------------")
+    print("source_code:")
+    print("-----------------------")
+    print(source_code)
+
+    # Extract relevant context around the cursor
+    parser = CodeParser.from_language_id(source_code, lang_id)
+    context_node = parser.context_near_cursor(target_point)
+    assert context_node is not None
+    actual_context = context_node.text.decode("utf-8", errors="ignore")
+    print("-----------------------")
+    print("actual_context:")
+    print("-----------------------")
+    print(actual_context)
+
+    # Split again in order to have a prefix and a suffix again
+    actual_prefix, actual_suffix = _split_on_point(actual_context, target_point)
+    print("-----------------------")
+    print("Prefix")
+    print("-----------------------")
+    print(repr(actual_prefix))
+
+    print("-----------------------")
+    print("Suffix")
+    print("-----------------------")
+    print(repr(actual_suffix))
+
+    assert actual_prefix == expected_prefix
+    assert actual_suffix == expected_suffix
+
+
+# TODO: move these functions
+def _split_on_point(source_code: str, target_point: tuple[int, int]):
+    pos = _point_to_position(source_code, target_point)
+    prefix = source_code[:pos]
+    suffix = source_code[pos:]
+    return (prefix, suffix)
+
+
+def _point_to_position(mystring, target_point):
+    row, col = target_point
+    lines = mystring.splitlines()
+
+    if row < len(lines):
+        line = lines[row]
+        if col <= len(line):
+            return sum(len(lines[i]) + 1 for i in range(row)) + col
+    raise ValueError("Invalid target_point")
