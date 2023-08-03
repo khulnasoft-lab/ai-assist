@@ -138,7 +138,7 @@ def test_base_context_visitor(
         "expected_suffix",
     ),
     [
-        ( # Test context at function level
+        (  # Test context at function level
             LanguageId.PYTHON,
             """
 def sum(a, b):
@@ -148,13 +148,13 @@ def subtract(a, b):
     return a - b
 """,
             (1, 10),
-"""
+            """
 def sum(a, b):
     return
 """,
             "",
         ),
-        ( # Test context at module level
+        (  # Test context at module level
             LanguageId.PYTHON,
             """
 def sum(a, b):
@@ -164,12 +164,12 @@ def subtract(a, b):
     return a - b
 """,
             (2, 0),
-"""
+            """
 def sum(a, b):
     return 
 
 """,
-"""
+            """
 
 def subtract(a, b):
     return a - b
