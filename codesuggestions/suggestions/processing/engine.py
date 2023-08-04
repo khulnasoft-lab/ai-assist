@@ -378,7 +378,6 @@ class ModelEnginePalm(ModelEngineBase):
             try:
                 parser = CodeParser.from_language_id(content, lang_id)
                 if target == "imports":
-                    # TODO: fix instantiating the parser only once
                     extracted = parser.imports()
                 elif target == "function_signatures":
                     extracted = parser.function_signatures()
