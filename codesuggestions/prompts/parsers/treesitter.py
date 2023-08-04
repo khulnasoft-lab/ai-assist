@@ -64,6 +64,14 @@ class CodeParser(BaseCodeParser):
 
         return counts
 
+    def suffix_near_cursor(self, point: tuple[int, int]) -> str:
+        node = self.context_near_cursor(point)
+        point_in_node = self._convert_point_to_relative_point_in_node(node, point)
+        _, suffix = self._split_on_point(
+            node.text.decode("utf-8", errors="ignore"), point_in_node
+        )
+        return suffix
+
     def context_near_cursor(self, point: tuple[int, int]) -> Node:
         visitor = ContextVisitorFactory.from_language_id(self.lang_id, point)
         if visitor is None:
@@ -78,38 +86,36 @@ class CodeParser(BaseCodeParser):
             return self.tree.root_node
         return node
 
-    def suffix_near_cursor(self, point: tuple[int, int]) -> str:
-        context_node = self.context_near_cursor(point)
-        _, truncated_suffix = self._split_node(context_node, point)
-        return truncated_suffix
-
-    def _split_on_point(self, source_code: str, target_point: tuple[int, int]):
-        pos = self._point_to_position(source_code, target_point)
+    def _split_on_point(
+        self, source_code: str, point: tuple[int, int]
+    ) -> tuple[int, int]:
+        """
+        Splits the source_code into a prefix and a suffix
+        """
+        pos = self._point_to_position(source_code, point)
         prefix = source_code[:pos]
         suffix = source_code[pos:]
         return (prefix, suffix)
 
-    def _split_node(self, node: Node, point: tuple[int, int]):
-        point_in_node = self._convert_target_point_to_point_in_node(node, point)
-        return self._split_on_point(
-            node.text.decode("utf-8", errors="ignore"), point_in_node
-        )
+    def _convert_point_to_relative_point_in_node(
+        self, node: Node, point: tuple[int, int]
+    ) -> tuple[int, int]:
+        """
+        Converts the global point to the relative point within the node.
+        """
+        row = point[0] - node.start_point[0]
+        col = point[1] - node.start_point[1]
+        return (row, col)
 
-    def _convert_target_point_to_point_in_node(
-        self, node: Node, target_point: tuple[int, int]
-    ):
-        # translate target_point to point_in_node
-        row_in_node = target_point[0] - node.start_point[0]
-        col_in_node = target_point[1] - node.start_point[1]
-        point_in_node = (row_in_node, col_in_node)
-        return point_in_node
-
-    def _point_to_position(self, source_code: str, target_point: tuple[int, int]):
-        row, col = target_point
+    def _point_to_position(self, source_code: str, point: tuple[int, int]) -> int:
+        """
+        Converts a point to a linear position in the source_code.
+        """
+        row, col = point
         lines = source_code.splitlines()
 
         if row >= len(lines) or col > len(lines[row]):
-            raise ValueError("Invalid target_point")
+            raise ValueError("Invalid point")
 
         pos = 0
         for i in range(row):
