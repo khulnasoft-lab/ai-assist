@@ -147,6 +147,51 @@ def i_want_to_sum(a, b):
     return sum(a, b)
 """
 
+PYTHON_SAMPLE_TWO_CLASSES = """
+from abc import ABC, abstractmethod
+
+from tree_sitter import Node
+
+__all__ = [
+    "BaseVisitor",
+    "BaseCodeParser",
+]
+
+
+class BaseVisitor(ABC):
+    _TARGET_SYMBOLS = []
+
+    @abstractmethod
+    def _visit_node(self, node: Node):
+        pass
+
+    @property
+    def stop_tree_traversal(self) -> bool:
+        return False
+
+    @property
+    def stop_node_traversal(self) -> bool:
+        return False
+
+    def visit(self, node: Node):
+        # use self instead of the class name to access the overridden attribute
+        if self._TARGET_SYMBOLS and node.type in self._TARGET_SYMBOLS:
+            self._visit_node(node)
+
+    def _bytes_to_str(self, data: bytes) -> str:
+        return data.decode("utf-8", errors="ignore")
+
+
+class BaseCodeParser(ABC):
+    @abstractmethod
+    def count_symbols(self) -> dict:
+        pass
+
+    @abstractmethod
+    def imports(self) -> list[str]:
+        pass
+"""
+
 
 @pytest.mark.parametrize(
     (
@@ -198,6 +243,22 @@ def i_want_to_sum(a, b):
             (2, 0),
             "def sum(a, b):\n    return a + b\n",
             "\ndef subtract(a, b):\n    return a - b\n",
+        ),
+        (  # Test context at class level
+            LanguageId.PYTHON,
+            PYTHON_SAMPLE_TWO_CLASSES[1:],
+            (25, 32),
+            # fmt: off
+            PYTHON_SAMPLE_TWO_CLASSES[1:438], # last line:'     def visit(self, node: Node):'
+"""
+        # use self instead of the class name to access the overridden attribute
+        if self._TARGET_SYMBOLS and node.type in self._TARGET_SYMBOLS:
+            self._visit_node(node)
+
+    def _bytes_to_str(self, data: bytes) -> str:
+        return data.decode("utf-8", errors="ignore")
+"""[:-1],
+            # fmt: on
         ),
     ],
 )
