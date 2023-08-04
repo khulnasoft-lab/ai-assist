@@ -340,7 +340,11 @@ class ModelEnginePalm(ModelEngineBase):
         prompt_len_body = (
             self.model.MAX_MODEL_LEN - prompt_len_imports - prompt_len_func_signatures
         )
-        body = self._get_body(prefix, suffix, prompt_len_body)
+        truncated_suffix_info = self._get_suffix_near_cursor(prefix, suffix, lang_id)
+        # TODO: fix this unwrapping
+        body = self._get_body(
+            prefix, truncated_suffix_info.content[0].text, prompt_len_body
+        )
 
         prompt_builder = _PromptBuilder(body.prefix, body.suffix, file_name, lang_id)
         # NOTE that the last thing we add here will appear first in the prefix
@@ -368,18 +372,31 @@ class ModelEnginePalm(ModelEngineBase):
         signatures = self._extract(content, "function_signatures", lang_id)
         return self._to_code_info(signatures, lang_id, as_comments=True)
 
+    def _get_suffix_near_cursor(
+        self, prefix: str, suffix: str, lang_id: Optional[LanguageId] = None
+    ) -> _CodeInfo:
+        new_suffix = self._extract(prefix, suffix, "suffix_near_cursor", lang_id)
+        return self._to_code_info([new_suffix], lang_id, as_comments=True)
+
     @staticmethod
     def _extract(
-        content: str, target: str, lang_id: Optional[LanguageId] = None
+        prefix: str, suffix: str, target: str, lang_id: Optional[LanguageId] = None
     ) -> list[str]:
         extracted = []
         if lang_id:
             try:
-                parser = CodeParser.from_language_id(content, lang_id)
                 if target == "imports":
+                    # TODO: fix instantiating the parser only once
+                    parser = CodeParser.from_language_id(prefix, lang_id)
                     extracted = parser.imports()
                 elif target == "function_signatures":
+                    parser = CodeParser.from_language_id(suffix, lang_id)
                     extracted = parser.function_signatures()
+                elif target == "suffix_near_cursor":
+                    parser = CodeParser.from_language_id(prefix + suffix, lang_id)
+                    row = len(prefix.splitlines()) - 1
+                    col = len(prefix.splitlines()[-1])
+                    _, extracted = parser.suffix_near_cursor(point=(row, col))
                 else:
                     raise ValueError(f"Unknown extraction target {target}")
             except ValueError as e:
