@@ -201,7 +201,7 @@ def i_want_to_sum(a, b):
         ),
     ],
 )
-def test_python_context_visitor(
+def test_suffix_near_cursor(
     lang_id: LanguageId,
     source_code: str,
     target_point: tuple[int, int],
