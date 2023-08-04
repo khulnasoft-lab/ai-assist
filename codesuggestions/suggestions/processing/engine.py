@@ -341,7 +341,6 @@ class ModelEnginePalm(ModelEngineBase):
             self.model.MAX_MODEL_LEN - prompt_len_imports - prompt_len_func_signatures
         )
         truncated_suffix = self._truncate_suffix_near_cursor(prefix, suffix, lang_id)
-        # TODO: fix this unwrapping
         body = self._get_body(prefix, truncated_suffix, prompt_len_body)
 
         prompt_builder = _PromptBuilder(body.prefix, body.suffix, file_name, lang_id)
