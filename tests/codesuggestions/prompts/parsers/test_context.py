@@ -194,7 +194,8 @@ def test_python_context_visitor(
     print("-----------------------")
     print("source_code:")
     print("-----------------------")
-    print(source_code)
+    pos = _point_to_position(source_code, target_point)
+    print(_highlight_position(pos, source_code))
 
     # Extract relevant context around the cursor
     parser = CodeParser.from_language_id(source_code, lang_id)
@@ -246,3 +247,13 @@ def _point_to_position(source_code: str, target_point: tuple[int, int]):
         pos += len(lines[i]) + 1
     pos += col
     return pos
+
+def _highlight_position(pos, mystring):
+    # fix this quadratic loop
+    text_highlight = ""
+    for i, x in enumerate(mystring):
+        if i == pos:
+            text_highlight += f"\033[44;33m{x}\033[m"
+        else:
+            text_highlight += x
+    return text_highlight
