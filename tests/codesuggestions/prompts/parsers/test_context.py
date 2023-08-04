@@ -129,6 +129,15 @@ def test_base_context_visitor(
     assert actual_context.strip() == expected_context.strip()
 
 
+PYTHON_SAMPLE_TWO_FUNCTIONS = """
+def sum(a, b):
+    return a + b
+
+def subtract(a, b):
+    return a - b
+"""
+
+
 @pytest.mark.parametrize(
     (
         "lang_id",
@@ -140,41 +149,31 @@ def test_base_context_visitor(
     [
         (  # Test context at function level
             LanguageId.PYTHON,
-            """
-def sum(a, b):
-    return 
-
-def subtract(a, b):
-    return a - b
-""",
-            (1, 10),
-            """
-def sum(a, b):
-    return
-""",
-            "",
+            PYTHON_SAMPLE_TWO_FUNCTIONS[1:],
+            (0, 14),
+            "def sum(a, b):",
+            "\n    return a + b",
         ),
-        (  # Test context at module level
+        (  # Test context at function level
             LanguageId.PYTHON,
-            """
-def sum(a, b):
-    return 
-
-def subtract(a, b):
-    return a - b
-""",
-            (2, 0),
-            """
-def sum(a, b):
-    return 
-
-""",
-            """
-
-def subtract(a, b):
-    return a - b
-
-""",
+            PYTHON_SAMPLE_TWO_FUNCTIONS[1:],
+            (0, 13),
+            "def sum(a, b)",
+            ":\n    return a + b",
+        ),
+        (  # Test context at function level
+            LanguageId.PYTHON,
+            PYTHON_SAMPLE_TWO_FUNCTIONS[1:],
+            (0, 12),
+            "def sum(a, b",
+            "):\n    return a + b",
+        ),
+        (  # Test context at function level
+            LanguageId.PYTHON,
+            PYTHON_SAMPLE_TWO_FUNCTIONS[1:],
+            (0, 11),
+            "def sum(a, ",
+            "b):\n    return a + b",
         ),
     ],
 )
@@ -186,11 +185,8 @@ def test_python_context_visitor(
     expected_suffix: str,
 ):
     print()
-    # skip the first \n [and last \n]
-    source_code = source_code[1:]
-    expected_prefix = expected_prefix[1:-1]
-    expected_suffix = expected_suffix[1:-1]
-    print(f"{target_point=}")
+    # print("-----------------------")
+    # print(f"{target_point=}")
     print("-----------------------")
     print("source_code:")
     print("-----------------------")
@@ -205,8 +201,10 @@ def test_python_context_visitor(
     print("-----------------------")
     print("actual_context:")
     print(context_node)
-    print("-----------------------")
+    print("---")
     print(actual_context)
+    print("---")
+    print(_highlight_position(pos, repr(actual_context)))
 
     # Split again in order to have a prefix and a suffix again
     # TODO: fix this. The target_point can't be used here anymore
