@@ -65,14 +65,14 @@ class CodeParser(BaseCodeParser):
         return counts
 
     def suffix_near_cursor(self, point: tuple[int, int]) -> str:
-        node = self.context_near_cursor(point)
+        node = self._context_near_cursor(point)
         point_in_node = self._convert_point_to_relative_point_in_node(node, point)
         _, suffix = self._split_on_point(
             node.text.decode("utf-8", errors="ignore"), point_in_node
         )
         return suffix
 
-    def context_near_cursor(self, point: tuple[int, int]) -> Node:
+    def _context_near_cursor(self, point: tuple[int, int]) -> Node:
         visitor = ContextVisitorFactory.from_language_id(self.lang_id, point)
         if visitor is None:
             return None
