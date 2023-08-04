@@ -435,7 +435,12 @@ class ModelEnginePalm(ModelEngineBase):
     def _truncate_suffix_context(
         self, prefix: str, suffix: str, lang_id: Optional[LanguageId] = None
     ) -> str:
-        parser = CodeParser.from_language_id(prefix + suffix, lang_id)
+        try:
+            parser = CodeParser.from_language_id(prefix + suffix, lang_id)
+        except ValueError as e:
+            log.warning(f"Failed to parse code: {e}")
+            # default to the original suffix
+            return suffix
 
         def _make_point(prefix: str) -> tuple[int, int]:
             row = len(prefix.splitlines()) - 1
