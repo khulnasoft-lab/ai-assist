@@ -202,6 +202,7 @@ class BaseCodeParser(ABC):
         "expected_suffix",
     ),
     [
+        # TODO: Add a test to sweep the full range of the context rectangle
         (  # Test context at function level
             LanguageId.PYTHON,
             PYTHON_SAMPLE_TWO_FUNCTIONS[1:],
