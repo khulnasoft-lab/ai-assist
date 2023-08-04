@@ -340,7 +340,7 @@ class ModelEnginePalm(ModelEngineBase):
         prompt_len_body = (
             self.model.MAX_MODEL_LEN - prompt_len_imports - prompt_len_func_signatures
         )
-        truncated_suffix = self._truncate_suffix_near_cursor(prefix, suffix, lang_id)
+        truncated_suffix = self._truncate_suffix_context(prefix, suffix, lang_id)
         body = self._get_body(prefix, truncated_suffix, prompt_len_body)
 
         prompt_builder = _PromptBuilder(body.prefix, body.suffix, file_name, lang_id)
@@ -432,13 +432,17 @@ class ModelEnginePalm(ModelEngineBase):
 
         return _CodeBody(prefix=prefix_truncated, suffix=suffix_truncated)
 
-    def _truncate_suffix_near_cursor(
+    def _truncate_suffix_context(
         self, prefix: str, suffix: str, lang_id: Optional[LanguageId] = None
     ) -> str:
         parser = CodeParser.from_language_id(prefix + suffix, lang_id)
-        row = len(prefix.splitlines()) - 1
-        col = len(prefix.splitlines()[-1])
-        truncated_suffix = parser.suffix_near_cursor(point=(row, col))
+
+        def _make_point(prefix: str) -> tuple[int, int]:
+            row = len(prefix.splitlines()) - 1
+            col = len(prefix.splitlines()[-1])
+            return (row, col)
+
+        truncated_suffix = parser.suffix_near_cursor(point=_make_point(prefix))
         return truncated_suffix
 
     def _truncate_content(
