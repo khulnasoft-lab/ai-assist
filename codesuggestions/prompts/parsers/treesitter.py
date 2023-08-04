@@ -77,6 +77,43 @@ class CodeParser(BaseCodeParser):
             # fallback to using the root node
             return self.tree.root_node
         return node
+    
+    def suffix_near_cursor(self, point: tuple[int, int]) -> str:
+        context_node = self.context_near_cursor(point)
+        _, truncated_suffix = self._split_node(context_node, point)
+        return truncated_suffix
+    
+    def _split_on_point(self, source_code: str, target_point: tuple[int, int]):
+        pos = self._point_to_position(source_code, target_point)
+        prefix = source_code[:pos]
+        suffix = source_code[pos:]
+        return (prefix, suffix)
+
+    def _split_node(self, node: Node, point: tuple[int, int]):
+        point_in_node = self._convert_target_point_to_point_in_node(node, point)
+        return self._split_on_point(node.text.decode("utf-8", errors="ignore"), point_in_node)
+
+
+    def _convert_target_point_to_point_in_node(self, node: Node, target_point: tuple[int, int]):
+        # translate target_point to point_in_node
+        row_in_node = target_point[0] - node.start_point[0]
+        col_in_node = target_point[1] - node.start_point[1]
+        point_in_node = (row_in_node, col_in_node)
+        return point_in_node
+
+
+    def _point_to_position(self, source_code: str, target_point: tuple[int, int]):
+        row, col = target_point
+        lines = source_code.splitlines()
+
+        if row >= len(lines) or col > len(lines[row]):
+            raise ValueError("Invalid target_point")
+
+        pos = 0
+        for i in range(row):
+            pos += len(lines[i]) + 1
+        pos += col
+        return pos
 
     def _visit_nodes(self, visitor: BaseVisitor):
         tree_dfs(self.tree, visitor)
