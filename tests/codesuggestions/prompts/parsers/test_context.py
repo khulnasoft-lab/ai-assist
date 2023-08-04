@@ -175,6 +175,13 @@ def subtract(a, b):
             "def sum(a, ",
             "b):\n    return a + b",
         ),
+        (  # Test context at module level
+            LanguageId.PYTHON,
+            PYTHON_SAMPLE_TWO_FUNCTIONS[1:],
+            (2, 0),
+            "def sum(a, b):\n    return a + b\n",
+            "\ndef subtract(a, b):\n    return a - b\n",
+        ),
     ],
 )
 def test_python_context_visitor(
