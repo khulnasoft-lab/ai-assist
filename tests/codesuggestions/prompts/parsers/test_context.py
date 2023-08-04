@@ -1,4 +1,5 @@
 import pytest
+from tree_sitter import Node
 
 from codesuggestions.prompts.parsers import CodeParser
 from codesuggestions.prompts.parsers.context_extractors import BaseContextVisitor
@@ -137,6 +138,15 @@ def subtract(a, b):
     return a - b
 """
 
+PYTHON_SAMPLE_FUNCTION_WITHIN_FUNCTION = """
+import os
+
+def i_want_to_sum(a, b):
+    def sum(a, b):
+        return a + b
+    return sum(a, b)
+"""
+
 
 @pytest.mark.parametrize(
     (
@@ -175,6 +185,13 @@ def subtract(a, b):
             "def sum(a, ",
             "b):\n    return a + b",
         ),
+        (  # Test context at function level
+            LanguageId.PYTHON,
+            PYTHON_SAMPLE_FUNCTION_WITHIN_FUNCTION[1:],
+            (2, 20),
+            'import os\n\ndef i_want_to_sum(a,',
+            ' b):\n    def sum(a, b):\n        return a + b\n    return sum(a, b)',
+        ),
         (  # Test context at module level
             LanguageId.PYTHON,
             PYTHON_SAMPLE_TWO_FUNCTIONS[1:],
@@ -192,8 +209,8 @@ def test_python_context_visitor(
     expected_suffix: str,
 ):
     print()
-    # print("-----------------------")
-    # print(f"{target_point=}")
+    print("-----------------------")
+    print(f"{target_point=}")
     print("-----------------------")
     print("source_code:")
     print("-----------------------")
@@ -204,18 +221,16 @@ def test_python_context_visitor(
     parser = CodeParser.from_language_id(source_code, lang_id)
     context_node = parser.context_near_cursor(target_point)
     assert context_node is not None
-    actual_context = context_node.text.decode("utf-8", errors="ignore")
     print("-----------------------")
-    print("actual_context:")
+    print("context_node:")
+    print(context_node.text.decode("utf-8", errors="ignore"))
     print(context_node)
-    print("---")
-    print(actual_context)
-    print("---")
-    print(_highlight_position(pos, repr(actual_context)))
 
-    # Split again in order to have a prefix and a suffix again
-    # TODO: fix this. The target_point can't be used here anymore
-    actual_prefix, actual_suffix = _split_on_point(actual_context, target_point)
+    actual_prefix, _ = _split_on_point(source_code, target_point)
+    
+    # Split again in order to have a prefix and a suffix, but do so relatively to the context node.
+    # Also ignore the prefix, since we are only interested in truncating the suffix.
+    _, actual_truncated_suffix = _split_node(context_node, target_point)
     print("-----------------------")
     print("Prefix")
     print("-----------------------")
@@ -225,11 +240,11 @@ def test_python_context_visitor(
     print("-----------------------")
     print("Suffix")
     print("-----------------------")
-    print(repr(actual_suffix))
+    print(repr(actual_truncated_suffix))
     print(repr(expected_suffix))
 
     assert actual_prefix == expected_prefix
-    assert actual_suffix == expected_suffix
+    assert actual_truncated_suffix == expected_suffix
 
 
 # TODO: move these functions
@@ -238,6 +253,19 @@ def _split_on_point(source_code: str, target_point: tuple[int, int]):
     prefix = source_code[:pos]
     suffix = source_code[pos:]
     return (prefix, suffix)
+
+
+def _split_node(node: Node, point: tuple[int, int]):
+    point_in_node = _convert_target_point_to_point_in_node(node, point)
+    return _split_on_point(node.text.decode("utf-8", errors="ignore"), point_in_node)
+
+
+def _convert_target_point_to_point_in_node(node: Node, target_point: tuple[int, int]):
+    # translate target_point to point_in_node
+    row_in_node = target_point[0] - node.start_point[0]
+    col_in_node = target_point[1] - node.start_point[1]
+    point_in_node = (row_in_node, col_in_node)
+    return point_in_node
 
 
 def _point_to_position(source_code: str, target_point: tuple[int, int]):
@@ -252,6 +280,20 @@ def _point_to_position(source_code: str, target_point: tuple[int, int]):
         pos += len(lines[i]) + 1
     pos += col
     return pos
+
+
+def _position_to_point(source_code: str, pos: int):
+    lines = source_code.splitlines()
+    row = 0
+    col = 0
+    for line in lines:
+        for col in line:
+            pos -= 1
+            if pos == 0:
+                return (row, col)
+            col += 1
+        line += 1
+    raise ValueError("Invalid position")
 
 
 def _highlight_position(pos, mystring):
