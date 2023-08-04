@@ -208,92 +208,11 @@ def test_python_context_visitor(
     expected_prefix: str,
     expected_suffix: str,
 ):
-    print()
-    print("-----------------------")
-    print(f"{target_point=}")
-    print("-----------------------")
-    print("source_code:")
-    print("-----------------------")
-    pos = _point_to_position(source_code, target_point)
-    print(_highlight_position(pos, source_code))
-
-    # Extract relevant context around the cursor
     parser = CodeParser.from_language_id(source_code, lang_id)
-    context_node = parser.context_near_cursor(target_point)
-    assert context_node is not None
-    print("-----------------------")
-    print("context_node:")
-    print(context_node.text.decode("utf-8", errors="ignore"))
-    print(context_node)
-
-    actual_prefix, _ = _split_on_point(source_code, target_point)
-
-    # Split again in order to have a prefix and a suffix, but do so relatively to the context node.
-    # Also ignore the prefix, since we are only interested in truncating the suffix.
-    _, actual_truncated_suffix = _split_node(context_node, target_point)
-    print("-----------------------")
-    print("Prefix")
-    print("-----------------------")
-    print(repr(actual_prefix))
-    print(repr(expected_prefix))
-
-    print("-----------------------")
-    print("Suffix")
-    print("-----------------------")
-    print(repr(actual_truncated_suffix))
-    print(repr(expected_suffix))
-
+    actual_prefix, _ = parser._split_on_point(source_code, target_point)
+    actual_truncated_suffix = parser.suffix_near_cursor(target_point)
     assert actual_prefix == expected_prefix
     assert actual_truncated_suffix == expected_suffix
-
-
-# TODO: move these functions
-def _split_on_point(source_code: str, target_point: tuple[int, int]):
-    pos = _point_to_position(source_code, target_point)
-    prefix = source_code[:pos]
-    suffix = source_code[pos:]
-    return (prefix, suffix)
-
-
-def _split_node(node: Node, point: tuple[int, int]):
-    point_in_node = _convert_target_point_to_point_in_node(node, point)
-    return _split_on_point(node.text.decode("utf-8", errors="ignore"), point_in_node)
-
-
-def _convert_target_point_to_point_in_node(node: Node, target_point: tuple[int, int]):
-    # translate target_point to point_in_node
-    row_in_node = target_point[0] - node.start_point[0]
-    col_in_node = target_point[1] - node.start_point[1]
-    point_in_node = (row_in_node, col_in_node)
-    return point_in_node
-
-
-def _point_to_position(source_code: str, target_point: tuple[int, int]):
-    row, col = target_point
-    lines = source_code.splitlines()
-
-    if row >= len(lines) or col > len(lines[row]):
-        raise ValueError("Invalid target_point")
-
-    pos = 0
-    for i in range(row):
-        pos += len(lines[i]) + 1
-    pos += col
-    return pos
-
-
-def _position_to_point(source_code: str, pos: int):
-    lines = source_code.splitlines()
-    row = 0
-    col = 0
-    for line in lines:
-        for col in line:
-            pos -= 1
-            if pos == 0:
-                return (row, col)
-            col += 1
-        line += 1
-    raise ValueError("Invalid position")
 
 
 def _highlight_position(pos, mystring):
