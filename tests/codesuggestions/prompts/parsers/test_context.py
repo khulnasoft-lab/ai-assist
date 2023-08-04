@@ -248,6 +248,7 @@ def _point_to_position(source_code: str, target_point: tuple[int, int]):
     pos += col
     return pos
 
+
 def _highlight_position(pos, mystring):
     # fix this quadratic loop
     text_highlight = ""
