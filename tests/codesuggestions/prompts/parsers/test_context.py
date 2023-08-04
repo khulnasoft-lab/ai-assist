@@ -189,8 +189,8 @@ def i_want_to_sum(a, b):
             LanguageId.PYTHON,
             PYTHON_SAMPLE_FUNCTION_WITHIN_FUNCTION[1:],
             (2, 20),
-            'import os\n\ndef i_want_to_sum(a,',
-            ' b):\n    def sum(a, b):\n        return a + b\n    return sum(a, b)',
+            "import os\n\ndef i_want_to_sum(a,",
+            " b):\n    def sum(a, b):\n        return a + b\n    return sum(a, b)",
         ),
         (  # Test context at module level
             LanguageId.PYTHON,
@@ -227,7 +227,7 @@ def test_python_context_visitor(
     print(context_node)
 
     actual_prefix, _ = _split_on_point(source_code, target_point)
-    
+
     # Split again in order to have a prefix and a suffix, but do so relatively to the context node.
     # Also ignore the prefix, since we are only interested in truncating the suffix.
     _, actual_truncated_suffix = _split_node(context_node, target_point)
