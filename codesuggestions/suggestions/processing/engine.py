@@ -440,7 +440,7 @@ class ModelEnginePalm(ModelEngineBase):
         parser = CodeParser.from_language_id(prefix + suffix, lang_id)
         row = len(prefix.splitlines()) - 1
         col = len(prefix.splitlines()[-1])
-        _, truncated_suffix = parser.suffix_near_cursor(point=(row, col))
+        truncated_suffix = parser.suffix_near_cursor(point=(row, col))
         return truncated_suffix
 
     def _truncate_content(
