@@ -75,7 +75,7 @@ class CodeParser(BaseCodeParser):
     def _context_near_cursor(self, point: tuple[int, int]) -> Node:
         visitor = ContextVisitorFactory.from_language_id(self.lang_id, point)
         if visitor is None:
-            return None
+            return self.tree.root_node
 
         self._visit_nodes(visitor)
 
