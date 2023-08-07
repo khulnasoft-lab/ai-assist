@@ -64,27 +64,30 @@ class CodeParser(BaseCodeParser):
 
         return counts
 
-    def suffix_near_cursor(self, point: tuple[int, int]) -> str:
+    def suffix_near_cursor(self, point: tuple[int, int]) -> Optional[str]:
+        """
+        Finds the suffix near the cursor based on language-speficic rules.
+
+        Returns None if there are no rules for the language or no relevant context was found.
+        """
         node = self._context_near_cursor(point)
+        if not node:
+            return None
+
         point_in_node = self._convert_point_to_relative_point_in_node(node, point)
         _, suffix = self._split_on_point(
             node.text.decode("utf-8", errors="ignore"), point_in_node
         )
         return suffix
 
-    def _context_near_cursor(self, point: tuple[int, int]) -> Node:
+    def _context_near_cursor(self, point: tuple[int, int]) -> Optional[Node]:
         visitor = ContextVisitorFactory.from_language_id(self.lang_id, point)
         if visitor is None:
-            return self.tree.root_node
+            return None
 
         self._visit_nodes(visitor)
 
-        node = visitor.extract_most_relevant_context()
-        if not node:
-            # not able to extract any meaningful context,
-            # fallback to using the root node
-            return self.tree.root_node
-        return node
+        return visitor.extract_most_relevant_context()
 
     def _split_on_point(
         self, source_code: str, point: tuple[int, int]
