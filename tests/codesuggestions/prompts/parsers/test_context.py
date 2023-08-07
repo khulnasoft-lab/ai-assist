@@ -345,7 +345,28 @@ def test_suffix_near_cursor(
 ):
     parser = CodeParser.from_language_id(source_code, lang_id)
     actual_prefix, _ = parser._split_on_point(source_code, target_point)
+
+    print(f"{target_point=}")
+    print("-----------------------")
+    print("source_code:")
+    print("-----------------------")
+    pos = parser._point_to_position(source_code, target_point)
+    print(_highlight_position(pos, source_code))
+
     actual_truncated_suffix = parser.suffix_near_cursor(target_point)
+
+    print("-----------------------")
+    print("Prefix")
+    print("-----------------------")
+    print(repr(actual_prefix))
+    print(repr(expected_prefix))
+
+    print("-----------------------")
+    print("Suffix")
+    print("-----------------------")
+    print(repr(actual_truncated_suffix))
+    print(repr(expected_suffix))
+
     assert actual_prefix == expected_prefix
     assert actual_truncated_suffix == expected_suffix
 
