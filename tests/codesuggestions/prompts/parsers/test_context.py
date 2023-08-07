@@ -192,6 +192,25 @@ class BaseCodeParser(ABC):
         pass
 """
 
+PYTHON_SAMPLE_CLASS_WITHIN_CLASS = """
+class SuggestionsResponse(BaseModel):
+    class Choice(BaseModel):
+        text: str
+        index: int = 0
+        finish_reason: str = "length"
+
+    class Model(BaseModel):
+        engine: str
+        name: str
+        lang: str
+
+    id: str
+    model: Model
+    object: str = "text_completion"
+    created: int
+    choices: list[Choice]
+"""
+
 
 @pytest.mark.parametrize(
     (
@@ -259,6 +278,42 @@ class BaseCodeParser(ABC):
     def _bytes_to_str(self, data: bytes) -> str:
         return data.decode("utf-8", errors="ignore")
 """[:-1],
+            # fmt: on
+        ),
+        (  # Test context at class within class, cursor within nested the class
+            LanguageId.PYTHON,
+            PYTHON_SAMPLE_CLASS_WITHIN_CLASS[1:],
+            (4, 21),
+            # fmt: off
+            PYTHON_SAMPLE_CLASS_WITHIN_CLASS[1:130],
+""": str = "length"
+
+    class Model(BaseModel):
+        engine: str
+        name: str
+        lang: str
+
+    id: str
+    model: Model
+    object: str = "text_completion"
+    created: int
+    choices: list[Choice]
+"""[:-1],
+            # fmt: on
+        ),
+        (  # Test context at class within class, cursor within outer class
+            LanguageId.PYTHON,
+            PYTHON_SAMPLE_CLASS_WITHIN_CLASS[1:],
+            (11, 0),
+            # fmt: off
+            PYTHON_SAMPLE_CLASS_WITHIN_CLASS[1:233],
+"""
+    id: str
+    model: Model
+    object: str = "text_completion"
+    created: int
+    choices: list[Choice]
+"""[1:-1],
             # fmt: on
         ),
     ],
