@@ -443,8 +443,9 @@ class ModelEnginePalm(ModelEngineBase):
             return suffix
 
         def _make_point(prefix: str) -> tuple[int, int]:
-            row = len(prefix.splitlines()) - 1
-            col = len(prefix.splitlines()[-1])
+            lines = prefix.splitlines()
+            row = len(lines) - 1
+            col = len(lines[-1])
             return (row, col)
 
         truncated_suffix = parser.suffix_near_cursor(point=_make_point(prefix))
