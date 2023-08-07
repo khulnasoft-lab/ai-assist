@@ -301,6 +301,24 @@ class SuggestionsResponse(BaseModel):
 """[:-1],
             # fmt: on
         ),
+        (  # Test context at class within class, cursor within the 2nd nested class
+            LanguageId.PYTHON,
+            PYTHON_SAMPLE_CLASS_WITHIN_CLASS[1:],
+            (7, 15),
+            # fmt: off
+            PYTHON_SAMPLE_CLASS_WITHIN_CLASS[1:191],
+""" str
+        name: str
+        lang: str
+
+    id: str
+    model: Model
+    object: str = "text_completion"
+    created: int
+    choices: list[Choice]
+"""[:-1],
+            # fmt: on
+        ),
         (  # Test context at class within class, cursor within outer class
             LanguageId.PYTHON,
             PYTHON_SAMPLE_CLASS_WITHIN_CLASS[1:],
