@@ -14,7 +14,7 @@ class Experiment:
 
     def run(self, **kwargs):
         (variant_idx,) = random.choices(range(len(self.variants)), weights=self.weights)
-        log.info(f"running experiment", exp=self.name, variant=variant_idx)
+        log.info("running experiment", exp=self.name, variant=variant_idx)
         return self.variants[variant_idx](**kwargs)
 
 
@@ -23,7 +23,7 @@ class ExperimentRegistry:
         self.experiments = {}
 
     def add_experiment(self, experiment: Experiment):
-        log.info(f"registering experiment", exp=experiment.name)
+        log.info("registering experiment", exp=experiment.name)
         self.experiments[experiment.name] = experiment
 
     def get_experiment(self, experiment_name: str) -> Optional[Experiment]:
