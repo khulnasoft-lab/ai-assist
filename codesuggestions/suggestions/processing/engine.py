@@ -354,7 +354,7 @@ class ModelEnginePalm(ModelEngineBase):
             )
             body = self._get_body(prefix, truncated_suffix, prompt_len_body)
         else:
-            body = self._get_body(prefix, truncated_suffix, prompt_len_body)
+            body = self._get_body(prefix, suffix, prompt_len_body)
 
         prompt_builder = _PromptBuilder(body.prefix, body.suffix, file_name, lang_id)
         # NOTE that the last thing we add here will appear first in the prefix
