@@ -23,7 +23,11 @@ class ExperimentRegistry:
         self.experiments = {}
 
     def add_experiment(self, experiment: Experiment):
-        log.info("registering experiment", exp=experiment.name, variants=len(experiment.variants))
+        log.info(
+            "registering experiment",
+            exp=experiment.name,
+            variants=len(experiment.variants),
+        )
         self.experiments[experiment.name] = experiment
 
     def get_experiment(self, experiment_name: str) -> Optional[Experiment]:
