@@ -7,8 +7,9 @@ log = structlog.stdlib.get_logger("codesuggestions")
 
 
 class Experiment:
-    def __init__(self, name: str, variants: list = [], weights: list = []):
+    def __init__(self, name: str, description: str, variants: list = [], weights: list = []):
         self.name = name
+        self.description = description
         self.variants = variants
         self.weights = weights
 
