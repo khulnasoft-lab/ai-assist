@@ -1,6 +1,10 @@
 import random
 from typing import Optional
 
+import structlog
+
+log = structlog.stdlib.get_logger("codesuggestions")
+
 
 class Experiment:
     def __init__(self, name: str, variants: list = [], weights: list = []):
@@ -9,8 +13,9 @@ class Experiment:
         self.weights = weights
 
     def run(self, **kwargs):
-        variant_func = random.choices(self.variants, weights=self.weights)[0]
-        return variant_func(**kwargs)
+        (variant_idx,) = random.choices(range(len(self.variants)), weights=self.weights)
+        log.info(f"running experiment", exp=self.name, variant=variant_idx)
+        return self.variants[variant_idx](**kwargs)
 
 
 class ExperimentRegistry:
@@ -18,6 +23,7 @@ class ExperimentRegistry:
         self.experiments = {}
 
     def add_experiment(self, experiment: Experiment):
+        log.info(f"registering experiment", exp=experiment.name)
         self.experiments[experiment.name] = experiment
 
     def get_experiment(self, experiment_name: str) -> Optional[Experiment]:
