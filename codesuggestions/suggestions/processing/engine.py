@@ -4,6 +4,10 @@ from typing import Any, Callable, NamedTuple, Optional
 import structlog
 from transformers import PreTrainedTokenizer
 
+from codesuggestions.experiments.exp_truncate_suffix_python import (
+    exp_truncate_suffix_python,
+)
+from codesuggestions.experiments.registry import ExperimentRegistry
 from codesuggestions.instrumentators import TextGenModelInstrumentator
 from codesuggestions.models import (
     PalmCodeGenBaseModel,
@@ -281,6 +285,9 @@ class ModelEnginePalm(ModelEngineBase):
             model.model_engine, model.model_name
         )
 
+        self.experiment_registry = ExperimentRegistry()
+        self.experiment_registry.add_experiment(exp_truncate_suffix_python)
+
     async def _generate_completion(
         self,
         prefix: str,
@@ -340,8 +347,14 @@ class ModelEnginePalm(ModelEngineBase):
         prompt_len_body = (
             self.model.MAX_MODEL_LEN - prompt_len_imports - prompt_len_func_signatures
         )
-        truncated_suffix = self._truncate_suffix_context(prefix, suffix, lang_id)
-        body = self._get_body(prefix, truncated_suffix, prompt_len_body)
+
+        if exp := self.experiment_registry.get_experiment("exp_truncate_suffix_python"):
+            truncated_suffix = exp.run(
+                logger=log, prefix=prefix, suffix=suffix, lang_id=lang_id
+            )
+            body = self._get_body(prefix, truncated_suffix, prompt_len_body)
+        else:
+            body = self._get_body(prefix, truncated_suffix, prompt_len_body)
 
         prompt_builder = _PromptBuilder(body.prefix, body.suffix, file_name, lang_id)
         # NOTE that the last thing we add here will appear first in the prefix
@@ -431,25 +444,6 @@ class ModelEnginePalm(ModelEngineBase):
         )
 
         return _CodeBody(prefix=prefix_truncated, suffix=suffix_truncated)
-
-    def _truncate_suffix_context(
-        self, prefix: str, suffix: str, lang_id: Optional[LanguageId] = None
-    ) -> str:
-        try:
-            parser = CodeParser.from_language_id(prefix + suffix, lang_id)
-        except ValueError as e:
-            log.warning(f"Failed to parse code: {e}")
-            # default to the original suffix
-            return suffix
-
-        def _make_point(prefix: str) -> tuple[int, int]:
-            lines = prefix.splitlines()
-            row = len(lines) - 1
-            col = len(lines[-1])
-            return (row, col)
-
-        truncated_suffix = parser.suffix_near_cursor(point=_make_point(prefix))
-        return truncated_suffix or suffix
 
     def _truncate_content(
         self, val: str, max_length: int, truncation_side: str = "left"
