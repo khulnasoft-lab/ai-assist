@@ -315,7 +315,7 @@ class ModelEnginePalm(ModelEngineBase):
                 self._count_symbols(prompt.prefix, lang_id, watch_container)
 
                 # log experiments included in this request
-                watch_container.register_experiments(prompt.metadata.experiments)
+                self._count_experiments(prompt.metadata.experiments, watch_container)
 
                 if res := await self.model.generate(
                     prompt.prefix, prompt.suffix, **kwargs
@@ -489,3 +489,11 @@ class ModelEnginePalm(ModelEngineBase):
             self.log_symbol_map(watch_container, symbol_map)
         except ValueError as e:
             log.warning(f"Failed to parse code: {e}")
+
+    def _count_experiments(
+        self,
+        experiments: list[ExperimentOutput],
+        watch_container: TextGenModelInstrumentator.WatchContainer,
+    ) -> None:
+        watch_container.register_experiments(experiments)
+        self.increment_experiment_counter(experiments)

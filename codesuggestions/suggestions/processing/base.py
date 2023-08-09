@@ -28,6 +28,10 @@ CODE_SYMBOL_COUNTER = Counter(
     "code_suggestions_prompt_symbols", "Prompt symbols count", ["lang", "symbol"]
 )
 
+EXPERIMENT_COUNTER = Counter(
+    "code_suggestions_experiments", "Ongoing experiments", ["name", "variant"]
+)
+
 
 class MetadataCodeContent(NamedTuple):
     length: int
@@ -108,6 +112,12 @@ class ModelEngineBase(ABC):
         symbol_map: dict,
     ) -> None:
         watch_container.register_prompt_symbols(symbol_map)
+
+    def increment_experiment_counter(self, experiments: list[ExperimentOutput]):
+        for exp_output in experiments:
+            EXPERIMENT_COUNTER.labels(
+                name=exp_output.name, variant=exp_output.selected_variant
+            ).inc()
 
     @staticmethod
     def _read_json(filepath: Path) -> dict[str, list]:
