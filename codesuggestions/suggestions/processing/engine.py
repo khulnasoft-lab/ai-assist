@@ -7,7 +7,7 @@ from transformers import PreTrainedTokenizer
 from codesuggestions.experiments.exp_truncate_suffix_python import (
     exp_truncate_suffix_python,
 )
-from codesuggestions.experiments.registry import ExperimentRegistry
+from codesuggestions.experiments.registry import ExperimentOutput, ExperimentRegistry
 from codesuggestions.instrumentators import TextGenModelInstrumentator
 from codesuggestions.models import (
     PalmCodeGenBaseModel,
@@ -122,6 +122,7 @@ class _PromptBuilder:
         suffix: _CodeContent,
         file_name: str,
         lang_id: Optional[LanguageId] = None,
+        experiments: Optional[list[ExperimentOutput]] = [],
     ):
         self.lang_id = lang_id
         self.file_name = file_name
@@ -138,6 +139,7 @@ class _PromptBuilder:
                 length=len(suffix.text),
                 length_tokens=suffix.length_tokens,
             ),
+            "experiments": experiments,
         }
 
     def add_extra_info(
@@ -191,6 +193,7 @@ class _PromptBuilder:
                 suffix=self._metadata["suffix"],
                 imports=self._metadata.get("imports", None),
                 function_signatures=self._metadata.get("function_signatures", None),
+                experiments=self._metadata["experiments"],
             ),
         )
 
@@ -311,6 +314,9 @@ class ModelEnginePalm(ModelEngineBase):
                 # count symbols of the final prompt
                 self._count_symbols(prompt.prefix, lang_id, watch_container)
 
+                # log experiments included in this request
+                watch_container.register_experiments(prompt.metadata.experiments)
+
                 if res := await self.model.generate(
                     prompt.prefix, prompt.suffix, **kwargs
                 ):
@@ -348,15 +354,20 @@ class ModelEnginePalm(ModelEngineBase):
             self.model.MAX_MODEL_LEN - prompt_len_imports - prompt_len_func_signatures
         )
 
+        experiments = []
         if exp := self.experiment_registry.get_experiment("exp_truncate_suffix_python"):
-            truncated_suffix = exp.run(
+            experiment_output = exp.run(
                 logger=log, prefix=prefix, suffix=suffix, lang_id=lang_id
             )
+            experiments.append(experiment_output)
+            truncated_suffix = experiment_output.output
             body = self._get_body(prefix, truncated_suffix, prompt_len_body)
         else:
             body = self._get_body(prefix, suffix, prompt_len_body)
 
-        prompt_builder = _PromptBuilder(body.prefix, body.suffix, file_name, lang_id)
+        prompt_builder = _PromptBuilder(
+            body.prefix, body.suffix, file_name, lang_id, experiments
+        )
         # NOTE that the last thing we add here will appear first in the prefix
         prompt_builder.add_extra_info(
             func_signatures,

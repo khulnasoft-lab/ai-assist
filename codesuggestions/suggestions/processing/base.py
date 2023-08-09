@@ -5,6 +5,7 @@ from typing import Any, NamedTuple, Optional
 
 from prometheus_client import Counter
 
+from codesuggestions.experiments.registry import ExperimentOutput
 from codesuggestions.instrumentators import TextGenModelInstrumentator
 from codesuggestions.suggestions.processing.ops import LanguageId, lang_from_filename
 
@@ -44,6 +45,7 @@ class MetadataPromptBuilder(NamedTuple):
     suffix: MetadataCodeContent
     imports: Optional[MetadataExtraInfo] = None
     function_signatures: Optional[MetadataExtraInfo] = None
+    experiments: Optional[list[ExperimentOutput]] = []
 
 
 class MetadataModel(NamedTuple):

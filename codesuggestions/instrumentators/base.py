@@ -8,6 +8,8 @@ from prometheus_client import Counter, Histogram
 from pydantic import BaseModel, constr
 from starlette_context import context
 
+from codesuggestions.experiments.registry import ExperimentOutput
+
 METRIC_LABELS = ["model_engine", "model_name"]
 TELEMETRY_LABELS = METRIC_LABELS + ["lang"]
 
@@ -88,6 +90,16 @@ class TextGenModelInstrumentator:
                     ),
                 }
             )
+
+        def register_experiments(self, experiments: list[ExperimentOutput]):
+            included_experiments = []
+            for exp_output in experiments:
+                entry = {
+                    "exp": exp_output.name,
+                    "exp_variant": exp_output.selected_variant,
+                }
+                included_experiments.append(entry)
+            self.__dict__.update({"experiments": included_experiments})
 
         def dict(self) -> dict:
             return self.__dict__
