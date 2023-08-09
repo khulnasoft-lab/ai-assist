@@ -355,7 +355,9 @@ class ModelEnginePalm(ModelEngineBase):
         )
 
         experiments = []
-        if exp := self.experiment_registry.get_experiment("exp_truncate_suffix_python"):
+        if lang_id == LanguageId.PYTHON and (
+            exp := self.experiment_registry.get_experiment("exp_truncate_suffix_python")
+        ):
             experiment_output = exp.run(
                 logger=log, prefix=prefix, suffix=suffix, lang_id=lang_id
             )
