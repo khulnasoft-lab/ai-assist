@@ -10,8 +10,9 @@ from starlette_context import context
 
 from codesuggestions.experiments.registry import ExperimentOutput
 
+EXPERIMENT_LABELS = ["exp", "exp_variant"]
 METRIC_LABELS = ["model_engine", "model_name"]
-TELEMETRY_LABELS = METRIC_LABELS + ["lang"]
+TELEMETRY_LABELS = METRIC_LABELS + ["lang"] + EXPERIMENT_LABELS
 
 INFERENCE_COUNTER = Counter(
     "code_suggestions_inference_requests",
