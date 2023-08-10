@@ -40,7 +40,7 @@ def variant_1(**kwargs) -> str:
 exp_truncate_suffix_python = Experiment(
     name="exp_truncate_suffix_python",
     description="""
-    Truncate the suffix before sending to code-gecko based on the context around the cursor.
+    Truncate the suffix based on the context around the cursor.
     """,
     variants=[
         variant_control,
