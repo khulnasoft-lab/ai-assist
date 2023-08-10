@@ -23,7 +23,7 @@ class Experiment:
 
     def run(self, **kwargs):
         (variant_idx,) = random.choices(range(len(self.variants)), weights=self.weights)
-        log.info("running experiment", exp=self.name, variant=variant_idx)
+        log.debug("running experiment", exp=self.name, variant=variant_idx)
         return ExperimentOutput(
             name=self.name,
             selected_variant=variant_idx,
