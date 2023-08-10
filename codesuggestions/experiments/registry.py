@@ -44,6 +44,4 @@ class ExperimentRegistry:
         self.experiments[experiment.name] = experiment
 
     def get_experiment(self, experiment_name: str) -> Optional[Experiment]:
-        if experiment_name not in self.experiments:
-            return None
-        return self.experiments[experiment_name]
+        return self.experiments.get(experiment_name)
