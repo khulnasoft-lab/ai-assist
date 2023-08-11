@@ -55,7 +55,7 @@ def experiments_provider() -> list[Experiment]:
     return [Experiment(**exp_truncate_suffix_python.experiment_details())]
 
 
-def create_experiment_registry_provider() -> providers.Singleton:
+def experiment_registry_provider() -> providers.Singleton:
     return providers.Singleton(
         ExperimentRegistry,
         experiments=providers.List(*experiments_provider()),

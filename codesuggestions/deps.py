@@ -6,7 +6,7 @@ from py_grpc_prometheus.prometheus_client_interceptor import PromClientIntercept
 from codesuggestions.api import middleware
 from codesuggestions.api.rollout.model import ModelRollout, ModelRolloutWithFallbackPlan
 from codesuggestions.auth import GitLabAuthProvider, GitLabOidcProvider
-from codesuggestions.experiments.registry import create_experiment_registry_provider
+from codesuggestions.experiments.registry import experiment_registry_provider
 from codesuggestions.models import (
     FakeGitLabCodeGenModel,
     FakePalmTextGenModel,
@@ -185,7 +185,7 @@ class CodeSuggestionsContainer(containers.DeclarativeContainer):
         config.gitlab_codegen_model.real_or_fake,
     )
 
-    experiment_registry = create_experiment_registry_provider()
+    experiment_registry = experiment_registry_provider()
 
     engines_palm_codegen = _create_palm_engine_providers(
         grpc_client_vertex,
