@@ -47,6 +47,8 @@ def test_telemetry_capture_with_headers(mock_counter):
             "model_engine": "codegen",
             "model_name": "ensemble",
             "lang": None,
+            "exp": None,
+            "exp_variant": None
         }
     ]
 
