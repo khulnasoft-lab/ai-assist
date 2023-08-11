@@ -449,9 +449,7 @@ class ModelEnginePalm(ModelEngineBase):
             return (row, col)
 
         truncated_suffix = parser.suffix_near_cursor(point=_make_point(prefix))
-        if not truncated_suffix:
-            return suffix
-        return truncated_suffix
+        return truncated_suffix or suffix
 
     def _truncate_content(
         self, val: str, max_length: int, truncation_side: str = "left"
