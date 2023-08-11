@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, Mock, PropertyMock
 
 import pytest
 from transformers import AutoTokenizer
+from codesuggestions.experiments.registry import ExperimentRegistry
 
 from codesuggestions.models import (
     PalmCodeGenBaseModel,
@@ -350,7 +351,8 @@ async def test_model_engine_palm(
     type(text_gen_base_model).model_name = PropertyMock(return_value=model_name)
     type(text_gen_base_model).model_engine = PropertyMock(return_value=model_engine)
 
-    engine = ModelEnginePalm(text_gen_base_model, tokenizer)
+    
+    engine = ModelEnginePalm(text_gen_base_model, tokenizer, ExperimentRegistry())
     engine.instrumentator = MockInstrumentor()
     completion = await engine.generate_completion(prefix, suffix, file_name)
 
@@ -496,7 +498,7 @@ def test_prompt_building_model_engine_palm(
     expected_imports: list[str],
     expected_functions: list[str],
 ):
-    engine = ModelEnginePalm(text_gen_base_model, tokenizer)
+    engine = ModelEnginePalm(text_gen_base_model, tokenizer, ExperimentRegistry())
     prompt = engine._build_prompt(
         prefix=prefix, file_name=file_name, suffix=suffix, lang_id=lang_id
     )
