@@ -91,7 +91,7 @@ class CodeParser(BaseCodeParser):
 
     def _split_on_point(
         self, source_code: str, point: tuple[int, int]
-    ) -> tuple[int, int]:
+    ) -> tuple[str, str]:
         """
         Splits the source_code into a prefix and a suffix
         """
