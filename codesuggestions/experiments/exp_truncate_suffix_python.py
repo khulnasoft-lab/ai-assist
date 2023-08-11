@@ -29,9 +29,9 @@ def variant_1(**kwargs) -> str:
             col = len(lines[-1])
             return (row, col)
 
-    truncated_suffix = parser.suffix_near_cursor(point=_make_point(prefix))
-    return truncated_suffix or suffix
-
+        truncated_suffix = parser.suffix_near_cursor(point=_make_point(prefix))
+        return truncated_suffix or suffix
+    
     return _truncate_suffix_context(**kwargs)
 
 
