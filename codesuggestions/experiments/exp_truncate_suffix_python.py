@@ -30,7 +30,7 @@ def _truncate_suffix_context(
     truncated_suffix = parser.suffix_near_cursor(point=_make_point(prefix))
     if not truncated_suffix:
         return suffix
-    return truncated_suffix
+    return truncated_suffix or suffix
 
 
 def variant_1(**kwargs) -> str:
