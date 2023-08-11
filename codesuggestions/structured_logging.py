@@ -98,6 +98,7 @@ def setup_logging(app: ASGIApp, logging_config: LoggingConfig):
     # Use OUR `ProcessorFormatter` to format all `logging` entries.
     handler.setFormatter(formatter)
     root_logger = logging.getLogger()
+    root_logger.handlers.clear()
     root_logger.addHandler(handler)
     root_logger.setLevel(logging_config.level.upper())
 
