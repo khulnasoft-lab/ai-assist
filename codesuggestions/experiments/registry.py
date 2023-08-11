@@ -4,7 +4,7 @@ from typing import Any, NamedTuple, Optional
 import structlog
 from dependency_injector import providers
 
-import codesuggestions.experiments.exp_truncate_suffix_python as exp_truncate_suffix_python
+from codesuggestions.experiments import exp_truncate_suffix_python
 
 log = structlog.stdlib.get_logger("codesuggestions")
 
