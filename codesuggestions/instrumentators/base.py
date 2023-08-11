@@ -156,6 +156,8 @@ class Telemetry(BaseModel):
     model_engine: Optional[constr(max_length=50)]
     model_name: Optional[constr(max_length=50)]
     lang: Optional[constr(max_length=50)]
+    exp: Optional[constr(max_length=50)]
+    exp_variant: Optional[int]
     requests: int
     accepts: int
     errors: int
@@ -174,6 +176,8 @@ class TelemetryInstrumentator:
                     or context.get("model_engine", ""),
                     "model_name": stats.model_name or context.get("model_name", ""),
                     "lang": stats.lang,
+                    "exp": stats.exp,
+                    "exp_variant": stats.exp_variant,
                 }
 
                 telemetry_logger.info("telemetry", **(stats.dict() | labels))
