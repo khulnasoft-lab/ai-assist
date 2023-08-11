@@ -121,8 +121,8 @@ class CodeParser(BaseCodeParser):
             raise ValueError("Invalid point")
 
         pos = 0
-        for i in range(row):
-            pos += len(lines[i]) + 1
+        for line in lines[:row]:
+            pos += len(line) + 1
         pos += col
         return pos
 
