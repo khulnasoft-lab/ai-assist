@@ -2,6 +2,9 @@ import random
 from typing import Any, NamedTuple, Optional
 
 import structlog
+from dependency_injector import providers
+
+import codesuggestions.experiments.exp_truncate_suffix_python as exp_truncate_suffix_python
 
 log = structlog.stdlib.get_logger("codesuggestions")
 
@@ -33,8 +36,8 @@ class Experiment:
 
 
 class ExperimentRegistry:
-    def __init__(self):
-        self.experiments = {}
+    def __init__(self, experiments: Optional[list[Experiment]] = []):
+        self.experiments = {exp.name: exp for exp in experiments}
 
     def add_experiment(self, experiment: Experiment):
         log.info(
@@ -46,3 +49,14 @@ class ExperimentRegistry:
 
     def get_experiment(self, experiment_name: str) -> Optional[Experiment]:
         return self.experiments.get(experiment_name)
+
+
+def experiments_provider() -> list[Experiment]:
+    return [Experiment(**exp_truncate_suffix_python.experiment_details())]
+
+
+def create_experiment_registry_provider() -> providers.Singleton:
+    return providers.Singleton(
+        ExperimentRegistry,
+        experiments=providers.List(*experiments_provider()),
+    )

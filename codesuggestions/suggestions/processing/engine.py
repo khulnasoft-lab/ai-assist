@@ -4,9 +4,6 @@ from typing import Any, Callable, NamedTuple, Optional
 import structlog
 from transformers import PreTrainedTokenizer
 
-from codesuggestions.experiments.exp_truncate_suffix_python import (
-    exp_truncate_suffix_python,
-)
 from codesuggestions.experiments.registry import ExperimentOutput, ExperimentRegistry
 from codesuggestions.instrumentators import TextGenModelInstrumentator
 from codesuggestions.models import (
@@ -281,15 +278,18 @@ class ModelEnginePalm(ModelEngineBase):
     MAX_TOKENS_IMPORTS_PERCENT = 0.12  # about 245 tokens for code-gecko
     MAX_TOKENS_SUFFIX_PERCENT = 0.07  # about 126 tokens for code-gecko, if "imports" takes up all the available space
 
-    def __init__(self, model: PalmCodeGenBaseModel, tokenizer: PreTrainedTokenizer):
+    def __init__(
+        self,
+        model: PalmCodeGenBaseModel,
+        tokenizer: PreTrainedTokenizer,
+        experiment_registry: ExperimentRegistry,
+    ):
         self.model = model
         self.tokenizer = tokenizer
         self.instrumentator = TextGenModelInstrumentator(
             model.model_engine, model.model_name
         )
-
-        self.experiment_registry = ExperimentRegistry()
-        self.experiment_registry.add_experiment(exp_truncate_suffix_python)
+        self.experiment_registry = experiment_registry
 
     async def _generate_completion(
         self,
