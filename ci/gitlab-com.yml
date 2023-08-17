@@ -65,7 +65,7 @@ cache:
     - docker:${DOCKER_VERSION}-dind
   before_script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-
+# TODO: remove me
 .docker-release-latest:
   extends: .docker
   script:
