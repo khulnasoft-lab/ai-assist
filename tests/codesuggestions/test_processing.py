@@ -18,7 +18,7 @@ from codesuggestions.suggestions.processing.ops import LanguageId
         (["f.java"], LanguageId.JAVA),
         (["f.js", "f.jsx"], LanguageId.JS),
         (["f.php", "f.php3", "f.php4", "f.php5", "f.phps", "f.phpt"], LanguageId.PHP),
-        (["f.py"], LanguageId.PYTHON),
+        (["f.py", "f.ipynb"], LanguageId.PYTHON),
         (["f.rb"], LanguageId.RUBY),
         (["f.rs"], LanguageId.RUST),
         (["f.scala"], LanguageId.SCALA),

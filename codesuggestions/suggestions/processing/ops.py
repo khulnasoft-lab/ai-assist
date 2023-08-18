@@ -42,7 +42,7 @@ _ALL_LANGS = {
         "PHP",
         frozenset({"php", "php3", "php4", "php5", "phps", "phpt"}),
     ),
-    _LanguageDef(LanguageId.PYTHON, "python", "Python", frozenset({"py"})),
+    _LanguageDef(LanguageId.PYTHON, "python", "Python", frozenset({"py", "ipynb"})),
     _LanguageDef(LanguageId.RUBY, "ruby", "Ruby", frozenset({"rb"})),
     _LanguageDef(LanguageId.RUST, "rust", "Rust", frozenset({"rs"})),
     _LanguageDef(LanguageId.SCALA, "scala", "Scala", frozenset({"scala"})),
