@@ -23,6 +23,10 @@ develop-local:
 test-local:
 	$(COMPOSE) run -v "$(ROOT_DIR):/app" api bash -c 'poetry install --with test && poetry run pytest'
 
+.PHONY: test-e2e-local
+test-e2e-local:
+	$(COMPOSE) run -v "$(ROOT_DIR):/app" api bash -c 'poetry install --with test && poetry run pytest tests/end-to-end'
+
 .PHONY: lint-local
 lint-local:
 	$(COMPOSE) run -v "$(ROOT_DIR):/app" api bash -c 'poetry install --only lint && poetry run flake8 ai_gateway'
@@ -81,6 +85,11 @@ test: LIB_DIR ?= ${ROOT_DIR}/lib
 test: install-test-deps
 	@echo "Running test..."
 	@poetry run pytest
+
+.PHONY: test-e2e
+test-e2e: install-test-deps
+	@echo "Running end-to-end tests..."
+	@poetry run pytest tests/end-to-end
 
 .PHONY: nuke
 nuke: monitoring-teardown monitoring-nuke

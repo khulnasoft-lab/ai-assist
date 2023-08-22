@@ -4,6 +4,7 @@ image: python:3.9.18
 stages:
   - validate
   - release
+  - post-deploy
 
 include:
   - project: "gitlab-com/gl-infra/common-ci-tasks"
@@ -69,6 +70,12 @@ helm-deploy-gstg:
     - k8s-workloads
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+e2e-test-gstg:
+  needs: [helm-deploy-gstg]
+  stage: post-deploy
+  script:
+    - make test-e2e
 
 helm-diff-gprd:
   resource_group: gprd
