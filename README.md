@@ -260,6 +260,28 @@ LOG_LEVEL=debug
 LOG_TO_FILE=../modelgateway_debug.log
 ```
 
+### Troubleshooting
+
+#### No module named `_hashlib`
+
+If you see the following error while running `poetry install`:
+
+```
+poetry install
+
+No module named '_hashlib'
+```
+
+You can fix it by reinstalling your python with these options:
+
+```
+asdf uninstall python 3.9.17
+export CONFIGURE_OPTS="--with-openssl=$(brew --prefix openssl)"
+asdf install python 3.9.17
+```
+
+Where is `3.9.17` version is a python version specified in `.tool-versions` file.
+
 ## Local development using GDK
 
 You can either run `make develop-local` or `docker-compose -f docker-compose.dev.yaml up --build --remove-orphans` this
