@@ -75,6 +75,7 @@ e2e-test-gstg:
   needs: [helm-deploy-gstg]
   stage: post-deploy
   script:
+    # This test requires a CI variable `GITLAB_PAT_STAGING` to be a personal access token on staging with API scope
     - make test-e2e
 
 helm-diff-gprd:
