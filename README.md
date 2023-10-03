@@ -659,3 +659,4 @@ Once port forwarding is setup, Targets can be found under the Status tab or one 
 Targets are useful for debugging. Below are examples of two ServiceMonitors, connecting to a golang and python service respectively, that are not configured for scraping and do not expose a `/metrics` endpoint.
 
 ![README.PrometheusUI](./docs/assets/README.PrometheusUI.png)
+
