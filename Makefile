@@ -66,6 +66,11 @@ check-isort: install-lint-deps
 	@echo "Running isort check..."
 	@poetry run isort --check-only ${LINT_WORKING_DIR}
 
+.PHONY: check-schemas
+check-schemas: install-lint-deps
+	@echo "Validating endpoint schemas..."
+	@poetry run -- check-jsonschema --check-metaschema -v ai_gateway/api/schemas/*.json
+
 .PHONY: install-test-deps
 install-test-deps:
 	@echo "Installing test dependencies..."

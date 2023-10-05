@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gitlab.com/ai/prompt.json",
+  "title": "AI model prompt",
+  "description": "A request that prompts an AI model to provide an answer to a question, given a list of prompt elements.",
+  "type": "object",
+  "properties": {
+    "prompt_components": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Indicates what kind of payload is being transmitted"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Carries information about the GitLab instance the payload originates from",
+            "properties": {
+              "source": {
+                "type": "string",
+                "description": "The GitLab instance type"
+              },
+              "version": {
+                "type": "string",
+                "description": "GitLab version string (x.y.z)"
+              }
+            }
+          },
+          "payload": {
+            "type": "object",
+            "description": "The actual payload carrying model inputs",
+            "properties": {
+              "content": {
+                "type": "string",
+                "description": "Textual input sent to the model (usually a prompt)"
+              },
+              "provider": {
+                "type": "string",
+                "description": "The model provider (e.g. vertex-ai)"
+              },
+              "model": {
+                "type": "string",
+                "description": "The model name (e.g. code-gecko)"
+              },
+              "params": {
+                "type": "object",
+                "description": "Inputs specific to the given model"
+              }
+            }
+          }
+        },
+        "required": [
+          "type",
+          "metadata",
+          "payload"
+        ]
+      }
+    }
+  }
+}
