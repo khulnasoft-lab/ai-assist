@@ -49,7 +49,7 @@ isort: install-lint-deps
 format: black isort
 
 .PHONY: lint
-lint: flake8 check-black check-isort
+lint: flake8 check-black check-isort check-schemas
 
 .PHONY: flake8
 flake8: install-lint-deps
