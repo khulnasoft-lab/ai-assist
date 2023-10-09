@@ -23,11 +23,7 @@ def load_schema(schema_name: str):
                             "source": "gitlab-saas",
                             "version": "66b71a300bf2f85a3ec728e056a6699497a9f86a",
                         },
-                        "payload": {
-                            "content": "this is a prompt string",
-                            "provider": "vertex-ai",
-                            "model": "code-gecko",
-                        },
+                        "payload": {},
                     }
                 ]
             }
@@ -47,26 +43,25 @@ def load_schema(schema_name: str):
                             "model": "code-gecko",
                             "params": {},
                         },
-                    }
-                ]
-            }
-        ),
-        (
-            {
-                "prompt_components": [
+                    },
                     {
-                        "type": "prompt",
+                        "type": "editor_content",
                         "metadata": {
-                            "source": "gitlab-saas",
-                            "version": "66b71a300bf2f85a3ec728e056a6699497a9f86a",
+                            "source": "gitlab-vscode-extension",
+                            "version": "1.2.3",
                         },
                         "payload": {
-                            "content": "this is a prompt string",
-                            "provider": "vertex-ai",
-                            "model": "code-gecko",
-                            "params": {"customer_param": 42},
+                            "filename": "application.rb",
+                            "before_cursor": "require 'active_record/railtie'",
+                            "after_cursor": "\nrequire 'action_controller/railtie'",
+                            "open_files": [
+                                {
+                                    "filename": "app/controllers/application_controller.rb",
+                                    "content": "class ApplicationController < ActionController::Base...",
+                                }
+                            ],
                         },
-                    }
+                    },
                 ]
             }
         ),
@@ -85,6 +80,14 @@ def test_valid_prompt_payloads(request_json):
         (
             {"prompt_components": [{"type": "prompt"}]},
             r"'metadata' is a required property",
+        ),
+        (
+            {
+                "prompt_components": [
+                    {"type": "unsupported", "metadata": {}, "payload": {}}
+                ]
+            },
+            r"'unsupported' is not one of.+",
         ),
         (
             {"prompt_components": [{"type": "prompt", "metadata": {}, "payload": {}}]},
@@ -115,56 +118,6 @@ def test_valid_prompt_payloads(request_json):
                 ]
             },
             r"'payload' is a required property",
-        ),
-        (
-            {
-                "prompt_components": [
-                    {
-                        "type": "prompt",
-                        "metadata": {
-                            "source": "gitlab-saas",
-                            "version": "66b71a300bf2f85a3ec728e056a6699497a9f86a",
-                        },
-                        "payload": {},
-                    }
-                ]
-            },
-            r"'content' is a required property",
-        ),
-        (
-            {
-                "prompt_components": [
-                    {
-                        "type": "prompt",
-                        "metadata": {
-                            "source": "gitlab-saas",
-                            "version": "66b71a300bf2f85a3ec728e056a6699497a9f86a",
-                        },
-                        "payload": {
-                            "content": "this is a prompt string",
-                        },
-                    }
-                ]
-            },
-            r"'provider' is a required property",
-        ),
-        (
-            {
-                "prompt_components": [
-                    {
-                        "type": "prompt",
-                        "metadata": {
-                            "source": "gitlab-saas",
-                            "version": "66b71a300bf2f85a3ec728e056a6699497a9f86a",
-                        },
-                        "payload": {
-                            "content": "this is a prompt string",
-                            "provider": "vertex-ai",
-                        },
-                    }
-                ]
-            },
-            r"'model' is a required property",
         ),
     ],
 )

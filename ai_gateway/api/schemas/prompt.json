@@ -12,8 +12,11 @@
         "type": "object",
         "properties": {
           "type": {
-            "type": "string",
-            "description": "Indicates what kind of payload is being transmitted"
+            "description": "Indicates what kind of payload is being transmitted",
+            "enum": [
+              "prompt",
+              "editor_content"
+            ]
           },
           "metadata": {
             "type": "object",
@@ -35,30 +38,7 @@
           },
           "payload": {
             "type": "object",
-            "description": "The actual payload carrying model inputs",
-            "properties": {
-              "content": {
-                "type": "string",
-                "description": "Textual input sent to the model (usually a prompt)"
-              },
-              "provider": {
-                "type": "string",
-                "description": "The model provider (e.g. vertex-ai)"
-              },
-              "model": {
-                "type": "string",
-                "description": "The model name (e.g. code-gecko)"
-              },
-              "params": {
-                "type": "object",
-                "description": "Inputs specific to the given model"
-              }
-            },
-            "required": [
-              "content",
-              "provider",
-              "model"
-            ]
+            "description": "The actual payload carrying model inputs"
           }
         },
         "required": [
