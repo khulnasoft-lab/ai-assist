@@ -27,7 +27,11 @@
                 "type": "string",
                 "description": "GitLab version string (x.y.z)"
               }
-            }
+            },
+            "required": [
+              "source",
+              "version"
+            ]
           },
           "payload": {
             "type": "object",
@@ -49,7 +53,12 @@
                 "type": "object",
                 "description": "Inputs specific to the given model"
               }
-            }
+            },
+            "required": [
+              "content",
+              "provider",
+              "model"
+            ]
           }
         },
         "required": [
@@ -59,5 +68,8 @@
         ]
       }
     }
-  }
+  },
+  "required": [
+    "prompt_components"
+  ]
 }

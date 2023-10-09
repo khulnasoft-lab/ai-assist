@@ -13,7 +13,64 @@ def load_schema(schema_name: str):
 
 @pytest.mark.parametrize(
     ("request_json"),
-    [{"prompt_components": [{"type": "prompt", "metadata": {}, "payload": {}}]}],
+    [
+        (
+            {
+                "prompt_components": [
+                    {
+                        "type": "prompt",
+                        "metadata": {
+                            "source": "gitlab-saas",
+                            "version": "66b71a300bf2f85a3ec728e056a6699497a9f86a",
+                        },
+                        "payload": {
+                            "content": "this is a prompt string",
+                            "provider": "vertex-ai",
+                            "model": "code-gecko",
+                        },
+                    }
+                ]
+            }
+        ),
+        (
+            {
+                "prompt_components": [
+                    {
+                        "type": "prompt",
+                        "metadata": {
+                            "source": "gitlab-saas",
+                            "version": "66b71a300bf2f85a3ec728e056a6699497a9f86a",
+                        },
+                        "payload": {
+                            "content": "this is a prompt string",
+                            "provider": "vertex-ai",
+                            "model": "code-gecko",
+                            "params": {},
+                        },
+                    }
+                ]
+            }
+        ),
+        (
+            {
+                "prompt_components": [
+                    {
+                        "type": "prompt",
+                        "metadata": {
+                            "source": "gitlab-saas",
+                            "version": "66b71a300bf2f85a3ec728e056a6699497a9f86a",
+                        },
+                        "payload": {
+                            "content": "this is a prompt string",
+                            "provider": "vertex-ai",
+                            "model": "code-gecko",
+                            "params": {"customer_param": 42},
+                        },
+                    }
+                ]
+            }
+        ),
+    ],
 )
 def test_valid_prompt_payloads(request_json):
     jsonschema.validate(request_json, load_schema("prompt"))
@@ -22,6 +79,7 @@ def test_valid_prompt_payloads(request_json):
 @pytest.mark.parametrize(
     ("request_json", "expected_error"),
     [
+        ({}, r"'prompt_components' is a required property"),
         ({"prompt_components": []}, r"\[\] is too short"),
         ({"prompt_components": [{}]}, r"'type' is a required property"),
         (
@@ -29,8 +87,84 @@ def test_valid_prompt_payloads(request_json):
             r"'metadata' is a required property",
         ),
         (
-            {"prompt_components": [{"type": "prompt", "metadata": {}}]},
+            {"prompt_components": [{"type": "prompt", "metadata": {}, "payload": {}}]},
+            r"'source' is a required property",
+        ),
+        (
+            {
+                "prompt_components": [
+                    {
+                        "type": "prompt",
+                        "metadata": {"source": "gitlab-saas"},
+                        "payload": {},
+                    }
+                ]
+            },
+            r"'version' is a required property",
+        ),
+        (
+            {
+                "prompt_components": [
+                    {
+                        "type": "prompt",
+                        "metadata": {
+                            "source": "gitlab-saas",
+                            "version": "66b71a300bf2f85a3ec728e056a6699497a9f86a",
+                        },
+                    }
+                ]
+            },
             r"'payload' is a required property",
+        ),
+        (
+            {
+                "prompt_components": [
+                    {
+                        "type": "prompt",
+                        "metadata": {
+                            "source": "gitlab-saas",
+                            "version": "66b71a300bf2f85a3ec728e056a6699497a9f86a",
+                        },
+                        "payload": {},
+                    }
+                ]
+            },
+            r"'content' is a required property",
+        ),
+        (
+            {
+                "prompt_components": [
+                    {
+                        "type": "prompt",
+                        "metadata": {
+                            "source": "gitlab-saas",
+                            "version": "66b71a300bf2f85a3ec728e056a6699497a9f86a",
+                        },
+                        "payload": {
+                            "content": "this is a prompt string",
+                        },
+                    }
+                ]
+            },
+            r"'provider' is a required property",
+        ),
+        (
+            {
+                "prompt_components": [
+                    {
+                        "type": "prompt",
+                        "metadata": {
+                            "source": "gitlab-saas",
+                            "version": "66b71a300bf2f85a3ec728e056a6699497a9f86a",
+                        },
+                        "payload": {
+                            "content": "this is a prompt string",
+                            "provider": "vertex-ai",
+                        },
+                    }
+                ]
+            },
+            r"'model' is a required property",
         ),
     ],
 )
