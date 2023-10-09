@@ -20,15 +20,15 @@
           },
           "metadata": {
             "type": "object",
-            "description": "Carries information about the GitLab instance the payload originates from",
+            "description": "Carries information about the source from which the payload originates",
             "properties": {
               "source": {
                 "type": "string",
-                "description": "The GitLab instance type"
+                "description": "The source of this data (e.g. gitlab-saas, gitlab-vscode-extension)"
               },
               "version": {
                 "type": "string",
-                "description": "GitLab version string (x.y.z)"
+                "description": "The source software version string (e.g. x.y.z or build ID)"
               }
             },
             "required": [
@@ -38,7 +38,7 @@
           },
           "payload": {
             "type": "object",
-            "description": "The actual payload carrying model inputs"
+            "description": "The actual payload carrying model inputs. Contents vary with source and type."
           }
         },
         "required": [
