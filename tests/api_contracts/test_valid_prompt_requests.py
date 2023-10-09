@@ -23,7 +23,11 @@ def load_schema(schema_name: str):
                             "source": "gitlab-saas",
                             "version": "66b71a300bf2f85a3ec728e056a6699497a9f86a",
                         },
-                        "payload": {},
+                        "payload": {
+                            "content": "this is a prompt string",
+                            "provider": "vertex-ai",
+                            "model": "code-gecko",
+                        },
                     }
                 ]
             }
@@ -54,40 +58,72 @@ def test_valid_prompt_payloads(request_json):
 
 
 @pytest.mark.parametrize(
-    ("request_json", "expected_error"),
+    ("scenario", "request_json", "expected_error"),
     [
-        ({}, r"'prompt_components' is a required property"),
-        ({"prompt_components": []}, r"\[\] is too short"),
-        ({"prompt_components": [{}]}, r"'type' is a required property"),
+        ("prompt_components missing", {}, "'prompt_components' is a required property"),
+        ("prompt_components is empty", {"prompt_components": []}, "[] is too short"),
+        ("type missing", {"prompt_components": [{}]}, "'type' is a required property"),
         (
+            "metadata missing",
             {"prompt_components": [{"type": "prompt"}]},
-            r"'metadata' is a required property",
+            "'metadata' is a required property",
         ),
         (
+            "unsupported type",
             {
                 "prompt_components": [
-                    {"type": "unsupported", "metadata": {}, "payload": {}}
+                    {
+                        "type": "unsupported",
+                        "metadata": {
+                            "source": "gitlab-saas",
+                            "version": "66b71a300bf2f85a3ec728e056a6699497a9f86a",
+                        },
+                        "payload": {
+                            "content": "this is a prompt string",
+                            "provider": "vertex-ai",
+                            "model": "code-gecko",
+                        },
+                    }
                 ]
             },
-            r"'unsupported' is not one of.+",
+            "'unsupported' is not one of",
         ),
         (
-            {"prompt_components": [{"type": "prompt", "metadata": {}, "payload": {}}]},
-            r"'source' is a required property",
+            "metadata.source missing",
+            {
+                "prompt_components": [
+                    {
+                        "type": "prompt",
+                        "metadata": {},
+                        "payload": {
+                            "content": "this is a prompt string",
+                            "provider": "vertex-ai",
+                            "model": "code-gecko",
+                        },
+                    }
+                ]
+            },
+            "'source' is a required property",
         ),
         (
+            "metadata.version missing",
             {
                 "prompt_components": [
                     {
                         "type": "prompt",
                         "metadata": {"source": "gitlab-saas"},
-                        "payload": {},
+                        "payload": {
+                            "content": "this is a prompt string",
+                            "provider": "vertex-ai",
+                            "model": "code-gecko",
+                        },
                     }
                 ]
             },
-            r"'version' is a required property",
+            "'version' is a required property",
         ),
         (
+            "payload missing",
             {
                 "prompt_components": [
                     {
@@ -99,10 +135,63 @@ def test_valid_prompt_payloads(request_json):
                     }
                 ]
             },
-            r"'payload' is a required property",
+            "'payload' is a required property",
+        ),
+        (
+            "payload.content missing",
+            {
+                "prompt_components": [
+                    {
+                        "type": "prompt",
+                        "metadata": {
+                            "source": "gitlab-saas",
+                            "version": "66b71a300bf2f85a3ec728e056a6699497a9f86a",
+                        },
+                        "payload": {},
+                    }
+                ]
+            },
+            "'content' is a required property",
+        ),
+        (
+            "payload.provider missing",
+            {
+                "prompt_components": [
+                    {
+                        "type": "prompt",
+                        "metadata": {
+                            "source": "gitlab-saas",
+                            "version": "66b71a300bf2f85a3ec728e056a6699497a9f86a",
+                        },
+                        "payload": {"content": "this is a prompt"},
+                    }
+                ]
+            },
+            "'provider' is a required property",
+        ),
+        (
+            "payload.model missing",
+            {
+                "prompt_components": [
+                    {
+                        "type": "prompt",
+                        "metadata": {
+                            "source": "gitlab-saas",
+                            "version": "66b71a300bf2f85a3ec728e056a6699497a9f86a",
+                        },
+                        "payload": {
+                            "content": "this is a prompt",
+                            "provider": "vertex-ai",
+                        },
+                    }
+                ]
+            },
+            "'model' is a required property",
         ),
     ],
 )
-def test_invalid_prompt_payloads(request_json, expected_error):
-    with pytest.raises(jsonschema.ValidationError, match=expected_error):
+def test_invalid_prompt_payloads(scenario, request_json, expected_error):
+    with pytest.raises(jsonschema.ValidationError) as ex:
         jsonschema.validate(request_json, load_schema("prompt"))
+
+    assert expected_error in str(ex.value), "scenario failed: " + scenario

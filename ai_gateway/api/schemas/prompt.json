@@ -40,6 +40,28 @@
             "description": "The actual payload carrying model inputs. Contents vary with source and type."
           }
         },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "prompt"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "payload": {
+                  "required": [
+                    "content",
+                    "provider",
+                    "model"
+                  ]
+                }
+              }
+            }
+          }
+        ],
         "required": [
           "type",
           "metadata",
