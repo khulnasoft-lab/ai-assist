@@ -41,27 +41,9 @@ def load_schema(schema_name: str):
                             "content": "this is a prompt string",
                             "provider": "vertex-ai",
                             "model": "code-gecko",
-                            "params": {},
+                            "params": {"custom_param": 42},
                         },
-                    },
-                    {
-                        "type": "editor_content",
-                        "metadata": {
-                            "source": "gitlab-vscode-extension",
-                            "version": "1.2.3",
-                        },
-                        "payload": {
-                            "filename": "application.rb",
-                            "before_cursor": "require 'active_record/railtie'",
-                            "after_cursor": "\nrequire 'action_controller/railtie'",
-                            "open_files": [
-                                {
-                                    "filename": "app/controllers/application_controller.rb",
-                                    "content": "class ApplicationController < ActionController::Base...",
-                                }
-                            ],
-                        },
-                    },
+                    }
                 ]
             }
         ),

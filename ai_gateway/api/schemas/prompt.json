@@ -14,8 +14,7 @@
           "type": {
             "description": "Indicates what kind of payload is being transmitted",
             "enum": [
-              "prompt",
-              "editor_content"
+              "prompt"
             ]
           },
           "metadata": {
