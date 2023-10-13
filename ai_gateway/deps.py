@@ -33,6 +33,7 @@ from ai_gateway.tracking import (
 
 __all__ = [
     "FastApiContainer",
+    "AnthropicContainer",
     "CodeSuggestionsContainer",
 ]
 
@@ -188,6 +189,20 @@ class FastApiContainer(containers.DeclarativeContainer):
     telemetry_middleware = providers.Factory(
         middleware.MiddlewareModelTelemetry,
         skip_endpoints=_PROBS_ENDPOINTS,
+    )
+
+
+class AnthropicContainer(containers.DeclarativeContainer):
+    wiring_config = containers.WiringConfiguration(
+        modules=[
+            "ai_gateway.api.v2.endpoints.anthropic",
+        ]
+    )
+
+    client_anthropic = providers.Resource(connect_anthropic)
+    anthropic_model = providers.Factory(
+        AnthropicModel,
+        client=client_anthropic,
     )
 
 
