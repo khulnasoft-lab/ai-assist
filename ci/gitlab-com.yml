@@ -54,6 +54,19 @@ cache:
     - scripts/lib/
     - scripts/vendor/
 
+.code-changes:
+  rules:
+    - changes:
+        - "**/*.py"
+        - ".gitlab-ci.yml"
+        - ".tool-version"
+        - "Dockerfile"
+        - "Makefile"
+        - "ci/**/*"
+        - "poetry.lock"
+        - "poetry.toml"
+        - "setup.cfg"
+
 .poetry:
   before_script:
     - pip install poetry==1.6.1
@@ -82,16 +95,20 @@ cache:
     - docker push "${RELEASED_IMAGE_LATEST}"
 
 lint:
-  extends: .poetry
   stage: lint
+  extends:
+    - .poetry
+    - .code-changes
   script:
     - make lint
     - poetry lock --no-update
     - git diff --exit-code
 
 install:
-  extends: .poetry
   stage: build
+  extends:
+    - .poetry
+    - .code-changes
   script:
     - poetry install
 
@@ -99,15 +116,18 @@ build-docker-model-gateway:
   stage: build
   extends:
     - .kaniko_base
+    - .code-changes
   variables:
     KANIKO_BUILD_FILE: Dockerfile
     KANIKO_DESTINATION: "${TARGET_IMAGE}"
 
 tests:
-  extends: .poetry
   stage: test
   needs:
     - install
+  extends:
+    - .poetry
+    - .code-changes
   script:
     - poetry install --with test
     - curl -sL https://deb.nodesource.com/setup_18.x | bash -
@@ -129,6 +149,8 @@ container_scanning:
   stage: test
   needs:
     - build-docker-model-gateway
+  extends:
+    - .code-changes
   rules:
     - if: $CONTAINER_SCANNING_DISABLED
       when: never
@@ -142,6 +164,8 @@ gemnasium-python-dependency_scanning:
   stage: test
   needs:
     - install
+  extends:
+    - .code-changes
   rules:
     - if: $DEPENDENCY_SCANNING_DISABLED
       when: never
@@ -151,8 +175,6 @@ gemnasium-python-dependency_scanning:
 
 secret_detection:
   stage: test
-  needs:
-    - install
   cache: {}
   rules:
     - if: $SECRET_DETECTION_DISABLED
@@ -165,6 +187,8 @@ semgrep-sast:
   stage: test
   needs:
     - install
+  extends:
+    - .code-changes
   rules:
     - if: $SAST_DISABLED
       when: never
