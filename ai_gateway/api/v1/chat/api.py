@@ -2,12 +2,14 @@ import os
 
 from fastapi import APIRouter
 
-from ai_gateway.api.v1.chat import evaluation
+# Import the router from agent.py
+from ai_gateway.api.v1.chat import agent, evaluation
 
 __all__ = ["router"]
 
 router = APIRouter()
 
+router.include_router(agent.router)
 
 # Hack: Avoid deploying the chat evaluation endpoints to production
 # TODO: Protect the API endpoints verifying the token scopes
