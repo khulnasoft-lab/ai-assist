@@ -87,7 +87,7 @@ class CodeCompletions:
                 watch_container.register_lang(lang_id, editor_lang)
 
                 if res := await self.model.generate(
-                    prompt.prefix, prompt.suffix, **kwargs
+                    prompt.prefix, suffix, **kwargs
                 ):
                     watch_container.register_model_output_length(res.text)
                     watch_container.register_model_score(res.score)

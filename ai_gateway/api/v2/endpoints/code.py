@@ -204,6 +204,7 @@ async def generations(
             payload.current_file.content_above_cursor,
             payload.current_file.file_name,
             payload.current_file.language_identifier,
+            payload.current_file.content_below_cursor
         )
 
     log.debug(

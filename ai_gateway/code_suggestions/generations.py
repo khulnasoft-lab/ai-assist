@@ -73,6 +73,7 @@ class CodeGenerations:
         prefix: str,
         file_name: str,
         editor_lang: Optional[str] = None,
+        suffix: Optional[str] = None,
         **kwargs: Any,
     ) -> CodeSuggestionsOutput:
         lang_id = resolve_lang_id(file_name, editor_lang)
@@ -84,7 +85,7 @@ class CodeGenerations:
             try:
                 watch_container.register_lang(lang_id, editor_lang)
 
-                if res := await self.model.generate(prompt.prefix, "", **kwargs):
+                if res := await self.model.generate(prompt.prefix, suffix, **kwargs):
                     watch_container.register_model_output_length(res.text)
                     watch_container.register_model_score(res.score)
                     watch_container.register_safety_attributes(res.safety_attributes)

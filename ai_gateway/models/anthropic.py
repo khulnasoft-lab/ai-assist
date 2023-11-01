@@ -102,10 +102,13 @@ class AnthropicModel(TextGenBaseModel):
     async def generate(
         self,
         prefix: str,
-        _suffix: str,
+        suffix: str,
         **kwargs: Any,
     ) -> TextGenModelOutput:
-        opts = _obtain_opts(self.model_opts, **kwargs)
+        opts = _obtain_opts(self.model_opts, **kwargs).copy()
+        if suffix and not suffix.isspace():
+            opts["stop_sequences"] = opts["stop_sequences"].copy() + \
+                ["\n".join(s.strip() for s in suffix.splitlines()[:3])]
         log.debug("codegen anthropic call:", **opts)
 
         try:
