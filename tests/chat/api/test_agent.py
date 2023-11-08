@@ -154,3 +154,41 @@ class TestAnthropicInvalidScope:
 
         assert response.status_code == 403
         assert response.json() == {"detail": "Forbidden"}
+
+
+class TestAgentInvalidRequest:
+    def test_invalid_request(
+        self,
+        mock_client: TestClient,
+    ):
+        response = mock_client.post(
+            "/v1/chat/agent",
+            headers={
+                "Authorization": "Bearer 12345",
+                "X-Gitlab-Authentication-Type": "oidc",
+            },
+            json={
+                "type": "prompt",
+                "metadata": {"source": "gitlab-rails-sm"},
+                "payload": {
+                    "provider": "anthropic",
+                    "model": "claude-2",
+                },
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json() == {
+            "detail": [
+                {
+                    "loc": ["body", "metadata", "version"],
+                    "msg": "field required",
+                    "type": "value_error.missing",
+                },
+                {
+                    "loc": ["body", "payload", "content"],
+                    "msg": "field required",
+                    "type": "value_error.missing",
+                },
+            ]
+        }
