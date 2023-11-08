@@ -105,3 +105,52 @@ class TestAgentUnsupportedProvider:
 
             assert response.status_code == 422
             assert response.json().get("detail") == "Unsupported provider"
+
+
+class TestAnthropicInvalidScope:
+    @pytest.fixture
+    def auth_user(self):
+        return User(
+            authenticated=True,
+            claims=UserClaims(
+                is_third_party_ai_default=False, scopes=["unauthorized_scope"]
+            ),
+        )
+
+    @pytest.mark.asyncio
+    async def test_invalid_scope(
+        self,
+        mock_client: TestClient,
+    ):
+        mock_model = mock.Mock(spec=AnthropicModel)
+        mock_model.generate = AsyncMock(
+            return_value=TextGenModelOutput(
+                text="test completion",
+                score=10000,
+                safety_attributes=SafetyAttributes(),
+            )
+        )
+
+        with mock.patch(
+            "ai_gateway.api.v1.chat.agent.AnthropicModel"
+        ) as mock_anthropic_model:
+            mock_anthropic_model.from_model_name.return_value = mock_model
+            response = mock_client.post(
+                "/v1/chat/agent",
+                headers={
+                    "Authorization": "Bearer 12345",
+                    "X-Gitlab-Authentication-Type": "oidc",
+                },
+                json={
+                    "type": "prompt",
+                    "metadata": {"source": "gitlab-rails-sm", "version": "16.5.0-ee"},
+                    "payload": {
+                        "content": "\n\nHuman: hello, what is your name?\n\nAssistant:",
+                        "provider": "anthropic",
+                        "model": "claude-2",
+                    },
+                },
+            )
+
+        assert response.status_code == 403
+        assert response.json() == {"detail": "Forbidden"}
