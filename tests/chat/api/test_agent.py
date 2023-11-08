@@ -1,3 +1,4 @@
+from typing import Type
 from unittest import mock
 from unittest.mock import AsyncMock
 
@@ -7,7 +8,14 @@ from structlog.testing import capture_logs
 
 from ai_gateway.api.v1.api import api_router
 from ai_gateway.auth import User, UserClaims
-from ai_gateway.models import AnthropicModel, SafetyAttributes, TextGenModelOutput
+from ai_gateway.models import (
+    AnthropicAPIConnectionError,
+    AnthropicAPIStatusError,
+    AnthropicModel,
+    ModelAPIError,
+    SafetyAttributes,
+    TextGenModelOutput,
+)
 
 
 @pytest.fixture(scope="class")
@@ -192,3 +200,48 @@ class TestAgentInvalidRequest:
                 },
             ]
         }
+
+
+class TestAgentUnsuccessfulAnthropicRequest:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "model_exception_type", [AnthropicAPIStatusError, AnthropicAPIConnectionError]
+    )
+    async def test_fail_receiving_anthropic_response(
+        self, mock_client: TestClient, model_exception_type: Type[ModelAPIError]
+    ):
+        def _side_effect(*_args, **_kwargs):
+            raise exception
+
+        if issubclass(model_exception_type, AnthropicAPIStatusError):
+            model_exception_type.code = 404
+        exception = model_exception_type("exception message")
+
+        mock_model = mock.Mock(spec=AnthropicModel)
+        mock_model.generate = AsyncMock(
+            side_effect=_side_effect,
+        )
+
+        with mock.patch(
+            "ai_gateway.api.v1.chat.agent.AnthropicModel"
+        ) as mock_anthropic_model:
+            mock_anthropic_model.from_model_name.return_value = mock_model
+            response = mock_client.post(
+                "/v1/chat/agent",
+                headers={
+                    "Authorization": "Bearer 12345",
+                    "X-Gitlab-Authentication-Type": "oidc",
+                },
+                json={
+                    "type": "prompt",
+                    "metadata": {"source": "gitlab-rails-sm", "version": "16.5.0-ee"},
+                    "payload": {
+                        "content": "\n\nHuman: hello, what is your name?\n\nAssistant:",
+                        "provider": "anthropic",
+                        "model": "claude-2",
+                    },
+                },
+            )
+
+        assert response.status_code == 500
+        assert response.json() == {"detail": "Failed to obtain Anthropic response"}
