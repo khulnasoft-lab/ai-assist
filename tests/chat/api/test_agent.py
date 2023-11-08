@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
+from structlog.testing import capture_logs
 
 from ai_gateway.api.v1.api import api_router
 from ai_gateway.auth import User, UserClaims
@@ -22,7 +23,6 @@ def auth_user():
     )
 
 
-# TODO: check various problematic and edge cases
 class TestAgentSuccessfulRequest:
     @pytest.mark.asyncio
     async def test_successful_response(
@@ -75,3 +75,33 @@ class TestAgentSuccessfulRequest:
             temperature=0.1,
             stop_sequences=[],
         )
+
+
+class TestAgentUnsupportedProvider:
+    def test_invalid_request(
+        self,
+        mock_client: TestClient,
+    ):
+        with capture_logs() as cap_logs:
+            response = mock_client.post(
+                "/v1/chat/agent",
+                headers={
+                    "Authorization": "Bearer 12345",
+                    "X-Gitlab-Authentication-Type": "oidc",
+                },
+                json={
+                    "type": "prompt",
+                    "metadata": {"source": "gitlab-rails-sm", "version": "16.5.0-ee"},
+                    "payload": {
+                        "content": "\n\nHuman: hello, what is your name?\n\nAssistant:",
+                        "provider": "UNKNOWN PROVIDER",
+                        "model": "claude-2",
+                    },
+                },
+            )
+
+            assert cap_logs[0]["event"] == "Unsupported provider: UNKNOWN PROVIDER"
+            assert cap_logs[0]["log_level"] == "error"
+
+            assert response.status_code == 422
+            assert response.json().get("detail") == "Unsupported provider"
