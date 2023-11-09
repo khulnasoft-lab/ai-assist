@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware import Middleware
 from starlette_context.middleware import RawContextMiddleware
 
+from ai_gateway.api.experimental.code_metadata import create_router
 from ai_gateway.api.middleware import (
     MiddlewareAuthentication,
     MiddlewareLogRequest,
@@ -57,5 +58,6 @@ def create_fast_api_server(
     fastapi_app.include_router(http_api_router_v1)
     fastapi_app.include_router(http_api_router_v2)
     fastapi_app.include_router(http_monitoring_router)
+    fastapi_app.include_router(create_router(), prefix="/experimental")
 
     return fastapi_app
