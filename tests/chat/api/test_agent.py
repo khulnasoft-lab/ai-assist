@@ -27,7 +27,7 @@ def fast_api_router():
 def auth_user():
     return User(
         authenticated=True,
-        claims=UserClaims(is_third_party_ai_default=False, scopes=["duo_chat"]),
+        claims=UserClaims(scopes=["duo_chat"]),
     )
 
 
@@ -120,9 +120,7 @@ class TestAnthropicInvalidScope:
     def auth_user(self):
         return User(
             authenticated=True,
-            claims=UserClaims(
-                is_third_party_ai_default=False, scopes=["unauthorized_scope"]
-            ),
+            claims=UserClaims(scopes=["unauthorized_scope"]),
         )
 
     @pytest.mark.asyncio
