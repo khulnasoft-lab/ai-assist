@@ -20,6 +20,7 @@ prompt = {
     },
 }
 
+
 @pytest.fixture
 def oidc_token(gitlab, token_var):
     headers = {
@@ -54,7 +55,9 @@ def test_completions_endpoint(gateway, oidc_token):
         "X-Gitlab-Authentication-Type": "oidc",
         "Content-Type": "application/json",
     }
-    r = requests.post(f"https://{gateway}/v2/completions", json=prompt, headers=headers, timeout=1)
+    r = requests.post(
+        f"https://{gateway}/v2/completions", json=prompt, headers=headers, timeout=1
+    )
     assert r.status_code == 200
 
     data = r.json()
