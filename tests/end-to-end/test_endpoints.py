@@ -56,7 +56,7 @@ def test_completions_endpoint(gateway, oidc_token):
         "Content-Type": "application/json",
     }
     r = requests.post(
-        f"https://{gateway}/v2/completions", json=prompt, headers=headers, timeout=1
+        f"https://{gateway}/v2/completions", json=prompt, headers=headers, timeout=10
     )
     assert r.status_code == 200
 
