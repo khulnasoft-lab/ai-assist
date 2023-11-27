@@ -23,7 +23,7 @@ from ai_gateway.code_suggestions import (
     ModelProvider,
 )
 from ai_gateway.code_suggestions.processing.ops import lang_from_filename
-from ai_gateway.code_suggestions.chains.xray import x_ray_chain, XRayRequest, XRayChainFormatOutput
+from ai_gateway.code_suggestions.chains.xray import chain, XRayRequest, unpack_package_file_prompt
 from ai_gateway.deps import CodeSuggestionsContainer
 from ai_gateway.experimentation.base import ExperimentTelemetry
 from ai_gateway.instrumentators.base import Telemetry, TelemetryInstrumentator
@@ -293,4 +293,4 @@ async def repositoryXRay(
     request: Request,
     payload: XRayRequest
 ):
-    return x_ray_chain().invoke(payload)
+    return chain(payload).invoke(payload)
