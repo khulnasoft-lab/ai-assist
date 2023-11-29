@@ -170,11 +170,11 @@ class TestAgentUnsupportedModel:
             "detail": [
                 {
                     "loc": ["body", "prompt_components", 0, "payload", "model"],
-                    "msg": "unexpected value; permitted: 'claude-2.0', 'claude-instant-1.2'",
+                    "msg": "unexpected value; permitted: 'claude-2.1', 'claude-2.0', 'claude-instant-1.2'",
                     "type": "value_error.const",
                     "ctx": {
                         "given": "UNSUPPORTED_MODEL",
-                        "permitted": ["claude-2.0", "claude-instant-1.2"],
+                        "permitted": ["claude-2.1", "claude-2.0", "claude-instant-1.2"],
                     },
                 }
             ]

@@ -51,7 +51,8 @@ class AnthropicModel(TextGenBaseModel):
     # Ref: https://docs.anthropic.com/claude/reference/selecting-a-model
     MAX_MODEL_LEN = 100_000
     CLAUDE_INSTANT = "claude-instant-1.2"
-    CLAUDE = "claude-2.0"
+    CLAUDE = "claude-2.1"
+    CLAUDE_2_0 = "claude-2.0"
 
     # Ref: https://docs.anthropic.com/claude/reference/versioning
     DEFAULT_VERSION = "2023-06-01"
@@ -147,7 +148,7 @@ class AnthropicModel(TextGenBaseModel):
 
     @classmethod
     def from_model_name(cls, name: str, client: AsyncAnthropic, **kwargs: Any):
-        if not name.startswith((cls.CLAUDE_INSTANT, cls.CLAUDE)):
+        if not name.startswith((cls.CLAUDE_INSTANT, cls.CLAUDE, cls.CLAUDE_2_0)):
             raise ValueError(f"no model found by the name '{name}'")
 
         return cls(name, client, **kwargs)

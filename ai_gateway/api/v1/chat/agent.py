@@ -41,8 +41,12 @@ class PromptPayload(BaseModel):
         Literal[ANTHROPIC]
     ]  # We only support and expect Anthropic for now
     model: Optional[
-        Literal[AnthropicModel.CLAUDE, AnthropicModel.CLAUDE_INSTANT]
-    ] = AnthropicModel.CLAUDE
+        Literal[
+            AnthropicModel.CLAUDE,
+            AnthropicModel.CLAUDE_2_0,
+            AnthropicModel.CLAUDE_INSTANT,
+        ]
+    ] = AnthropicModel.CLAUDE_2_0
 
 
 class PromptComponent(BaseModel):
