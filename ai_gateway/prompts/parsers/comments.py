@@ -16,6 +16,7 @@ class BaseCommentVisitor(BaseVisitor):
         self._stop_tree_traversal = False
         self._stop_node_traversal = False
         self._comments_only = True
+        self._ends_with_comment = False
 
     @property
     def stop_tree_traversal(self) -> bool:
@@ -29,12 +30,17 @@ class BaseCommentVisitor(BaseVisitor):
     def comments_only(self) -> bool:
         return self._comments_only
 
+    @property
+    def ends_with_comment(self) -> bool:
+        return self._ends_with_comment
+
     def visit(self, node: Node):
         # use self instead of the class name to access the overridden attribute
         if self._TARGET_SYMBOLS and node.type not in self._TARGET_SYMBOLS:
             self._comments_only = False
-            self._stop_node_traversal = True
-            self._stop_tree_traversal = True
+            self._ends_with_comment = False
+        else:
+            self._ends_with_comment = True
 
     def _visit_node(self, node: Node):
         return super()._visit_node(node)

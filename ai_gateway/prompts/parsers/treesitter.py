@@ -108,13 +108,26 @@ class CodeParser(BaseCodeParser):
         tree_dfs(self.tree, visitor)
 
     def comments_only(self) -> bool:
-        visitor = CommentVisitorFactory.from_language_id(self.lang_id)
-        if visitor is None:
+        visitor = self._comments_visitor()
+        if not visitor:
             return False
 
-        self._visit_nodes(visitor)
-
         return visitor.comments_only
+
+    def ends_with_comment(self) -> bool:
+        visitor = self._comments_visitor()
+        if not visitor:
+            return False
+
+        return visitor.ends_with_comment
+
+    def _comments_visitor(self) -> bool:
+        visitor = CommentVisitorFactory.from_language_id(self.lang_id)
+        if visitor is None:
+            return None
+
+        self._visit_nodes(visitor)
+        return visitor
 
     @classmethod
     def from_language_id(

@@ -148,7 +148,7 @@ class CodeGenerations:
             if model_provider == ModelProvider.ANTHROPIC
             else PostProcessor
         )
-        generation = processor(prefix).process(response.text)
+        generation = processor(prefix, lang_id).process(response.text)
 
         return CodeSuggestionsOutput(
             text=generation,

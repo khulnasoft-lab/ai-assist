@@ -192,6 +192,27 @@ def prepend_new_line(code_context: str, completion: str) -> str:
     return completion
 
 
+def prepend_new_line_if_inside_comment(
+    code_context: str, completion: str, language: LanguageId
+) -> str:
+    if not len(completion):
+        return completion
+
+    prefix = CodeParser.from_language_id(code_context, language)
+
+    if not prefix:
+        return completion
+
+    if (
+        prefix.ends_with_comment()
+        and not code_context.endswith("\n")
+        and not completion.startswith("\n")
+    ):
+        return "\n" + completion
+
+    return completion
+
+
 def _split_code_lines(s: str) -> list[str]:
     lines_split = s.splitlines(keepends=True)
     lines_processed = []

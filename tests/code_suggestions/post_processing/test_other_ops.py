@@ -44,6 +44,28 @@ def test_prepend_new_line(code_context: str, completion: str, expected_value: st
 
 
 @pytest.mark.parametrize(
+    ("code_context", "completion", "language", "expected_value"),
+    [
+        ("", "", LanguageId.JS, ""),
+        ("code context", "", LanguageId.JS, ""),
+        ("code context", "\ncompletion", LanguageId.JS, "\ncompletion"),
+        ("code context", "completion", LanguageId.JS, "completion"),
+        ("code context\n", "completion", LanguageId.JS, "completion"),
+        ("// code context\n", "completion", LanguageId.JS, "completion"),
+        ("// code context", "completion", LanguageId.JS, "\ncompletion"),
+    ],
+)
+def test_prepend_new_line_if_inside_comment(
+    code_context: str, completion: str, language: LanguageId, expected_value: str
+):
+    actual_value = ops.prepend_new_line_if_inside_comment(
+        code_context, completion, language
+    )
+
+    assert actual_value == expected_value
+
+
+@pytest.mark.parametrize(
     ("completion", "lang_id", "expected"),
     [
         (
