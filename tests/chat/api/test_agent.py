@@ -1,9 +1,11 @@
-from typing import Type
+import os
+from typing import AsyncIterator, Type
 from unittest import mock
-from unittest.mock import AsyncMock
+from unittest.mock import ANY, AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from langchain.schema.output import ChatGenerationChunk
 from structlog.testing import capture_logs
 
 from ai_gateway.api.v1.api import api_router
@@ -32,27 +34,22 @@ def auth_user():
     )
 
 
+@pytest.fixture(autouse=True)
+def mock_environment_variables():
+    with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "dummy"}):
+        yield
+
+
 class TestAgentSuccessfulRequest:
     @pytest.mark.asyncio
-    async def test_successful_response(
-        self,
-        mock_client: TestClient,
-    ):
+    async def test_successful_response(self, mock_client: TestClient):
         model_name = "claude-2.0"
-        mock_model = mock.Mock(spec=AnthropicModel)
-        mock_model.generate = AsyncMock(
-            return_value=TextGenModelOutput(
-                text="test completion",
-                score=10000,
-                safety_attributes=SafetyAttributes(),
-            )
-        )
-        mock_anthropic_model = mock.Mock()
-        mock_anthropic_model.provider.return_value = mock_model
 
-        container = ChatContainer()
+        with patch(
+            "ai_gateway.api.v1.chat.agent.ChatAnthropic.ainvoke"
+        ) as mock_model_invoke:
+            mock_model_invoke.return_value = "test completion"
 
-        with container.anthropic_model.override(mock_anthropic_model):
             response = mock_client.post(
                 "/v1/chat/agent",
                 headers={
@@ -77,6 +74,10 @@ class TestAgentSuccessfulRequest:
                 },
             )
 
+            mock_model_invoke.assert_called_with(
+                "\n\nHuman: hello, what is your name?\n\nAssistant:", ANY
+            )
+
         assert response.status_code == 200
 
         assert response.json()["response"] == "test completion"
@@ -85,10 +86,55 @@ class TestAgentSuccessfulRequest:
         assert response_metadata["provider"] == "anthropic"
         assert response_metadata["model"] == model_name
 
-        mock_anthropic_model.provider.assert_called_with(model_name=model_name)
-        mock_model.generate.assert_called_with(
-            prefix="\n\nHuman: hello, what is your name?\n\nAssistant:", _suffix=""
-        )
+
+class TestAgentSuccessfulStream:
+    @pytest.mark.asyncio
+    async def test_successful_stream(self, mock_client: TestClient):
+        model_name = "claude-2.0"
+
+        model_chunks = ["test", " ", "completion"]
+
+        async def _stream_generator(*args) -> AsyncIterator[ChatGenerationChunk]:
+            for chunk in model_chunks:
+                yield chunk
+
+        with patch(
+            "ai_gateway.api.v1.chat.agent.ChatAnthropic.astream"
+        ) as mock_model_stream:
+            mock_model_stream.side_effect = _stream_generator
+
+            response = mock_client.post(
+                "/v1/chat/agent",
+                headers={
+                    "Authorization": "Bearer 12345",
+                    "X-Gitlab-Authentication-Type": "oidc",
+                },
+                json={
+                    "prompt_components": [
+                        {
+                            "type": "prompt",
+                            "metadata": {
+                                "source": "gitlab-rails-sm",
+                                "version": "16.5.0-ee",
+                            },
+                            "payload": {
+                                "content": "\n\nHuman: hello, how can I stream in FastAPI?\n\nAssistant:",
+                                "provider": "anthropic",
+                                "model": model_name,
+                            },
+                        },
+                    ],
+                    "stream": "True",
+                },
+            )
+
+            mock_model_stream.assert_called_with(
+                "\n\nHuman: hello, how can I stream in FastAPI?\n\nAssistant:", ANY
+            )
+
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+        assert response.text == "test completion"
 
 
 class TestAgentUnsupportedProvider:
@@ -332,21 +378,11 @@ class TestAgentUnsuccessfulAnthropicRequest:
             model_exception_type.code = 404
         exception = model_exception_type("exception message")
 
-        mock_model = mock.Mock(spec=AnthropicModel)
-        mock_model.generate = AsyncMock(
-            side_effect=_side_effect,
-            return_value=TextGenModelOutput(
-                text="test completion",
-                score=10000,
-                safety_attributes=SafetyAttributes(),
-            ),
-        )
-        mock_anthropic_model = mock.Mock()
-        mock_anthropic_model.provider.return_value = mock_model
+        with patch(
+            "ai_gateway.api.v1.chat.agent.ChatAnthropic.ainvoke"
+        ) as mock_model_invoke:
+            mock_model_invoke.side_effect = _side_effect
 
-        container = ChatContainer()
-
-        with container.anthropic_model.override(mock_anthropic_model):
             with capture_logs() as cap_logs:
                 response = mock_client.post(
                     "/v1/chat/agent",

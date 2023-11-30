@@ -4,6 +4,9 @@ from typing import Optional
 import structlog
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Request
+from fastapi.responses import StreamingResponse
+from langchain.chat_models import ChatAnthropic
+from langchain.schema import StrOutputParser
 from pydantic import BaseModel
 from pydantic.types import conlist, constr
 from pydantic.typing import Literal
@@ -55,6 +58,7 @@ class PromptComponent(BaseModel):
 # Details: https://gitlab.com/gitlab-org/gitlab/-/merge_requests/135837#note_1642865693
 class ChatRequest(BaseModel):
     prompt_components: conlist(PromptComponent, min_items=1, max_items=1)
+    stream: Optional[bool] = False
 
 
 class ChatResponseMetadata(BaseModel):
@@ -78,15 +82,18 @@ async def chat(
 ):
     prompt_component = chat_request.prompt_components[0]
     payload = prompt_component.payload
-    model = anthropic_model.provider(model_name=payload.model)
+
+    chain = ChatAnthropic(model_name=payload.model) | StrOutputParser()
+
+    if chat_request.stream is True:
+        return StreamingResponse(
+            chain.astream(payload.content), media_type="text/event-stream"
+        )
 
     try:
-        if completion := await model.generate(
-            prefix=payload.content,
-            _suffix="",
-        ):
+        if completion := await chain.ainvoke(payload.content):
             return ChatResponse(
-                response=completion.text,
+                response=completion,
                 metadata=ChatResponseMetadata(
                     provider=ANTHROPIC, model=payload.model, timestamp=time()
                 ),
