@@ -19,6 +19,7 @@ from ai_gateway.prompts.parsers.blocks import ErrorBlocksVisitor, MinAllowedBloc
 from ai_gateway.prompts.parsers.comments import CommentVisitorFactory
 from ai_gateway.prompts.parsers.context_extractors import ContextVisitorFactory
 from ai_gateway.prompts.parsers.counters import CounterVisitorFactory
+from ai_gateway.prompts.parsers.errors import ErrorVisitor
 from ai_gateway.prompts.parsers.function_signatures import (
     FunctionSignatureVisitorFactory,
 )
@@ -128,6 +129,16 @@ class CodeParser(BaseCodeParser):
 
         self._visit_nodes(visitor)
         return visitor
+
+    def has_errors(self) -> bool:
+        visitor = ErrorVisitor()
+
+        if not visitor:
+            return False
+
+        self._visit_nodes(visitor)
+
+        return visitor.error_count > 0
 
     @classmethod
     def from_language_id(

@@ -208,7 +208,14 @@ def prepend_new_line_if_inside_comment(
         and not code_context.endswith("\n")
         and not completion.startswith("\n")
     ):
-        return "\n" + completion
+        # see if newline leaves us with valid code
+        full_code = CodeParser.from_language_id(
+            code_context + "\n" + completion, language
+        )
+        if full_code.has_errors():
+            return completion
+        else:
+            return "\n" + completion
 
     return completion
 

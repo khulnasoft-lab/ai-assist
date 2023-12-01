@@ -53,6 +53,13 @@ def test_prepend_new_line(code_context: str, completion: str, expected_value: st
         ("code context\n", "completion", LanguageId.JS, "completion"),
         ("// code context\n", "completion", LanguageId.JS, "completion"),
         ("// code context", "completion", LanguageId.JS, "\ncompletion"),
+        (
+            "// code context",
+            "function completion() {",
+            LanguageId.JS,
+            "\nfunction completion() {",
+        ),
+        ("// code context", "this is a comment", LanguageId.JS, "this is a comment"),
     ],
 )
 def test_prepend_new_line_if_inside_comment(
