@@ -198,24 +198,27 @@ def prepend_new_line_if_inside_comment(
     if not completion:
         return completion
 
-    prefix = CodeParser.from_language_id(code_context, language)
+    try:
+        prefix = CodeParser.from_language_id(code_context, language)
 
-    if not prefix:
-        return completion
-
-    if (
-        prefix.ends_with_comment()
-        and not code_context.endswith("\n")
-        and not completion.startswith("\n")
-    ):
-        # see if newline leaves us with valid code
-        full_code = CodeParser.from_language_id(
-            code_context + "\n" + completion, language
-        )
-        if full_code.has_errors():
+        if not prefix:
             return completion
-        else:
-            return "\n" + completion
+
+        if (
+            prefix.ends_with_comment()
+            and not code_context.endswith("\n")
+            and not completion.startswith("\n")
+        ):
+            # see if newline leaves us with valid code
+            full_code = CodeParser.from_language_id(
+                code_context + "\n" + completion, language
+            )
+            if full_code.has_errors():
+                return completion
+            else:
+                return "\n" + completion
+    except ValueError as e:
+        log.warning(f"Failed to parse code: {e}")
 
     return completion
 
