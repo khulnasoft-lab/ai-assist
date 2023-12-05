@@ -195,7 +195,7 @@ def prepend_new_line(code_context: str, completion: str) -> str:
 def prepend_new_line_if_inside_comment(
     code_context: str, completion: str, language: LanguageId
 ) -> str:
-    if not len(completion):
+    if not completion:
         return completion
 
     prefix = CodeParser.from_language_id(code_context, language)
