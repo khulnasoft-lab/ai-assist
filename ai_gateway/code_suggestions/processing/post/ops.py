@@ -193,7 +193,7 @@ def prepend_new_line(code_context: str, completion: str) -> str:
 
 
 def prepend_new_line_if_inside_comment(
-    code_context: str, completion: str, language: LanguageId
+    code_context: str, completion: str, lang_id: Optional[LanguageId] = None
 ) -> str:
     if not completion:
         return completion
