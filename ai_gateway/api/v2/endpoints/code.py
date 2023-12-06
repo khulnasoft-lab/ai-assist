@@ -4,7 +4,7 @@ from typing import Annotated, AsyncIterator, Literal, Optional, Union
 import structlog
 from dependency_injector.providers import Factory
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Body, Depends, Request
+from fastapi import APIRouter, Body, Depends, Request, WebSocket
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, conlist, constr
 from starlette.datastructures import CommaSeparatedStrings
@@ -96,6 +96,30 @@ class SuggestionsResponse(BaseModel):
 
 class StreamSuggestionsResponse(StreamingResponse):
     pass
+
+@router.websocket("/code/completions/ws")
+@requires("code_suggestions")
+@inject
+async def websocket_endpoint(
+    websocket: WebSocket,
+    code_completions_legacy: Factory[CodeCompletionsLegacy] = Depends(
+        Provide[CodeSuggestionsContainer.code_completions_legacy.provider]
+    ),
+):
+    code_completions = code_completions_legacy()
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
+
+        suggestion = await code_completions.execute(
+            prefix=data,
+            suffix="",
+            file_name="test.py",
+            editor_lang="python",
+            stream=False,
+        )
+
+        await websocket.send_text(f"Suggestion was: {suggestion.text}")
 
 
 @router.post("/completions")
