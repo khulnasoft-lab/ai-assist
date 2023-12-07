@@ -359,20 +359,24 @@ class TestAgentInvalidRequestManyPromptComponents:
 
 
 class TestAgentUnsuccessfulAnthropicRequest:
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "model_exception_type", [APIConnectionError, APIStatusError]
     )
-    async def test_fail_receiving_anthropic_response(
-        self, mock_client: TestClient, model_exception_type: Type[APIError]
+    def test_fail_receiving_anthropic_response(
+        self, mock_client: TestClient, model_exception_type: Type
     ):
         def _side_effect(*_args, **_kwargs):
             raise exception
 
-        if issubclass(model_exception_type, APIStatusError):
-            model_exception_type.code = 404
-
-        exception = model_exception_type("exception message")
+        if issubclass(model_exception_type, APIConnectionError):
+            exception = model_exception_type(message="exception", request=mock.Mock())
+        else:
+            exception = model_exception_type(
+                message="exception message",
+                request=mock.Mock(),
+                response=mock.Mock(),
+                body=mock.Mock(),
+            )
 
         with patch(
             "ai_gateway.api.v1.chat.agent.ChatAnthropic.ainvoke"
