@@ -2,7 +2,7 @@ from time import time
 from typing import Optional
 
 import structlog
-from anthropic import AsyncAnthropic
+from anthropic import APIConnectionError, APIStatusError, AsyncAnthropic
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
@@ -14,11 +14,7 @@ from pydantic.typing import Literal
 from starlette.authentication import requires
 
 from ai_gateway.deps import ChatContainer
-from ai_gateway.models import (
-    AnthropicAPIConnectionError,
-    AnthropicAPIStatusError,
-    AnthropicModel,
-)
+from ai_gateway.models import AnthropicModel
 
 __all__ = [
     "router",
@@ -89,7 +85,7 @@ async def chat(
         | StrOutputParser()
     )
 
-    if chat_request.stream is True:
+    if chat_request.stream:
         return StreamingResponse(
             chain.astream(payload.content), media_type="text/event-stream"
         )
@@ -102,7 +98,7 @@ async def chat(
                     provider=ANTHROPIC, model=payload.model, timestamp=time()
                 ),
             )
-    except (AnthropicAPIConnectionError, AnthropicAPIStatusError) as ex:
+    except (APIConnectionError, APIStatusError) as ex:
         log.error(f"failed to execute Anthropic request: {ex}")
     return ChatResponse(
         response="",

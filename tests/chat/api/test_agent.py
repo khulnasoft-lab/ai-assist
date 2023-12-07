@@ -4,6 +4,7 @@ from unittest import mock
 from unittest.mock import ANY, AsyncMock, patch
 
 import pytest
+from anthropic import APIConnectionError, APIError, APIStatusError
 from fastapi.testclient import TestClient
 from langchain.schema.output import ChatGenerationChunk
 from structlog.testing import capture_logs
@@ -360,16 +361,17 @@ class TestAgentInvalidRequestManyPromptComponents:
 class TestAgentUnsuccessfulAnthropicRequest:
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "model_exception_type", [AnthropicAPIStatusError, AnthropicAPIConnectionError]
+        "model_exception_type", [APIConnectionError, APIStatusError]
     )
     async def test_fail_receiving_anthropic_response(
-        self, mock_client: TestClient, model_exception_type: Type[ModelAPIError]
+        self, mock_client: TestClient, model_exception_type: Type[APIError]
     ):
         def _side_effect(*_args, **_kwargs):
             raise exception
 
-        if issubclass(model_exception_type, AnthropicAPIStatusError):
+        if issubclass(model_exception_type, APIStatusError):
             model_exception_type.code = 404
+
         exception = model_exception_type("exception message")
 
         with patch(
