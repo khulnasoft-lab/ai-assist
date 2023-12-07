@@ -78,7 +78,6 @@ class ChatResponse(BaseModel):
 async def chat(
     request: Request,
     chat_request: ChatRequest,
-    anthropic_model: AnthropicModel = Depends(Provide[ChatContainer.anthropic_model]),
 ):
     prompt_component = chat_request.prompt_components[0]
     payload = prompt_component.payload
