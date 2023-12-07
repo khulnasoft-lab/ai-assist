@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, AsyncIterator, NamedTuple, Union
 
+import httpx
 from anthropic import AsyncAnthropic
 from google.cloud.aiplatform.gapic import PredictionServiceAsyncClient
 from pydantic import BaseModel
@@ -15,6 +16,7 @@ __all__ = [
     "TextGenBaseModel",
     "grpc_connect_vertex",
     "connect_anthropic",
+    "connect_chat_anthropic",
 ]
 
 
@@ -110,3 +112,10 @@ def grpc_connect_vertex(client_options: dict) -> PredictionServiceAsyncClient:
 
 def connect_anthropic(**kwargs: Any) -> AsyncAnthropic:
     return AsyncAnthropic(**kwargs)
+
+
+def connect_chat_anthropic() -> AsyncAnthropic:
+    return AsyncAnthropic(
+        timeout=httpx.Timeout(30.0, connect=5.0),
+        max_retries=1,
+    )

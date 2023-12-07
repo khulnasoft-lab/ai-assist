@@ -34,12 +34,6 @@ def auth_user():
     )
 
 
-@pytest.fixture(autouse=True)
-def mock_environment_variables():
-    with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "dummy"}):
-        yield
-
-
 class TestAgentSuccessfulRequest:
     @pytest.mark.asyncio
     async def test_successful_response(self, mock_client: TestClient):

@@ -2,6 +2,7 @@ from time import time
 from typing import Optional
 
 import structlog
+from anthropic import AsyncAnthropic
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
@@ -78,11 +79,15 @@ class ChatResponse(BaseModel):
 async def chat(
     request: Request,
     chat_request: ChatRequest,
+    anthropic_client: AsyncAnthropic = Depends(Provide[ChatContainer.anthropic_client]),
 ):
     prompt_component = chat_request.prompt_components[0]
     payload = prompt_component.payload
 
-    chain = ChatAnthropic(model_name=payload.model) | StrOutputParser()
+    chain = (
+        ChatAnthropic(model_name=payload.model, async_client=anthropic_client)
+        | StrOutputParser()
+    )
 
     if chat_request.stream is True:
         return StreamingResponse(

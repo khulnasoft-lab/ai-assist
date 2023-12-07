@@ -21,6 +21,7 @@ from ai_gateway.models import (
     FakePalmTextGenModel,
     PalmCodeGenModel,
     connect_anthropic,
+    connect_chat_anthropic,
     grpc_connect_vertex,
 )
 from ai_gateway.tokenizer import init_tokenizer
@@ -300,8 +301,4 @@ class ChatContainer(containers.DeclarativeContainer):
         ]
     )
 
-    client_anthropic = providers.Resource(connect_anthropic)
-    anthropic_model = providers.Factory(
-        AnthropicModel,
-        client=client_anthropic,
-    )
+    anthropic_client = providers.Resource(connect_chat_anthropic)
