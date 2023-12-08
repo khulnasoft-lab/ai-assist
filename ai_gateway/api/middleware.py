@@ -158,6 +158,7 @@ class MiddlewareLogRequest(Middleware):
                     gitlab_realm=request.headers.get(X_GITLAB_REALM_HEADER),
                 )
                 fields.update(context.data)
+                context.clear()
 
                 # Recreate the Uvicorn access log format, but add all parameters as structured information
                 access_logger.info(

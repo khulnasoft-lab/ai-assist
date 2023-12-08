@@ -193,6 +193,7 @@ class TextGenModelInstrumentator:
 
             context["inference_duration_s"] = duration
             context.update(container_dict)
+            container_dict.clear()
 
     def _track_model_cost(self, kind, character_count):
         labels = {
