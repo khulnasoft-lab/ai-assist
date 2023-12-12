@@ -201,9 +201,6 @@ def prepend_new_line_if_inside_comment(
     try:
         prefix = CodeParser.from_language_id(code_context, lang_id)
 
-        if not prefix:
-            return completion
-
         if (
             prefix.ends_with_comment()
             and not code_context.endswith("\n")

@@ -53,6 +53,7 @@ def test_prepend_new_line(code_context: str, completion: str, expected_value: st
         ("code context\n", "completion", LanguageId.JS, "completion"),
         ("// code context\n", "completion", LanguageId.JS, "completion"),
         ("// code context", "completion", LanguageId.JS, "\ncompletion"),
+        (12345, "111fffddd", LanguageId.JS, "111fffddd"),
         (
             "// code context",
             "function completion() {",
