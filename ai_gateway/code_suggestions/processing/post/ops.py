@@ -199,7 +199,7 @@ def prepend_new_line_if_inside_comment(
         return completion
 
     try:
-        prefix = CodeParser.from_language_id(code_context, language)
+        prefix = CodeParser.from_language_id(code_context, lang_id)
 
         if not prefix:
             return completion
@@ -210,10 +210,9 @@ def prepend_new_line_if_inside_comment(
             and not completion.startswith("\n")
         ):
             # see if newline leaves us with valid code
-            full_code = CodeParser.from_language_id(
-                code_context + "\n" + completion, language
-            )
-            if full_code.has_errors():
+            full_code = CodeParser.from_language_id(completion, lang_id)
+
+            if full_code.errors(include_missing=False):
                 return completion
             else:
                 return "\n" + completion
