@@ -74,7 +74,7 @@ class SnowplowClient(Client):
         configuration: A SnowplowClientConfiguration using to initialize the Snowplow tracker.
     """
 
-    SCHEMA = "iglu:com.gitlab/code_suggestions_context/jsonschema/1-0-0"
+    SCHEMA = "iglu:com.gitlab/code_suggestions_context/jsonschema/2-3-0"
 
     def __init__(self, configuration: SnowplowClientConfiguration) -> None:
         emitter = AsyncEmitter(
