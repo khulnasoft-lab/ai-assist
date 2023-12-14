@@ -129,7 +129,7 @@ class CodeParser(BaseCodeParser):
 
         return visitor.ends_with_comment
 
-    def _comments_visitor(self) -> bool:
+    def _comments_visitor(self) -> BaseCommentVisitor:
         visitor = CommentVisitorFactory.from_language_id(self.lang_id)
         if visitor is None:
             return None
