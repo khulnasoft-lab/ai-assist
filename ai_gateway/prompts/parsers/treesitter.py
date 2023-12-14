@@ -16,7 +16,10 @@ from ai_gateway.prompts.parsers.base import (
     Point,
 )
 from ai_gateway.prompts.parsers.blocks import ErrorBlocksVisitor, MinAllowedBlockVisitor
-from ai_gateway.prompts.parsers.comments import CommentVisitorFactory
+from ai_gateway.prompts.parsers.comments import (
+    BaseCommentVisitor,
+    CommentVisitorFactory,
+)
 from ai_gateway.prompts.parsers.context_extractors import ContextVisitorFactory
 from ai_gateway.prompts.parsers.counters import CounterVisitorFactory
 from ai_gateway.prompts.parsers.function_signatures import (
@@ -99,18 +102,10 @@ class CodeParser(BaseCodeParser):
         return CodeContext.from_node(self.tree.root_node)
 
     def errors(self, include_missing=True) -> list[CodeContext]:
-        visitor = ErrorBlocksVisitor()
+        visitor = ErrorBlocksVisitor(include_missing=include_missing)
         self._visit_nodes(visitor)
 
-        if include_missing:
-            return list(map(CodeContext.from_node, visitor.errors))
-        else:
-            return list(
-                map(
-                    CodeContext.from_node,
-                    [e for e in visitor.errors if not e.is_missing],
-                )
-            )
+        return list(map(CodeContext.from_node, visitor.errors))
 
     def _visit_nodes(self, visitor: BaseVisitor):
         tree_dfs(self.tree, visitor)

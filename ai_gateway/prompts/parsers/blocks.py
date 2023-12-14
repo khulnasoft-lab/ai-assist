@@ -44,8 +44,9 @@ class MinAllowedBlockVisitor(BaseVisitor):
 
 
 class ErrorBlocksVisitor(BaseVisitor):
-    def __init__(self):
+    def __init__(self, include_missing=True):
         self.error_nodes = []
+        self.include_missing = include_missing
 
     def _visit_node(self, target_node: Node):
         # Include only low-level errors that do not contain other error nodes.
@@ -64,7 +65,10 @@ class ErrorBlocksVisitor(BaseVisitor):
 
     @property
     def errors(self) -> list[Node]:
-        return self.error_nodes
+        if not self.include_missing:
+            return [e for e in self.error_nodes if not e.is_missing]
+        else:
+            return self.error_nodes
 
     def visit(self, node: Node):
         # override the inherited method to rely on the error property
