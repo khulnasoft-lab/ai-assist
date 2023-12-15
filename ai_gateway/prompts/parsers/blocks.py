@@ -52,7 +52,11 @@ class ErrorBlocksVisitor(BaseVisitor):
         # Include only low-level errors that do not contain other error nodes.
         # We assume that the visitor called with the DFS algorithm.
         # Consider updating the logic by building a binary tree of visited nodes if the support of BFS is required.
-        nodes = [target_node]
+        if target_node.is_missing and not self.include_missing:
+            nodes = []
+        else:
+            nodes = [target_node]
+
         for node in self.error_nodes:
             if (
                 node.start_point <= target_node.start_point
@@ -65,10 +69,7 @@ class ErrorBlocksVisitor(BaseVisitor):
 
     @property
     def errors(self) -> list[Node]:
-        if not self.include_missing:
-            return [e for e in self.error_nodes if not e.is_missing]
-        else:
-            return self.error_nodes
+        return self.error_nodes
 
     def visit(self, node: Node):
         # override the inherited method to rely on the error property

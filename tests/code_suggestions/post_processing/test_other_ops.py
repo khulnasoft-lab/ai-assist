@@ -60,6 +60,12 @@ def test_prepend_new_line(code_context: str, completion: str, expected_value: st
             LanguageId.JS,
             "\nfunction completion() {",
         ),
+        (
+            "some invalid code\n// code context",
+            "console.log()",
+            LanguageId.JS,
+            "\nconsole.log()",
+        ),
         ("// code context", "this is a comment", LanguageId.JS, "this is a comment"),
     ],
 )
