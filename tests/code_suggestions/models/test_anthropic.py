@@ -1,5 +1,5 @@
 from typing import Type
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import ANY, AsyncMock, Mock, patch
 
 import pytest
 from anthropic import (
@@ -259,7 +259,9 @@ async def test_anthropic_model_generate_instrumented():
     ) as mock_watch:
         await model.generate("Wolf, what time is it?")
 
-        mock_watch.assert_called_once_with(stream=False)
+        mock_watch.assert_called_once_with(
+            prompt="Wolf, what time is it?", opts=ANY, stream=False
+        )
 
 
 @pytest.mark.asyncio
@@ -306,7 +308,9 @@ async def test_anthropic_model_generate_stream_instrumented():
         with pytest.raises(ValueError):
             _ = [item async for item in r]
 
-        mock_watch.assert_called_once_with(stream=True)
+        mock_watch.assert_called_once_with(
+            prompt="Wolf, what time is it?", opts=ANY, stream=True
+        )
         watcher.finish.assert_called_once()
 
 

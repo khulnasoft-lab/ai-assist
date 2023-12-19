@@ -1,5 +1,5 @@
 from typing import Sequence
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import ANY, AsyncMock, Mock, patch
 
 import pytest
 from google.api_core.exceptions import InvalidArgument, RetryError
@@ -121,7 +121,16 @@ async def test_palm_model_generate_instrumented(model):
         "ai_gateway.instrumentators.model_requests.ModelRequestInstrumentator.watch"
     ) as mock_watch:
         await palm_model.generate(TEST_PREFIX, TEST_SUFFIX)
-        mock_watch.assert_called()
+        if model == PalmTextBisonModel:
+            mock_watch.assert_called_once_with(
+                prompt={"content": TEST_PREFIX}, opts=ANY
+            )
+        elif model == PalmCodeBisonModel:
+            mock_watch.assert_called_once_with(prompt={"prefix": TEST_PREFIX}, opts=ANY)
+        else:
+            mock_watch.assert_called_once_with(
+                prompt={"prefix": TEST_PREFIX, "suffix": TEST_SUFFIX}, opts=ANY
+            )
 
 
 @pytest.mark.parametrize(

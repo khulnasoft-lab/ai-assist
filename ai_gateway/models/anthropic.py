@@ -117,9 +117,10 @@ class AnthropicModel(TextGenBaseModel):
         **kwargs: Any,
     ) -> Union[TextGenModelOutput, AsyncIterator[TextGenModelChunk]]:
         opts = _obtain_opts(self.model_opts, **kwargs)
-        log.debug("codegen anthropic call:", **opts)
 
-        with self.instrumentator.watch(stream=stream) as watcher:
+        with self.instrumentator.watch(
+            prompt=prefix, opts=opts, stream=stream
+        ) as watcher:
             try:
                 suggestion = await self.client.completions.create(
                     model=self.metadata.name,

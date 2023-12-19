@@ -1,6 +1,8 @@
 from contextlib import contextmanager
 from typing import Union
 
+import structlog
+from asgi_correlation_id.context import correlation_id
 from prometheus_client import Gauge
 
 METRIC_LABELS = ["model_engine", "model_name"]
@@ -16,6 +18,7 @@ MAX_CONCURRENT_MODEL_INFERENCES = Gauge(
     "The maximum number of inferences we can run concurrently on a model",
     METRIC_LABELS,
 )
+log = structlog.stdlib.get_logger("model_requests")
 
 
 class ModelRequestInstrumentator:
@@ -24,7 +27,15 @@ class ModelRequestInstrumentator:
             self.labels = labels
             self.concurrency_limit = concurrency_limit
 
-        def start(self):
+        def start(self, prompt: str, opts: dict):
+            details = {
+                "prompt": prompt,
+                "correlation_id": correlation_id.get(),
+                "model_options": opts,
+                **self.labels,
+            }
+            log.info("requesting to a model", **details)
+
             if self.concurrency_limit is not None:
                 MAX_CONCURRENT_MODEL_INFERENCES.labels(**self.labels).set(
                     self.concurrency_limit
@@ -41,11 +52,11 @@ class ModelRequestInstrumentator:
         self.concurrency_limit = concurrency_limit
 
     @contextmanager
-    def watch(self, stream=False):
+    def watch(self, prompt: Union[str, dict], opts: dict, stream=False):
         watcher = ModelRequestInstrumentator.WatchContainer(
             labels=self.labels, concurrency_limit=self.concurrency_limit
         )
-        watcher.start()
+        watcher.start(prompt=prompt, opts=opts)
         try:
             yield watcher
         finally:
