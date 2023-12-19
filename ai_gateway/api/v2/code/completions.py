@@ -19,6 +19,7 @@ from ai_gateway.api.middleware import (
 from ai_gateway.api.v2.code.typing import (
     CompletionsRequestV1,
     CompletionsRequestV2,
+    CurrentFile,
     GenerationsRequestV1,
     GenerationsRequestV2,
     StreamSuggestionsResponse,
@@ -31,6 +32,7 @@ from ai_gateway.code_suggestions import (
     CodeCompletionsLegacy,
     CodeGenerations,
     CodeSuggestionsChunk,
+    PiiRedactor,
 )
 from ai_gateway.code_suggestions.processing.ops import lang_from_filename
 from ai_gateway.deps import CodeSuggestionsContainer
@@ -76,6 +78,8 @@ async def completions(
         Provide[CodeSuggestionsContainer.snowplow_instrumentator]
     ),
 ):
+    payload.current_file = redact_pii(payload.current_file)
+
     try:
         track_snowplow_event(request, payload, snowplow_instrumentator)
     except Exception as e:
@@ -153,6 +157,8 @@ async def generations(
         Provide[CodeSuggestionsContainer.snowplow_instrumentator]
     ),
 ):
+    payload.current_file = redact_pii(payload.current_file)
+
     try:
         track_snowplow_event(request, payload, snowplow_instrumentator)
     except Exception as e:
@@ -276,3 +282,15 @@ async def _handle_stream(
     return StreamSuggestionsResponse(
         _stream_generator(), media_type="text/event-stream"
     )
+
+
+@inject
+def redact_pii(
+    file: CurrentFile,
+    pii_redactor: PiiRedactor = Depends(Provide[CodeSuggestionsContainer.pii_redactor]),
+) -> CurrentFile:
+    redacted_above_cursor = pii_redactor.redact_pii(content=file.content_above_cursor)
+    redacted_below_cursor = pii_redactor.redact_pii(content=file.content_below_cursor)
+    file.content_above_cursor = redacted_above_cursor
+    file.content_below_cursor = redacted_below_cursor
+    return file

@@ -9,6 +9,7 @@ from ai_gateway.code_suggestions import (
     CodeCompletions,
     CodeCompletionsLegacy,
     CodeGenerations,
+    PiiRedactor,
 )
 from ai_gateway.code_suggestions.processing import ModelEngineCompletions
 from ai_gateway.code_suggestions.processing.post.completions import (
@@ -314,6 +315,10 @@ class CodeSuggestionsContainer(containers.DeclarativeContainer):
     snowplow_instrumentator = providers.Resource(
         SnowplowInstrumentator,
         client=snowplow_client,
+    )
+
+    pii_redactor = providers.Resource(
+        PiiRedactor,
     )
 
 

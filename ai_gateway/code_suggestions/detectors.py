@@ -1,27 +1,25 @@
 import re
-from abc import ABC, abstractmethod
-from enum import Enum
-from typing import Iterable, NamedTuple, Optional
+from typing import List
 
 import regex
 
-# noinspection PyProtectedMember
-from detect_secrets.core.scan import PotentialSecret, _process_line_based_plugins
-from detect_secrets.plugins.keyword import QUOTES_REQUIRED_DENYLIST_REGEX_TO_GROUP
-from detect_secrets.settings import transient_settings
-
 __all__ = [
-    "Detected",
-    "DetectorKind",
-    "BaseDetector",
-    "DetectorRegex",
     "DetectorRegexEmail",
     "DetectorRegexIPV6",
     "DetectorRegexIPV4",
-    "DetectorBasicAuthSecrets",
-    "DetectorTokenSecrets",
-    "DetectorKeywordsSecrets",
+    "DetectorRegexSecrets",
+    "PiiRedactor",
+    "DEFAULT_REPLACEMENT_EMAIL",
+    "DEFAULT_REPLACEMENT_IPV4",
+    "DEFAULT_REPLACEMENT_IPV6",
+    "DEFAULT_REPLACEMENT_SECRET",
 ]
+
+DEFAULT_REPLACEMENT_EMAIL = "<email@example.com>"
+DEFAULT_REPLACEMENT_IPV4 = "<x.x.x.x>"
+DEFAULT_REPLACEMENT_IPV6 = "<x:x:x:x:x:x:x:x>"
+DEFAULT_REPLACEMENT_SECRET = "<secret>"
+
 
 email_pattern = r"""
     (?<= ^ | [\b\s@,?!;:)('".\p{Han}<] )
@@ -40,7 +38,7 @@ ipv4seg = r"(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])"
 ipv4addr = r"(?:(?:" + ipv4seg + r"\.){3,3}" + ipv4seg + r")"
 ipv6seg = r"(?:(?:[0-9a-fA-F]){1,4})"
 
-# Examples of emails identified:
+# Examples of IPs identified:
 # 1:2:3:4:5:6:7:8
 # 1:: 1:2:3:4:5:6:7::
 # 1::8 1:2:3:4:5:6::8 1:2:3:4:5:6::8
@@ -69,198 +67,960 @@ ipv6groups = (
 )
 ipv6addr = "|".join(["(?:{})".format(g) for g in ipv6groups[::-1]])
 
-ipv6_pattern = (
-    r"(?:^|[\b\s@?,!;:\'\")(.\p{Han}])(" + ipv6addr + r")(?:$|[\s@,?!;:'\"(.\p{Han}])"
-)
+ipv6_pattern = ipv6addr
 
-ipv4_pattern = (
-    r"(?:^|[\b\s@?,!;:\'\")(.\p{Han}])(" + ipv4addr + r")(?:$|[\s@,?!;:'\"(.\p{Han}])"
-)
+ipv4_pattern = ipv4addr
 
 
-class DetectorKind(Enum):
-    EMAIL = 1
-    IPV4 = 2
-    IPV6 = 3
-    SECRET = 4
-    REGEX = 5
+# Patterns for 882 tokens labeled as high confidence in
+# https://github.com/mazen160/secrets-patterns-db/blob/master/db/rules-stable.yml
+secret_token_patterns = [
+    r"AKIA[0-9A-Z]{16}",
+    r"arn:aws:[a-z0-9-]+:[a-z]{2}-[a-z]+-[0-9]+:[0-9]+:.+",
+    r"(A3T[A-Z0-9]|AKIA|AGPA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}",
+    r"da2-[a-z0-9]{26}",
+    r"amzn\.mws\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+    r"[0-9a-z._-]+.rds.amazonaws.com",
+    r"s3://[0-9a-z._/-]+",
+    r"(aws_access_key_id|aws_secret_access_key)",
+    r"(?:abbysale).{0,40}\b([a-z0-9A-Z]{40})\b",
+    r"(?:abstract).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:abuseipdb).{0,40}\b([a-z0-9]{80})\b",
+    r"(?:accuweather).{0,40}([a-z0-9A-Z\%]{35})\b",
+    r"\b(aio\_[a-zA-Z0-9]{28})\b",
+    r"(?:adobe).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:adzuna).{0,40}\b([a-z0-9]{8})\b",
+    r"(?:adzuna).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:aeroworkflow).{0,40}\b([0-9]{1,})\b",
+    r"(?:aeroworkflow).{0,40}\b([a-zA-Z0-9^!]{20})\b",
+    r"(?:agora).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:airbrake).{0,40}\b([0-9]{6})\b",
+    r"(?:airbrake).{0,40}\b([a-zA-Z-0-9]{32})\b",
+    r"(?:airbrake).{0,40}\b([a-zA-Z-0-9]{40})\b",
+    r"(?:airship).{0,40}\b([0-9Aa-zA-Z]{91})\b",
+    r"(?:airvisual).{0,40}\b([a-z0-9-]{36})\b",
+    r"(?:alconost).{0,40}\b([0-9Aa-z]{32})\b",
+    r"(?:alegra).{0,40}\b([a-z0-9-]{20})\b",
+    r"(?:alegra).{0,40}\b([a-zA-Z0-9.-@]{25,30})\b",
+    r"(?:aletheiaapi).{0,40}\b([A-Z0-9]{32})\b",
+    r"\b(LTAI[a-zA-Z0-9]{17,21})[\"\' ;\s]*",
+    r"(?:alienvault).{0,40}\b([a-z0-9]{64})\b",
+    r"(?:allsports).{0,40}\b([0-9a-z]{64})\b",
+    r"(?:amadeus).{0,40}\b([0-9A-Za-z]{32})\b",
+    r"(?:amadeus).{0,40}\b([0-9A-Za-z]{16})\b",
+    r"(?:ambee).{0,40}\b([0-9a-f]{64})\b",
+    r"(?:amplitude).{0,40}\b([a-f0-9]{32})",
+    r"(?:apacta).{0,40}\b([a-z0-9-]{36})\b",
+    r"(?:api2cart).{0,40}\b([0-9a-f]{32})\b",
+    r"\b(sk_live_[a-z0-9A-Z-]{93})\b",
+    r"(?:apideck).{0,40}\b([a-z0-9A-Z]{40})\b",
+    r"(?:apiflash).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:apiflash).{0,40}\b([a-zA-Z0-9\S]{21,30})\b",
+    r"(?:apifonica).{0,40}\b([0-9a-z]{11}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12})\b",
+    r"\b(apify\_api\_[a-zA-Z-0-9]{36})\b",
+    r"(?:apimatic).{0,40}\b([a-z0-9-\S]{8,32})\b",
+    r"(?:apimatic).{0,40}\b([a-zA-Z0-9]{3,20}@[a-zA-Z0-9]{2,12}.[a-zA-Z0-9]{2,5})\b",
+    r"(?:apiscience).{0,40}\b([a-bA-Z0-9\S]{22})\b",
+    r"(?:apollo).{0,40}\b([a-zA-Z0-9]{22})\b",
+    r"(?:appcues).{0,40}\b([0-9]{5})\b",
+    r"(?:appcues).{0,40}\b([a-z0-9-]{36})\b",
+    r"(?:appcues).{0,40}\b([a-z0-9-]{39})\b",
+    r"(?:appfollow).{0,40}\b([0-9A-Za-z]{20})\b",
+    r"(?:appsynergy).{0,40}\b([a-z0-9]{64})\b",
+    r"(?:apptivo).{0,40}\b([a-z0-9-]{36})\b",
+    r"(?:apptivo).{0,40}\b([a-zA-Z0-9-]{32})\b",
+    r"\b([A-Za-z0-9](?:[A-Za-z0-9\-]{0,61}[A-Za-z0-9])\.jfrog\.io)",
+    r"(?:artsy).{0,40}\b([0-9a-zA-Z]{20})\b",
+    r"(?:artsy).{0,40}\b([0-9a-zA-Z]{32})\b",
+    r"(?:asana).{0,40}\b([a-z\/:0-9]{51})\b",
+    r"(?:asana).{0,40}\b([0-9]{1,}\/[0-9]{16,}:[A-Za-z0-9]{32,})\b",
+    r"(?:assemblyai).{0,40}\b([0-9a-z]{32})\b",
+    r"-----BEGIN ((EC|PGP|DSA|RSA|OPENSSH) )?PRIVATE KEY( BLOCK)?-----",
+    r"(?:audd).{0,40}\b([a-z0-9-]{32})\b",
+    r"(?:auth0).{0,40}\b(ey[a-zA-Z0-9._-]+)\b",
+    r"(?:autodesk).{0,40}\b([0-9A-Za-z]{32})\b",
+    r"(?:autodesk).{0,40}\b([0-9A-Za-z]{16})\b",
+    r"(?:autoklose).{0,40}\b([a-zA-Z0-9-]{32})\b",
+    r"(?:autopilot).{0,40}\b([0-9a-f]{32})\b",
+    r"(?:avaza).{0,40}\b([0-9]+-[0-9a-f]{40})\b",
+    r"(?:aviationstack).{0,40}\b([a-z0-9]{32})\b",
+    r"\b((?:AKIA|ABIA|ACCA|ASIA)[0-9A-Z]{16})\b",
+    r"(?:axonaut).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:aylien).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:aylien).{0,40}\b([a-z0-9]{8})\b",
+    r"(?:ayrshare).{0,40}\b([A-Z]{7}-[A-Z0-9]{7}-[A-Z0-9]{7}-[A-Z0-9]{7})\b",
+    r"(?:bannerbear).{0,40}\b([0-9a-zA-Z]{22}tt)\b",
+    r"(?:baremetrics).{0,40}\b([a-zA-Z0-9_]{25})\b",
+    r"(?:baseapi|base-api).{0,40}\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b",
+    r"(?:beamer).{0,40}\b([a-zA-Z0-9_+/]{45}=)",
+    r"(?:beebole).{0,40}\b([0-9a-z]{40})\b",
+    r"(?:besttime).{0,40}\b([0-9A-Za-z_]{36})\b",
+    r"(?:billomat).{0,40}\b([0-9a-z]{1,})\b",
+    r"(?:billomat).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:bitbar).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:bitcoinaverage).{0,40}\b([a-zA-Z0-9]{43})\b",
+    r"(?:bitfinex).{0,40}\b([A-Za-z0-9_-]{43})\b",
+    r"R_[0-9a-f]{32}",
+    r"(?:bitly).{0,40}\b([a-zA-Z-0-9]{40})\b",
+    r"(?:bitmex).{0,40}([ \r\n]{1}[0-9a-zA-Z\-\_]{24}[ \r\n]{1})",
+    r"(?:bitmex).{0,40}([ \r\n]{1}[0-9a-zA-Z\-\_]{48}[ \r\n]{1})",
+    r"(?:blablabus).{0,40}\b([0-9A-Za-z]{22})\b",
+    r"(?:blazemeter|runscope).{0,40}\b([0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12})\b",
+    r"(?:blitapp).{0,40}\b([a-zA-Z0-9_-]{39})\b",
+    r"(?:bombbomb).{0,40}\b([a-zA-Z0-9-._]{704})\b",
+    r"(?:boostnote).{0,40}\b([0-9a-f]{64})\b",
+    r"(?:borgbase).{0,40}\b([a-zA-Z0-9/_.-]{148,152})\b",
+    r"access_token$production$[0-9a-z]{16}$[0-9a-f]{32}",
+    r"(?:brandfetch).{0,40}\b([0-9A-Za-z]{40})\b",
+    r"(?:browshot).{0,40}\b([a-zA-Z-0-9]{28})\b",
+    r"(?:buddyns).{0,40}\b([0-9a-z]{40})\b",
+    r"(?:bugherd).{0,40}\b([0-9a-z]{22})\b",
+    r"(?:bugsnag).{0,40}\b([0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12})\b",
+    r"(?:buildkite).{0,40}\b([a-z0-9]{40})\b",
+    r"(?:bulbul).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:buttercms).{0,40}\b([a-z0-9]{40})\b",
+    r"(?:caflou).{0,40}\b([a-bA-Z0-9\S]{155})\b",
+    r"(?:calendarific).{0,40}\b([a-z0-9]{40})\b",
+    r"(?:calendly).{0,40}\b([a-zA-Z-0-9]{20}.[a-zA-Z-0-9]{171}.[a-zA-Z-0-9_]{43})\b",
+    r"(?:calorieninja).{0,40}\b([0-9A-Za-z]{40})\b",
+    r"(?:campayn).{0,40}\b([a-z0-9]{64})\b",
+    r"(?:canny).{0,40}\b([a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[0-9]{4}-[a-z0-9]{12})\b",
+    r"(?:capsulecrm).{0,40}\b([a-zA-Z0-9-._+=]{64})\b",
+    r"(?:captaindata).{0,40}\b([0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{12})\b",
+    r"(?:captaindata).{0,40}\b([0-9a-f]{64})\b",
+    r"(?:carboninterface).{0,40}\b([a-zA-Z0-9]{21})\b",
+    r"(?:cashboard).{0,40}\b([0-9A-Z]{3}-[0-9A-Z]{3}-[0-9A-Z]{3}-[0-9A-Z]{3})\b",
+    r"(?:cashboard).{0,40}\b([0-9a-z]{1,})\b",
+    r"(?:caspio).{0,40}\b([a-z0-9]{8})\b",
+    r"(?:caspio).{0,40}\b([a-z0-9]{50})\b",
+    r"(?:censys).{0,40}\b([a-zA-Z0-9]{32})\b",
+    r"(?:censys).{0,40}\b([a-z0-9-]{36})\b",
+    r"(?:centralstation).{0,40}\b([a-z0-9]{30})\b",
+    r"(?:cexio|cex.io).{0,40}\b([a-z]{2}[0-9]{9})\b",
+    r"(?:cexio|cex.io).{0,40}\b([0-9A-Za-z]{24,27})\b",
+    r"(?:chatbot).{0,40}\b([a-zA-Z0-9_]{32})\b",
+    r"(?:chatfuel).{0,40}\b([a-zA-Z0-9]{128})\b",
+    r"(?:checio).{0,40}\b(pk_[a-z0-9]{45})\b",
+    r"(?:checklyhq).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:checkout).{0,40}\b((sk_|sk_test_)[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\b",
+    r"(?:checkout).{0,40}\b(cus_[0-9a-zA-Z]{26})\b",
+    r"(?:checkvist).{0,40}\b([\w\.-]+@[\w-]+\.[\w\.-]{2,5})\b",
+    r"(?:checkvist).{0,40}\b([0-9a-zA-Z]{14})\b",
+    r"(?:cicero).{0,40}\b([0-9a-z]{40})\b",
+    r"(?:clearbit).{0,40}\b([0-9a-z_]{35})\b",
+    r"\b([0-9A-Za-z]{3,20}.try.clickhelp.co)\b",
+    r"(?:clickhelp).{0,40}\b([0-9A-Za-z]{24})\b",
+    r"(?:sms).{0,40}\b([a-zA-Z0-9]{3,20}@[a-zA-Z0-9]{2,12}.[a-zA-Z0-9]{2,5})\b",
+    r"(?:clickup).{0,40}\b(pk_[0-9]{8}_[0-9A-Z]{32})\b",
+    r"(?:cliengo).{0,40}\b([0-9a-f]{8}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{4}\-[0-9a-f]{12})\b",
+    r"(?:clinchpad).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:clockify).{0,40}\b([a-zA-Z0-9]{48})\b",
+    r"(?:clockwork|textanywhere).{0,40}\b([0-9a-zA-Z]{24})\b",
+    r"(?:clockwork|textanywhere).{0,40}\b([0-9]{5})\b",
+    r"\b(api_[a-z0-9A-Z.]{45})\b",
+    r"(?:cloudelements).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:cloudelements).{0,40}\b([a-zA-Z0-9]{43})\b",
+    r"(?:cloudflare).{0,40}\b(v[A-Za-z0-9._-]{173,})\b",
+    r"(?:cloudimage).{0,40}\b([a-z0-9_]{30})\b",
+    r"cloudinary://[0-9]+:[A-Za-z0-9\-_\.]+@[A-Za-z0-9\-_\.]+",
+    r"(?:cloudmersive).{0,40}\b([a-z0-9-]{36})\b",
+    r"(?:cloudplan).{0,40}\b([A-Z0-9-]{32})\b",
+    r"(?:cloverly).{0,40}\b([a-z0-9:_]{28})\b",
+    r"(?:cloze).{0,40}\b([0-9a-f]{32})\b",
+    r"(?:cloze).{0,40}\b([\w\.-]+@[\w-]+\.[\w\.-]{2,5})\b",
+    r"(?:clustdoc).{0,40}\b([0-9a-zA-Z]{60})\b",
+    r"(?:codacy).{0,40}\b([0-9A-Za-z]{20})\b",
+    r"(?:coinapi).{0,40}\b([A-Z0-9-]{36})\b",
+    r"(?:coinbase).{0,40}\b([a-zA-Z-0-9]{64})\b",
+    r"(?:coinlayer).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:coinlib).{0,40}\b([a-z0-9]{16})\b",
+    r"(?:column).{0,40}\b((?:test|live)_[a-zA-Z0-9]{27})\b",
+    r"(?:commercejs).{0,40}\b([a-z0-9_]{48})\b",
+    r"(?:commodities).{0,40}\b([a-zA-Z0-9]{60})\b",
+    r"(?:companyhub).{0,40}\b([0-9a-zA-Z]{20})\b",
+    r"(?:companyhub).{0,40}\b([a-zA-Z0-9$%^=-]{4,32})\b",
+    r"(?:confluent).{0,40}\b([a-zA-Z-0-9]{16})\b",
+    r"(?:confluent).{0,40}\b([a-zA-Z-0-9]{64})\b",
+    r"(?:convertkit).{0,40}\b([a-z0-9A-Z_]{22})\b",
+    r"(?:convier).{0,40}\b([0-9]{2}\|[a-zA-Z0-9]{40})\b",
+    r"(?:copper).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:countrylayer).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:courier).{0,40}\b(pk\_[a-zA-Z0-9]{1,}\_[a-zA-Z0-9]{28})\b",
+    r"(?:coveralls).{0,40}\b([a-zA-Z0-9-]{37})\b",
+    r"(?:crowdin).{0,40}\b([0-9A-Za-z]{80})\b",
+    r"(?:cryptocompare).{0,40}\b([a-z-0-9]{64})\b",
+    r"(?:currencycloud).{0,40}\b([0-9a-z]{64})\b",
+    r"(?:currencyfreaks).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:currencylayer).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:currencyscoop).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:currentsapi).{0,40}\b([a-zA-Z0-9\S]{48})\b",
+    r"(?:guru).{0,40}\b([a-z0-9A-Z]{50})\b",
+    r"(?:guru).{0,40}\b([a-z0-9A-Z]{30})\b",
+    r"(?:d7network).{0,40}\b([a-zA-Z0-9\W\S]{23}\=)",
+    r"(?:daily).{0,40}\b([0-9a-f]{64})\b",
+    r"(?:dandelion).{0,40}\b([a-z0-9]{32})\b",
+    r"dapi[a-f0-9]{32}\b",
+    r"(?:datafire).{0,40}\b([a-z0-9\S]{175,190})\b",
+    r"(?:data.gov).{0,40}\b([a-zA-Z0-9]{40})\b",
+    r"(?:deepai).{0,40}\b([a-z0-9-]{36})\b",
+    r"(?:deepgram).{0,40}\b([0-9a-z]{40})\b",
+    r"(?:delighted).{0,40}\b([a-z0-9A-Z]{32})\b",
+    r"\b([0-9a-z]{1,}.as.deputy.com)\b",
+    r"(?:deputy).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:detectlanguage).{0,40}\b([a-z0-9]{32})\b",
+    r"\b(web\_[0-9a-z]{32})\b",
+    r"(?:diffbot).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:digitalocean).{0,40}\b([A-Za-z0-9_-]{64})\b",
+    r"https://discordapp\.com/api/webhooks/[0-9]+/[A-Za-z0-9\-]+",
+    r"(?:discord).{0,40}\b([A-Za-z0-9_-]{24}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{27})\b",
+    r"(?:discord).{0,40}\b([0-9]{17})\b",
+    r"(https:\/\/discord.com\/api\/webhooks\/[0-9]{18}\/[0-9a-zA-Z-]{68})",
+    r"(?:ditto).{0,40}\b([a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12}\.[a-z0-9]{40})\b",
+    r"(?:dnscheck).{0,40}\b([a-z0-9A-Z-]{36})\b",
+    r"(?:dnscheck).{0,40}\b([a-z0-9A-Z]{32})\b",
+    r"\b(ey[a-zA-Z0-9]{34}.ey[a-zA-Z0-9]{154}.[a-zA-Z0-9_-]{43})\b",
+    r"\b(dp\.pt\.[a-zA-Z0-9]{43})\b",
+    r"(?:dotmailer).{0,40}\b(apiuser-[a-z0-9]{12}@apiconnector.com)\b",
+    r"(?:dotmailer).{0,40}\b([a-zA-Z0-9\S]{8,24})\b",
+    r"(?:dovico).{0,40}\b([0-9a-z]{32}\.[0-9a-z]{1,}\b)",
+    r"(?:dronahq).{0,40}\b([a-z0-9]{50})\b",
+    r"(?:droneci).{0,40}\b([a-zA-Z0-9]{32})\b",
+    r"\b(sl\.[A-Za-z0-9\-\_]{130,140})\b",
+    r"(?:dwolla).{0,40}\b([a-zA-Z-0-9]{50})\b",
+    r"(?:dynalist).{0,40}\b([a-zA-Z0-9-_]{128})\b",
+    r"dt0[a-zA-Z]{1}[0-9]{2}\.[A-Z0-9]{24}\.[A-Z0-9]{64}",
+    r"(?:dyspatch).{0,40}\b([A-Z0-9]{52})\b",
+    r"-----BEGIN EC PRIVATE KEY-----",
+    r"(?:eagleeyenetworks).{0,40}\b([a-zA-Z0-9]{3,20}@[a-zA-Z0-9]{2,12}.[a-zA-Z0-9]{2,5})\b",
+    r"(?:eagleeyenetworks).{0,40}\b([a-zA-Z0-9]{15})\b",
+    r"(?:easyinsight|easy-insight).{0,40}\b([a-zA-Z0-9]{20})\b",
+    r"(?:easyinsight|easy-insight).{0,40}\b([0-9Aa-zA-Z]{20})\b",
+    r"(?:edamam).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:edamam).{0,40}\b([0-9a-z]{8})\b",
+    r"(?:edenai).{0,40}\b([a-zA-Z0-9]{36}.[a-zA-Z0-9]{92}.[a-zA-Z0-9_]{43})\b",
+    r"(?:8x8).{0,40}\b([a-zA-Z0-9]{43})\b",
+    r"(?:elastic).{0,40}\b([A-Za-z0-9_-]{96})\b",
+    r"(?:enablex).{0,40}\b([a-zA-Z0-9]{36})\b",
+    r"(?:enablex).{0,40}\b([a-z0-9]{24})\b",
+    r"(?:enigma).{0,40}\b([a-zA-Z0-9]{40})\b",
+    r"(?:ethplorer).{0,40}\b([a-z0-9A-Z-]{22})\b",
+    r"(?:everhour).{0,40}\b([0-9Aa-f]{4}-[0-9a-f]{4}-[0-9a-f]{6}-[0-9a-f]{6}-[0-9a-f]{8})\b",
+    r"(?:exchangerate).{0,40}\b([a-z0-9]{24})\b",
+    r"(?:exchangerates).{0,40}\b([a-z0-9]{32})\b",
+    r"EAACEdEose0cBA[0-9A-Za-z]+",
+    r"(?:faceplusplus).{0,40}\b([0-9a-zA-Z_-]{32})\b",
+    r"(?:fakejson).{0,40}\b([a-zA-Z0-9]{22})\b",
+    r"(?:fastforex).{0,40}\b([a-z0-9-]{28})\b",
+    r"(?:fastly).{0,40}\b([A-Za-z0-9_-]{32})\b",
+    r"(?:feedier).{0,40}\b([a-z0-9A-Z]{32})\b",
+    r"(?:fetchrss).{0,40}\b([0-9A-Za-z.]{40})\b",
+    r"(?:figma).{0,40}\b([0-9]{6}-[0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12})\b",
+    r"(?:fileio).{0,40}\b([A-Z0-9.-]{39})\b",
+    r"\b(API_KEY[0-9A-Z]{32})\b",
+    r"(?:financialmodelingprep).{0,40}\b([a-zA-Z0-9]{32})\b",
+    r"(?:findl).{0,40}\b([a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12})\b",
+    r"(?:finnhub).{0,40}\b([0-9a-z]{20})\b",
+    r"(?:fixer).{0,40}\b([A-Za-z0-9]{32})\b",
+    r"(?:flat).{0,40}\b([0-9a-z]{128})\b",
+    r"\b(flb_live_[0-9a-zA-Z]{20})\b",
+    r"(?:flickr).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:flightapi).{0,40}\b([a-z0-9]{24})\b",
+    r"(?:flightstats).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:flightstats).{0,40}\b([0-9a-z]{8})\b",
+    r"(?:flowflu).{0,40}\b([a-zA-Z0-9]{51})\b",
+    r"\b(FLWSECK-[0-9a-z]{32}-X)\b",
+    r"(?:fmfw).{0,40}\b([a-zA-Z0-9-]{32})\b",
+    r"(?:fmfw).{0,40}\b([a-zA-Z0-9_-]{32})\b",
+    r"(?:formbucket).{0,40}\b([0-9A-Za-z]{1,}.[0-9A-Za-z]{1,}\.[0-9A-Z-a-z\-_]{1,})",
+    r"(?:formio).{0,40}\b(eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.[0-9A-Za-z]{310}\.[0-9A-Z-a-z\-_]{43}[ \r\n]{1})",
+    r"(?:foursquare).{0,40}\b([0-9A-Z]{48})\b",
+    r"\b(fio-u-[0-9a-zA-Z_-]{64})\b",
+    r"(?:freshbooks).{0,40}\b([0-9a-z]{64})\b",
+    r"(?:freshbooks).{0,40}\b(https://www.[0-9A-Za-z_-]{1,}.com)\b",
+    r"(?:freshdesk).{0,40}\b([0-9A-Za-z]{20})\b",
+    r"\b([0-9a-z-]{1,}.freshdesk.com)\b",
+    r"(?:front).{0,40}\b([0-9a-zA-Z]{36}.[0-9a-zA-Z\.\-\_]{188,244})\b",
+    r"(?:fulcrum).{0,40}\b([a-z0-9]{80})\b",
+    r"(?:fullstory).{0,40}\b([a-zA-Z-0-9/+]{88})\b",
+    r"(?:fusebill).{0,40}\b([a-zA-Z0-9]{88})\b",
+    r"(?:fxmarket).{0,40}\b([0-9Aa-zA-Z-_=]{20})\b",
+    r"\{[^{]+auth_provider_x509_cert_url[^}]+\}",
+    r"(?:geckoboard).{0,40}\b([a-zA-Z0-9]{44})\b",
+    r"jdbc:mysql(=| =|:| :)",
+    r"BEGIN OPENSSH PRIVATE KEY",
+    r"BEGIN PRIVATE KEY",
+    r"BEGIN RSA PRIVATE KEY",
+    r"BEGIN DSA PRIVATE KEY",
+    r"BEGIN EC PRIVATE KEY",
+    r"BEGIN PGP PRIVATE KEY BLOCK",
+    r"algolia_api_key",
+    r"asana_access_token",
+    r"azure_tenant",
+    r"bitly_access_token",
+    r"browserstack_access_key",
+    r"buildkite_access_token",
+    r"comcast_access_token",
+    r"datadog_api_key",
+    r"deviantart_secret",
+    r"deviantart_access_token",
+    r"dropbox_api_token",
+    r"facebook_appsecret",
+    r"facebook_access_token",
+    r"firebase_custom_token",
+    r"firebase_id_token",
+    r"github_client",
+    r"github_ssh_key",
+    r"gitlab_private_token",
+    r"heroku_api_key",
+    r"instagram_access_token",
+    r"mailchimp_api_key",
+    r"mailgun_api_key",
+    r"pagerduty_api_token",
+    r"paypal_key_sb",
+    r"paypal_key_live",
+    r"paypal_token_sb",
+    r"paypal_token_live",
+    r"pendo_integration_key",
+    r"salesforce_access_token",
+    r"saucelabs_ukey",
+    r"sendgrid_api_key",
+    r"slack_api_token",
+    r"square_auth_token",
+    r"travisci_api_token",
+    r"twitter_api_secret",
+    r"twitter_bearer_token",
+    r"spotify_access_token",
+    r"stripe_key_live",
+    r"wakatime_api_key",
+    r"wompi_auth_bearer_sb",
+    r"wompi_auth_bearer_live",
+    r"wpengine_api_key",
+    r"zendesk_access_token",
+    r"ssh-rsa",
+    r"(?:gengo).{0,40}([ ]{0,1}[0-9a-zA-Z\[\]\-\(\)\{\}|_^@$=~]{64}[ \r\n]{1})",
+    r"(?:geoapify).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:geocode).{0,40}\b([a-z0-9]{28})\b",
+    r"(?:geocodify).{0,40}\b([0-9a-z]{40})\b",
+    r"(?:geocod).{0,40}\b([a-z0-9]{39})\b",
+    r"(?:ipifi).{0,40}\b([a-z0-9A-Z_]{32})\b",
+    r"(?:getemail).{0,40}\b([a-zA-Z0-9-]{20})\b",
+    r"(?:getemails).{0,40}\b([a-z0-9-]{26})\b",
+    r"(?:getemails).{0,40}\b([a-z0-9-]{18})\b",
+    r"(?:getgeoapi).{0,40}\b([0-9a-z]{40})\b",
+    r"(?:getgist).{0,40}\b([a-z0-9A-Z+=]{68})",
+    r"(?:getsandbox).{0,40}\b([a-z0-9-]{40})\b",
+    r"(?:getsandbox).{0,40}\b([a-z0-9-]{15,30})\b",
+    r"\b((?:ghp|gho|ghu|ghs|ghr)_[a-zA-Z0-9]{36,255}\b)",
+    r"(ghu|ghs)_[0-9a-zA-Z]{36}",
+    r"gho_[0-9a-zA-Z]{36}",
+    r"ghp_[0-9a-zA-Z]{36}",
+    r"ghr_[0-9a-zA-Z]{76}",
+    r'(?:github)[^\.].{0,40}[ =:\'"]+([a-f0-9]{40})\b',
+    r"(?:github).{0,40}(-----BEGIN RSA PRIVATE KEY-----\s[A-Za-z0-9+\/\s]*\s-----END RSA PRIVATE KEY-----)",
+    r"\b(glpat-[a-zA-Z0-9\-=_]{20,22})\b",
+    r"(?:gitter).{0,40}\b([a-z0-9-]{40})\b",
+    r"(?:glassnode).{0,40}\b([0-9A-Za-z]{27})\b",
+    r"(?:gocanvas).{0,40}\b([0-9A-Za-z/+]{43}=[ \r\n]{1})",
+    r"(?:gocanvas).{0,40}\b([\w\.-]+@[\w-]+\.[\w\.-]{2,5})\b",
+    r'\b(live_[0-9A-Za-z\_\-]{40}[ "\'\r\n]{1})',
+    r"(?:goodday).{0,40}\b([a-z0-9]{32})\b",
+    r'"type": "service_account"',
+    r"AIza[0-9a-z-_]{35}",
+    r"https://www\.google\.com/calendar/embed\?src=[A-Za-z0-9%@&;=\-_\./]+",
+    r"ya29\.[0-9A-Za-z\-_]+",
+    r"(?:graph).{0,40}\b([a-z0-9]{25})\b",
+    r"\b(ey[a-zA-Z0-9]{73}.ey[a-zA-Z0-9]{365}.[a-zA-Z0-9_-]{683})\b",
+    r"(?:graphhopper).{0,40}\b([a-z0-9-]{36})\b",
+    r"(?:groove).{0,40}\b([a-z0-9A-Z]{64})",
+    r"(?:guru).{0,40}\b([a-zA-Z0-9]{3,20}@[a-zA-Z0-9]{2,12}.[a-zA-Z0-9]{2,5})\b",
+    r"(?:guru).{0,40}\b([a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12})\b",
+    r"(?:gyazo).{0,40}\b([0-9A-Za-z-]{43})\b",
+    r"(?:happi).{0,40}\b([a-zA-Z0-9]{56})",
+    r"(?:happyscribe).{0,40}\b([0-9a-zA-Z]{24})\b",
+    r"(?:harvest).{0,40}\b([a-z0-9A-Z._]{97})\b",
+    r"(?:hellosign).{0,40}\b([a-zA-Z-0-9/+]{64})\b",
+    r"(?:helpcrunch).{0,40}\b([a-zA-Z-0-9+/=]{328})",
+    r"(?:helpscout).{0,40}\b([A-Za-z0-9]{56})\b",
+    r"(?:hereapi).{0,40}\b([a-zA-Z0-9\S]{43})\b",
+    r"(?:heroku).{0,40}\b([0-9Aa-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b",
+    r"(?:hive).{0,40}\b([0-9A-Za-z]{17})\b",
+    r"(?:hiveage).{0,40}\b([0-9A-Za-z\_\-]{20})\b",
+    r"(?:holidayapi).{0,40}\b([a-z0-9-]{36})\b",
+    r"(?:html2pdf).{0,40}\b([a-zA-Z0-9]{64})\b",
+    r"(?:hubspot).{0,40}\b([A-Za-z0-9]{8}\-[A-Za-z0-9]{4}\-[A-Za-z0-9]{4}\-[A-Za-z0-9]{4}\-[A-Za-z0-9]{12})\b",
+    r"(?:humanity).{0,40}\b([0-9a-z]{40})\b",
+    r"(?:hypertrack).{0,40}\b([0-9a-zA-Z\_\-]{54})\b",
+    r"(?:hypertrack).{0,40}\b([0-9a-zA-Z\_\-]{27})\b",
+    r"(?:ibm).{0,40}\b([A-Za-z0-9_-]{44})\b",
+    r"(?:iconfinder).{0,40}\b([a-zA-Z0-9]{64})\b",
+    r"(?:iexcloud).{0,40}\b([a-z0-9_]{35})\b",
+    r"(?:imagekit).{0,40}\b([a-zA-Z0-9_=]{36})",
+    r"(?:imagga).{0,40}\b([a-z0-9A-Z=]{72})",
+    r"(?:impala).{0,40}\b([0-9A-Za-z_]{46})\b",
+    r"(?:insightly).{0,40}\b([a-z0-9-]{36})\b",
+    r"(?:integromat).{0,40}\b([a-z0-9-]{36})\b",
+    r"(?:intrinio).{0,40}\b([a-zA-Z0-9]{44})\b",
+    r"(?:invoiceocean).{0,40}\b([0-9A-Za-z]{20})\b",
+    r"\b([0-9a-z]{1,}.invoiceocean.com)\b",
+    r"(?:ipapi).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:ipgeolocation).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:ipify).{0,40}\b([a-zA-Z0-9_-]{32})\b",
+    r"(?:ipinfodb).{0,40}\b([a-z0-9]{64})\b",
+    r"(?:ipquality).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:ipstack).{0,40}\b([a-fA-f0-9]{32})\b",
+    r"jdbc:[a-z:]+://[A-Za-z0-9\.\-_:;=/@?,&]+",
+    r"(?:jira).{0,40}\b([a-zA-Z-0-9]{24})\b",
+    r"(?:jira).{0,40}\b([a-zA-Z-0-9]{5,24}\@[a-zA-Z-0-9]{3,16}\.com)\b",
+    r"(?:jotform).{0,40}\b([0-9Aa-z]{32})\b",
+    r"(?:jumpcloud).{0,40}\b([a-zA-Z0-9]{40})\b",
+    r"(?:juro).{0,40}\b([a-zA-Z0-9]{40})\b",
+    r"(?:kanban).{0,40}\b([0-9A-Z]{12})\b",
+    r"\b([0-9a-z]{1,}.kanbantool.com)\b",
+    r"(?:karma).{0,40}\b([a-zA-Z0-9]{20})\b",
+    r"(?:keen).{0,40}\b([0-9a-z]{24})\b",
+    r"(?:keen).{0,40}\b([0-9A-Z]{64})\b",
+    r"(?:kickbox).{0,40}\b([a-zA-Z0-9_]+[a-zA-Z0-9]{64})\b",
+    r"(?:klipfolio).{0,40}\b([0-9a-f]{40})\b",
+    r"(?:kontent).{0,40}\b([a-z0-9-]{36})\b",
+    r'(?:kraken).{0,40}\b([0-9A-Za-z\/\+=]{56}[ "\'\r\n]{1})',
+    r'(?:kraken).{0,40}\b([0-9A-Za-z\/\+=]{86,88}[ "\'\r\n]{1})',
+    r"(?:kucoin).{0,40}([ \r\n]{1}[!-~]{7,32}[ \r\n]{1})",
+    r"(?:kucoin).{0,40}\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b",
+    r"(?:kucoin).{0,40}\b([0-9a-f]{24})\b",
+    r"(?:kylas).{0,40}\b([a-z0-9-]{36})\b",
+    r"(?:languagelayer).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:lastfm).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:launchdarkly).{0,40}\b([a-z0-9-]{40})\b",
+    r"(?:leadfeeder).{0,40}\b([a-zA-Z0-9-]{43})\b",
+    r"(?:lendflow).{0,40}\b([a-zA-Z0-9]{36}\.[a-zA-Z0-9]{235}\.[a-zA-Z0-9]{32}\-[a-zA-Z0-9]{47}\-[a-zA-Z0-9_]{162}\-[a-zA-Z0-9]{42}\-[a-zA-Z0-9_]{40}\-[a-zA-Z0-9_]{66}\-[a-zA-Z0-9_]{59}\-[a-zA-Z0-9]{7}\-[a-zA-Z0-9_]{220})\b",  # noqa: E501
+    r"(?:lexigram).{0,40}\b([a-zA-Z0-9\S]{301})\b",
+    r"\b(lin_api_[0-9A-Za-z]{40})\b",
+    r"(?:line).{0,40}\b([A-Za-z0-9+/]{171,172})\b",
+    r"(?:linenotify).{0,40}\b([0-9A-Za-z]{43})\b",
+    r"(?:linkpreview).{0,40}\b([a-zA-Z0-9]{32})\b",
+    r"(?:liveagent).{0,40}\b([a-zA-Z0-9]{32})\b",
+    r"(?:livestorm).{0,40}\b(eyJhbGciOiJIUzI1NiJ9\.eyJhdWQiOiJhcGkubGl2ZXN0b3JtLmNvIiwianRpIjoi[0-9A-Z-a-z]{134}\.[0-9A-Za-z\-\_]{43}[ \r\n]{1})",
+    r"\b(pk\.[a-zA-Z-0-9]{32})\b",
+    r"(?:loginradius).{0,40}\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b",
+    r"(?:lokalise).{0,40}\b([a-z0-9]{40})\b",
+    r"(?:loyverse).{0,40}\b([0-9-a-z]{32})\b",
+    r"(?:luno).{0,40}\b([a-z0-9]{13})\b",
+    r"(?:luno).{0,40}\b([a-zA-Z0-9_-]{43})\b",
+    r"(?:macaddress).{0,40}\b([a-zA-Z0-9_]{32})\b",
+    r"(?:madkudu).{0,40}\b([0-9a-f]{32})\b",
+    r"(?:magnetic).{0,40}\b([0-9Aa-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12})\b",
+    r"[0-9a-f]{32}-us[0-9]{1,2}",
+    r"(?:mailboxlayer).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:mailerlite).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:mailgun).{0,40}\b([a-zA-Z-0-9]{72})\b",
+    r"key-[0-9a-zA-Z]{32}",
+    r"(?:mailjet).{0,40}\b([A-Za-z0-9]{87}\=)",
+    r"(?:mailjet).{0,40}\b([A-Za-z0-9]{32})\b",
+    r"(?:mailmodo).{0,40}\b([A-Z0-9]{7}-[A-Z0-9]{7}-[A-Z0-9]{7}-[A-Z0-9]{7})\b",
+    r"(?:mailsac).{0,40}\b(k_[0-9A-Za-z]{36,})\b",
+    r"(?:mandrill).{0,40}\b([A-Za-z0-9_-]{22})\b",
+    r"\b(sk\.[a-zA-Z-0-9\.]{80,240})\b",
+    r"(?:mapquest).{0,40}\b([0-9A-Za-z]{32})\b",
+    r"(?:marketstack).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:mattermost).{0,40}\b([A-Za-z0-9-_]{1,}.cloud.mattermost.com)\b",
+    r"(?:mattermost).{0,40}\b([a-z0-9]{26})\b",
+    r"(?:mavenlink).{0,40}\b([0-9a-z]{64})\b",
+    r"(?:maxmind|geoip).{0,40}\b([0-9A-Za-z]{16})\b",
+    r"(?:maxmind|geoip).{0,40}\b([0-9]{2,7})\b",
+    r"(?:meaningcloud).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:mediastack).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:meistertask).{0,40}\b([a-zA-Z0-9]{43})\b",
+    r"(?:mesibo).{0,40}\b([0-9A-Za-z]{64})\b",
+    r"(?:messagebird).{0,40}\b([A-Za-z0-9_-]{25})\b",
+    r"(?:metaapi|meta-api).{0,40}\b([0-9a-f]{64})\b",
+    r"(?:metaapi|meta-api).{0,40}\b([0-9a-f]{24})\b",
+    r"(?:metrilo).{0,40}\b([a-z0-9]{16})\b",
+    r"(https:\/\/[a-zA-Z-0-9]+\.webhook\.office\.com\/webhookb2\/[a-zA-Z-0-9]{8}-[a-zA-Z-0-9]{4}-[a-zA-Z-0-9]{4}-[a-zA-Z-0-9]{4}-[a-zA-Z-0-9]{12}\@[a-zA-Z-0-9]{8}-[a-zA-Z-0-9]{4}-[a-zA-Z-0-9]{4}-[a-zA-Z-0-9]{4}-[a-zA-Z-0-9]{12}\/IncomingWebhook\/[a-zA-Z-0-9]{32}\/[a-zA-Z-0-9]{8}-[a-zA-Z-0-9]{4}-[a-zA-Z-0-9]{4}-[a-zA-Z-0-9]{4}-[a-zA-Z-0-9]{12})",  # noqa: E501
+    r"midi-662b69edd2[a-zA-Z0-9]{54}",
+    r"(?:mindmeister).{0,40}\b([a-zA-Z0-9]{43})\b",
+    r"(?:mite).{0,40}\b([0-9a-z]{16})\b",
+    r"\b([0-9a-z-]{1,}.mite.yo.lk)\b",
+    r"(?:mixmax).{0,40}\b([a-zA-Z0-9_-]{36})\b",
+    r"(?:mixpanel).{0,40}\b([a-zA-Z0-9.-]{30,40})\b",
+    r"(?:mixpanel).{0,40}\b([a-zA-Z0-9-]{32})\b",
+    r"(?:moderation).{0,40}\b([a-zA-Z0-9]{36}\.[a-zA-Z0-9]{115}\.[a-zA-Z0-9_]{43})\b",
+    r"(?:monday).{0,40}\b(ey[a-zA-Z0-9_.]{210,225})\b",
+    r"(?:moonclerck).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:moonclerk).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:moosend).{0,40}\b([0-9Aa-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b",
+    r"(?:mrticktock).{0,40}\b([a-zA-Z0-9!=@#$%()_^]{1,50})",
+    r"(?:myintervals).{0,40}\b([0-9a-z]{11})\b",
+    r"(?:nasdaq).{0,40}\b([a-zA-Z0-9_-]{20})\b",
+    r"(?:nethunt).{0,40}\b([a-zA-Z0-9.-@]{25,30})\b",
+    r"(?:nethunt).{0,40}\b([a-z0-9-\S]{36})\b",
+    r"(?:netlify).{0,40}\b([A-Za-z0-9_-]{43,45})\b",
+    r"(?:neutrinoapi).{0,40}\b([a-zA-Z0-9]{48})\b",
+    r"(?:neutrinoapi).{0,40}\b([a-zA-Z0-9]{6,24})\b",
+    r"NRAA-[a-f0-9]{27}",
+    r"NRI(?:I|Q)-[A-Za-z0-9\-_]{32}",
+    r"NRRA-[a-f0-9]{42}",
+    r"NRSP-[a-z]{2}[0-9]{2}[a-f0-9]{31}",
+    r"(?:newrelic).{0,40}\b([A-Za-z0-9_\.]{4}-[A-Za-z0-9_\.]{42})\b",
+    r"(?:newsapi).{0,40}\b([a-z0-9]{32})",
+    r"(?:newscatcher).{0,40}\b([0-9A-Za-z_]{43})\b",
+    r"(?:nexmo).{0,40}\b([A-Za-z0-9_-]{8})\b",
+    r"(?:nexmo).{0,40}\b([A-Za-z0-9_-]{16})\b",
+    r"(?:nftport).{0,40}\b([a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12})\b",
+    r"(?:nicereply).{0,40}\b([0-9a-f]{40})\b",
+    r"(?:nimble).{0,40}\b([a-zA-Z0-9]{30})\b",
+    r"(?:nitro).{0,40}\b([0-9a-f]{32})\b",
+    r"(?:noticeable).{0,40}\b([0-9a-zA-Z]{20})\b",
+    r"\b(secret_[A-Za-z0-9]{43})\b",
+    r"(?:nozbe|nozbeteams).{0,40}\b([0-9A-Za-z]{16}_[0-9A-Za-z\-_]{64}[ \r\n]{1})",
+    r"(?:numverify).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:nutritionix).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:nutritionix).{0,40}\b([a-z0-9]{8})\b",
+    r"(?:nylas).{0,40}\b([0-9A-Za-z]{30})\b",
+    r"(?:oanda).{0,40}\b([a-zA-Z0-9]{24})\b",
+    r"(?:omnisend).{0,40}\b([a-z0-9A-Z-]{75})\b",
+    r"(?:onedesk).{0,40}\b([a-zA-Z0-9!=@#$%^]{8,64})",
+    r'secret[a-zA-Z0-9_\' "=]{0,20}([a-z0-9]{64})',
+    r"(?:onepagecrm).{0,40}\b([a-zA-Z0-9=]{44})",
+    r"(?:onepagecrm).{0,40}\b([a-z0-9]{24})\b",
+    r"(?:onwater).{0,40}\b([a-zA-Z0-9_-]{20})\b",
+    r"(?:oopspam).{0,40}\b([a-zA-Z0-9]{40})\b",
+    r"(?:opencagedata).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:opengraphr).{0,40}\b([0-9Aa-zA-Z]{80})\b",
+    r"(?:openuv).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:openweather).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:optimizely).{0,40}\b([0-9A-Za-z-:]{54})\b",
+    r"(?:owlbot).{0,40}\b([a-z0-9]{40})\b",
+    r"-----BEGIN PGP PRIVATE KEY BLOCK-----",
+    r"(?:pagerduty).{0,40}\b([a-z]{1}\+[a-zA-Z]{9}\-[a-z]{2}\-[a-z0-9]{5})\b",
+    r"(?:pandadoc).{0,40}\b([a-zA-Z0-9]{40})\b",
+    r"(?:pandascore).{0,40}([ \r\n]{0,1}[0-9A-Za-z\-\_]{51}[ \r\n]{1})",
+    r"(?:paralleldots).{0,40}\b([0-9A-Za-z]{43})\b",
+    r"(?:partnerstack).{0,40}\b([0-9A-Za-z]{64})\b",
+    r"(?:passbase).{0,40}\b([a-zA-Z0-9]{128})\b",
+    r'[a-zA-Z]{3,10}://[^/\s:@]{3,20}:[^/\s:@]{3,20}@.{1,100}["\'\s]',
+    r"(?:pastebin).{0,40}\b([a-zA-Z0-9_]{32})\b",
+    r"access_token\$production\$[0-9a-z]{16}\$[0-9a-f]{32}",
+    r"(?:paymoapp).{0,40}\b([a-zA-Z0-9]{44})\b",
+    r"(?:paymongo).{0,40}\b([a-zA-Z0-9_]{32})\b",
+    r"\b(sk\_[a-z]{1,}\_[A-Za-z0-9]{40})\b",
+    r"(?:pdflayer).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:pdfshift).{0,40}\b([0-9a-f]{32})\b",
+    r"(?:peopledatalabs).{0,40}\b([a-z0-9]{64})\b",
+    r"(?:pepipost|netcore).{0,40}\b([a-zA-Z-0-9]{32})\b",
+    r"sk_live_[0-9a-z]{32}",
+    r"(?:pipedream).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:pipedrive).{0,40}\b([a-zA-Z0-9]{40})\b",
+    r"(?:pivotal).{0,40}([a-z0-9]{32})",
+    r"(?:pixabay).{0,40}\b([a-z0-9-]{34})\b",
+    r"(?:plaid).{0,40}\b([a-z0-9]{24})\b",
+    r"(?:plaid).{0,40}\b([a-z0-9]{30})\b",
+    r"(?:planviewleankit|planview).{0,40}\b([0-9a-f]{128})\b",
+    r"(?:planviewleankit|planview).{0,40}(?:subdomain).\b([a-zA-Z][a-zA-Z0-9.-]{1,23}[a-zA-Z0-9])\b",
+    r"(?:planyo).{0,40}\b([0-9a-z]{62})\b",
+    r"(?:plivo).{0,40}\b([A-Za-z0-9_-]{40})\b",
+    r"(?:plivo).{0,40}\b([A-Z]{20})\b",
+    r"(?:poloniex).{0,40}\b([0-9a-f]{128})\b",
+    r"(?:poloniex).{0,40}\b([0-9A-Z]{8}-[0-9A-Z]{8}-[0-9A-Z]{8}-[0-9A-Z]{8})\b",
+    r"(?:polygon).{0,40}\b([a-z0-9A-Z]{32})\b",
+    r"(?:positionstack).{0,40}\b([a-zA-Z0-9_]{32})\b",
+    r"(?:postageapp).{0,40}\b([0-9A-Za-z]{32})\b",
+    r"\b(phc_[a-zA-Z0-9_]{43})\b",
+    r"\b(PMAK-[a-zA-Z-0-9]{59})\b",
+    r"(?:postmark).{0,40}\b([0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12})\b",
+    r"(?:powrbot).{0,40}\b([a-z0-9A-Z]{40})\b",
+    r"-----\s*?BEGIN[ A-Z0-9_-]*?PRIVATE KEY\s*?-----[\s\S]*?----\s*?END[ A-Z0-9_-]*? PRIVATE KEY\s*?-----",
+    r"(?:prospect).{0,40}\b([a-z0-9-]{32})\b",
+    r"(?:prospect).{0,40}\b([a-z0-9A-Z-]{50})\b",
+    r"(?:protocols).{0,40}\b([a-z0-9]{64})\b",
+    r"(?:proxycrawl).{0,40}\b([a-zA-Z0-9_]{22})\b",
+    r"\b(sub-c-[0-9a-z]{8}-[a-z]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12})\b",
+    r"\b(pub-c-[0-9a-z]{8}-[0-9a-z]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12})\b",
+    r"(?:purestake).{0,40}\b([a-zA-Z0-9]{40})\b",
+    r"(?:pushbullet).{0,40}\b([A-Za-z0-9_\.]{34})\b",
+    r"(?:pusher).{0,40}\b([a-z0-9]{20})\b",
+    r"(?:pusher).{0,40}\b([0-9]{7})\b",
+    r"pypi-AgEIcHlwaS5vcmc[A-Za-z0-9-_]{50,1000}",
+    r"(?:qualaroo).{0,40}\b([a-z0-9A-Z=]{64})",
+    r"(?:qubole).{0,40}\b([0-9a-z]{64})\b",
+    r"(?:quickmetrics).{0,40}\b([a-zA-Z0-9_-]{22})\b",
+    r"-----BEGIN PRIVATE KEY-----",
+    r"-----BEGIN RSA PRIVATE KEY-----",
+    r"(?:rapidapi).{0,40}\b([A-Za-z0-9_-]{50})\b",
+    r"(?:raven).{0,40}\b([A-Z0-9-]{16})\b",
+    r"(?:rawg).{0,40}\b([0-9Aa-z]{32})\b",
+    r"\brzp_\w{2,6}_\w{10,20}\b",
+    r"(?:readme).{0,40}\b([a-zA-Z0-9_]{32})\b",
+    r"\b(ey[a-zA-Z0-9-._]{153}.ey[a-zA-Z0-9-._]{916,1000})\b",
+    r"(?:rebrandly).{0,40}\b([a-zA-Z0-9_]{32})\b",
+    r"(?:refiner).{0,40}\b([0-9Aa-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b",
+    r"(?:repairshopr).{0,40}\b([a-zA-Z0-9_.!+$#^*]{3,32})\b",
+    r"(?:repairshopr).{0,40}\b([a-zA-Z0-9-]{51})\b",
+    r"(?:restpack).{0,40}\b([a-zA-Z0-9]{48})\b",
+    r"(?:restpack).{0,40}\b([0-9A-Za-z]{48})\b",
+    r"(?:rev).{0,40}\b([0-9a-zA-Z\/\+]{27}\=[ \r\n]{1})",
+    r"(?:revamp).{0,40}\b([a-zA-Z0-9]{40}\b)",
+    r"(?:ringcentral).{0,40}\b(https://www.[0-9A-Za-z_-]{1,}.com)\b",
+    r"(?:ringcentral).{0,40}\b([0-9A-Za-z_-]{22})\b",
+    r"(?:ritekit).{0,40}\b([0-9a-f]{44})\b",
+    r"(?:roaring).{0,40}\b([0-9A-Za-z_-]{28})\b",
+    r"(?:rocketreach).{0,40}\b([a-z0-9-]{39})\b",
+    r"(?:ronin).{0,40}\b([0-9a-zA-Z]{26})\b",
+    r"(?:route4me).{0,40}\b([0-9A-Z]{32})\b",
+    r"(?:rownd).{0,40}\b([a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12})\b",
+    r"(?:rownd).{0,40}\b([a-z0-9]{48})\b",
+    r"(?:rownd).{0,40}\b([0-9]{18})\b",
+    r"\b(rubygems_[a-zA0-9]{48})\b",
+    r"(?:runrunit).{0,40}\b([0-9a-f]{32})\b",
+    r"(?:runrunit).{0,40}\b([0-9A-Za-z]{18,20})\b",
+    r"-----BEGIN OPENSSH PRIVATE KEY-----",
+    r"-----BEGIN DSA PRIVATE KEY-----",
+    r"(?:salesblink).{0,40}\b([a-zA-Z]{16})\b",
+    r"(?:salescookie).{0,40}\b([a-zA-z0-9]{32})\b",
+    r"(?:salesflare).{0,40}\b([a-zA-Z0-9_]{45})\b",
+    r"(?:satismeter).{0,40}\b([a-zA-Z0-9]{4,20}@[a-zA-Z0-9]{2,12}.[a-zA-Z0-9]{2,12})\b",
+    r"(?:satismeter).{0,40}\b([a-zA-Z0-9]{24})\b",
+    r"(?:satismeter).{0,40}\b([a-zA-Z0-9!=@#$%^]{6,32})",
+    r"(?:satismeter).{0,40}\b([a-z0-9A-Z]{16})\b",
+    r"\b(oauth\-[a-z0-9]{8,}\-[a-z0-9]{5})\b",
+    r"(?:saucelabs).{0,40}\b([a-z0-9]{8}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{4}\-[a-z0-9]{12})\b",
+    r"(?:scaleway).{0,40}\b([0-9a-z]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[0-9a-z]{4}-[0-9a-z]{12})\b",
+    r"(?:scrapeowl).{0,40}\b([0-9a-z]{30})\b",
+    r"(?:scraperapi).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:scraperbox).{0,40}\b([A-Z0-9]{32})\b",
+    r"(?:scrapersite).{0,40}\b([a-zA-Z0-9]{45})\b",
+    r"(?:scrapestack).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:scrapfly).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:scrapingant).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:scrapingbee).{0,40}\b([A-Z0-9]{80})\b",
+    r"(?:screenshotapi).{0,40}\b([0-9A-Z]{7}\-[0-9A-Z]{7}\-[0-9A-Z]{7}\-[0-9A-Z]{7})\b",
+    r"(?:screenshotlayer).{0,40}\b([a-zA-Z0-9_]{32})\b",
+    r"(?:securitytrails).{0,40}\b([a-zA-Z0-9]{32})\b",
+    r"(?:segment).{0,40}\b([A-Za-z0-9_\-a-zA-Z]{43}\.[A-Za-z0-9_\-a-zA-Z]{43})\b",
+    r"(?:selectpdf).{0,40}\b([a-z0-9-]{36})\b",
+    r"(?:semaphore).{0,40}\b([0-9a-z]{32})\b",
+    r"SG\.[\w_]{16,32}\.[\w_]{16,64}",
+    r"(?:sendbird).{0,40}\b([0-9a-f]{40})\b",
+    r"(?:sendbird).{0,40}\b([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})\b",
+    r"(?:sendbird).{0,40}\b([0-9a-f]{24})\b",
+    r"(?:sendgrid).{0,40}(SG\.[\w\-_]{20,24}\.[\w\-_]{39,50})\b",
+    r"\b(xkeysib\-[A-Za-z0-9_-]{81})\b",
+    r"(?:sentiment).{0,40}\b([0-9]{17})\b",
+    r"(?:sentiment).{0,40}\b([a-zA-Z0-9]{20})\b",
+    r"(?:sentry).{0,40}\b([a-f0-9]{64})\b",
+    r"(?:serphouse).{0,40}\b([0-9A-Za-z]{60})\b",
+    r"(?:serpstack).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:sheety).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:sheety).{0,40}\b([0-9a-z]{64})\b",
+    r"(?:sherpadesk).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:shipday).{0,40}\b([a-zA-Z0-9.]{11}[a-zA-Z0-9]{20})\b",
+    r"(?:shodan).{0,40}\b([a-zA-Z0-9]{32})\b",
+    r"shpat_[a-fA-F0-9]{32}",
+    r"shpca_[a-fA-F0-9]{32}",
+    r"shppa_[a-fA-F0-9]{32}",
+    r"shpss_[a-fA-F0-9]{32}",
+    r"(?:shortcut).{0,40}\b([0-9a-f-]{36})\b",
+    r"(?:shotstack).{0,40}\b([a-zA-Z0-9]{40})\b",
+    r"(?:shutterstock).{0,40}\b(v2/[0-9A-Za-z]{388})\b",
+    r"\b([0-9a-z-]{3,64}.signalwire.com)\b",
+    r"(?:signalwire).{0,40}\b([0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12})\b",
+    r"(?:signalwire).{0,40}\b([0-9A-Za-z]{50})\b",
+    r"(?:signaturit).{0,40}\b([0-9A-Za-z]{86})\b",
+    r"(?:signupgenius).{0,40}\b([0-9A-Za-z]{32})\b",
+    r"(?:sigopt).{0,40}\b([A-Z0-9]{48})\b",
+    r"(?:simplesat).{0,40}\b([a-z0-9]{40})",
+    r"(?:simplynoted).{0,40}\b([a-zA-Z0-9\S]{340,360})\b",
+    r"(?:simvoly).{0,40}\b([a-z0-9]{33})\b",
+    r"(?:sinch).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:sirv).{0,40}\b([a-zA-Z0-9\S]{88})",
+    r"(?:sirv).{0,40}\b([a-zA-Z0-9]{26})\b",
+    r"(?:siteleaf).{0,40}\b([0-9Aa-z]{32})\b",
+    r"(?:skrapp).{0,40}\b([a-z0-9A-Z]{42})\b",
+    r"(?:skybiometry).{0,40}\b([0-9a-z]{25,26})\b",
+    r"xox[baprs]-[0-9a-zA-Z]{10,48}",
+    r"(xox[pborsa]-[0-9]{12}-[0-9]{12}-[0-9]{12}-[a-z0-9]{32})",
+    r"https://hooks.slack.com/services/T[a-zA-Z0-9_]{8,10}/B[a-zA-Z0-9_]{8,12}/[a-zA-Z0-9_]{23,24}",
+    r"xoxb-[0-9A-Za-z\-]{51}",
+    r"(https:\/\/hooks.slack.com\/services\/[A-Za-z0-9+\/]{44,46})",
+    r"(?:smartsheets).{0,40}\b([a-zA-Z0-9]{37})\b",
+    r"(?:smartystreets).{0,40}\b([a-zA-Z0-9]{20})\b",
+    r"(?:smartystreets).{0,40}\b([a-z0-9-]{36})\b",
+    r"(?:smooch).{0,40}\b(act_[0-9a-z]{24})\b",
+    r"(?:smooch).{0,40}\b([0-9a-zA-Z_-]{86})\b",
+    r"(?:snipcart).{0,40}\b([0-9A-Za-z_]{75})\b",
+    r"(?:snyk).{0,40}\b([0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12})\b",
+    r'sonar.{0,50}(?:"|\'|`)?[0-9a-f]{40}(?:"|\'|`)?',
+    r"(?:splunk).{0,40}\b([a-z0-9A-Z]{22})\b",
+    r"(?:spoonacular).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:sportsmonk).{0,40}\b([0-9a-zA-Z]{60})\b",
+    r"(?:square).{0,40}(EAAA[a-zA-Z0-9\-\+\=]{60})",
+    r"sq0csp-[0-9A-Za-z\-_]{43}",
+    r"sq0atp-[0-9A-Za-z\-_]{22}",
+    r"[\w\-]*sq0i[a-z]{2}-[0-9A-Za-z\-_]{22,43}",
+    r"[\w\-]*sq0c[a-z]{2}-[0-9A-Za-z\-_]{40,50}",
+    r"(?:squarespace).{0,40}\b([0-9Aa-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b",
+    r"\b(sq0idp-[0-9A-Za-z]{22})\b",
+    r"(?:sslmate).{0,40}\b([a-zA-Z0-9]{36})\b",
+    r"(?:stitchdata).{0,40}\b([0-9a-z_]{35})\b",
+    r"(?:stockdata).{0,40}\b([0-9A-Za-z]{40})\b",
+    r"(?:storecove).{0,40}\b([a-zA-Z0-9_-]{43})\b",
+    r"(?:stormglass).{0,40}\b([0-9Aa-z-]{73})\b",
+    r"(?:storyblok).{0,40}\b([0-9A-Za-z]{22}t{2})\b",
+    r"(?:storychief).{0,40}\b([a-zA-Z0-9_\-.]{940,1000})",
+    r"(?:strava).{0,40}\b([0-9]{5})\b",
+    r"(?:strava).{0,40}\b([0-9a-z]{40})\b",
+    r"(?:streak).{0,40}\b([0-9Aa-f]{32})\b",
+    r"[rs]k_live_[a-zA-Z0-9]{20,30}",
+    r"sk_live_[0-9a-zA-Z]{24}",
+    r"stripe[sr]k_live_[0-9a-zA-Z]{24}",
+    r"stripe[sk|rk]_live_[0-9a-zA-Z]{24}",
+    r"pk_live_[0-9a-z]{24}",
+    r"pk_test_[0-9a-z]{24}",
+    r"rk_(?:live|test)_[0-9a-zA-Z]{24}",
+    r"rk_live_[0-9a-zA-Z]{24}",
+    r"sk_(?:live|test)_[0-9a-zA-Z]{24}",
+    r"(sk|rk)_live_[0-9a-z]{24}",
+    r"(sk|rk)_test_[0-9a-z]{24}",
+    r"(?:stytch).{0,40}\b([a-zA-Z0-9-_]{47}=)",
+    r"(?:stytch).{0,40}\b([a-z0-9-]{49})\b",
+    r"(?:sugester).{0,40}\b([a-zA-Z0-9_.!+$#^*%]{3,32})\b",
+    r"(?:sugester).{0,40}\b([a-zA-Z0-9]{32})\b",
+    r"(?:sumo).{0,40}\b([A-Za-z0-9]{14})\b",
+    r"(?:sumo).{0,40}\b([A-Za-z0-9]{64})\b",
+    r"(?:supernotes).{0,40}([ \r\n]{0,1}[0-9A-Za-z\-_]{43}[ \r\n]{1})",
+    r"(?:surveybot).{0,40}\b([A-Za-z0-9-]{80})\b",
+    r"(?:surveysparrow).{0,40}\b([a-zA-Z0-9-_]{88})\b",
+    r"(?:survicate).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:swell).{0,40}\b([a-zA-Z0-9]{32})\b",
+    r"(?:swiftype).{0,40}\b([a-zA-z-0-9]{6}\_[a-zA-z-0-9]{6}\-[a-zA-z-0-9]{6})\b",
+    r"(?:tallyfy).{0,40}\b([0-9A-Za-z]{36}\.[0-9A-Za-z]{264}\.[0-9A-Za-z\-\_]{683})\b",
+    r"(?:tatum).{0,40}\b([0-9a-z-]{36})\b",
+    r"(?:taxjar).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:teamgate).{0,40}\b([a-z0-9]{40})\b",
+    r"(?:teamgate).{0,40}\b([a-zA-Z0-9]{80})\b",
+    r"(?:teamwork|teamworkcrm).{0,40}\b(tkn\.v1_[0-9A-Za-z]{71}=[ \r\n]{1})",
+    r"(?:teamwork|teamworkdesk).{0,40}\b(tkn\.v1_[0-9A-Za-z]{71}=[ \r\n]{1})",
+    r"(?:teamwork|teamworkspaces).{0,40}\b(tkn\.v1_[0-9A-Za-z]{71}=[ \r\n]{1})",
+    r"(?:technicalanalysisapi).{0,40}\b([A-Z0-9]{48})\b",
+    r"[0-9]+:AA[0-9A-Za-z\-_]{33}",
+    r"d{5,}:A[0-9a-z_-]{34,34}",
+    r"(?:telegram).{0,40}\b([0-9]{8,10}:[a-zA-Z0-9_-]{35})\b",
+    r"(?:telnyx).{0,40}\b(KEY[0-9A-Za-z_-]{55})\b",
+    r"\b([A-Za-z0-9]{14}.atlasv1.[A-Za-z0-9]{67})\b",
+    r"(?:text2data).{0,40}\b([0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12})\b",
+    r"(?:textmagic).{0,40}\b([0-9A-Za-z]{30})\b",
+    r"(?:textmagic).{0,40}\b([0-9A-Za-z]{1,25})\b",
+    r"(?:theoddsapi|the-odds-api).{0,40}\b([0-9a-f]{32})\b",
+    r"(?:thinkific).{0,40}\b([0-9a-f]{32})\b",
+    r"(?:thinkific).{0,40}\b([0-9A-Za-z]{4,40})\b",
+    r"(?:thousandeyes).{0,40}\b([a-zA-Z0-9]{32})\b",
+    r"(?:thousandeyes).{0,40}\b([a-zA-Z0-9]{3,20}@[a-zA-Z0-9]{2,12}.[a-zA-Z0-9]{2,5})\b",
+    r"(?:ticketmaster).{0,40}\b([a-zA-Z0-9]{32})\b",
+    r"(?:tiingo).{0,40}\b([0-9a-z]{40})\b",
+    r"(?:timezoneapi).{0,40}\b([a-zA-Z0-9]{20})\b",
+    r"(?:tly).{0,40}\b([0-9A-Za-z]{60})\b",
+    r"(?:tmetric).{0,40}\b([0-9A-Z]{64})\b",
+    r"(?:todoist).{0,40}\b([0-9a-z]{40})\b",
+    r"(?:toggl).{0,40}\b([0-9Aa-z]{32})\b",
+    r"(?:tomorrow).{0,40}\b([a-zA-Z0-9]{32})\b",
+    r"(?:tomtom).{0,40}\b([0-9Aa-zA-Z]{32})\b",
+    r"(?:tradier).{0,40}\b([a-zA-Z0-9]{28})\b",
+    r"(?:travelpayouts).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:travis).{0,40}\b([a-zA-Z0-9A-Z_]{22})\b",
+    r"https://trello.com/b/[0-9a-z]/[0-9a-z_-]+",
+    r"(?:trello).{0,40}\b([a-zA-Z-0-9]{32})\b",
+    r"(?:twelvedata).{0,40}\b([a-z0-9]{32})\b",
+    r"\bAC[0-9a-f]{32}\b",
+    r"SK[0-9a-fA-F]{32}",
+    r"twitter[0-9a-z]{18,25}",
+    r"twitter[0-9a-z]{35,44}",
+    r"(?:tyntec).{0,40}\b([a-zA-Z0-9]{32})\b",
+    r"(?:typeform).{0,40}\b([0-9A-Za-z]{44})\b",
+    r"\b(BBFF-[0-9a-zA-Z]{30})\b",
+    r"(?:unify).{0,40}\b([0-9A-Za-z_=-]{44})",
+    r"(?:unplu).{0,40}\b([a-z0-9]{64})\b",
+    r"(?:unsplash).{0,40}\b([0-9A-Za-z_]{43})\b",
+    r"(?:upcdatabase).{0,40}\b([A-Z0-9]{32})\b",
+    r"(?:uplead).{0,40}\b([a-z0-9-]{32})\b",
+    r"(?:uploadcare).{0,40}\b([a-z0-9]{20})\b",
+    r"(?:upwave).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:urlscan).{0,40}\b([a-z0-9-]{36})\b",
+    r"(?:userstack).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:vatlayer).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:vercel).{0,40}\b([a-zA-Z0-9]{24})\b",
+    r"(?:verifier).{0,40}\b([a-zA-Z-0-9-]{5,16}\@[a-zA-Z-0-9]{4,16}\.[a-zA-Z-0-9]{3,6})\b",
+    r"(?:verifier).{0,40}\b([a-z0-9]{96})\b",
+    r"(?:verimail).{0,40}\b([A-Z0-9]{32})\b",
+    r"(?:veriphone).{0,40}\b([0-9A-Z]{32})\b",
+    r"(?:versioneye).{0,40}\b([a-zA-Z0-9-]{40})\b",
+    r"(?:viewneo).{0,40}\b([a-z0-9A-Z]{120,300}.[a-z0-9A-Z]{150,300}.[a-z0-9A-Z-_]{600,800})",
+    r"(?:virustotal).{0,40}\b([a-f0-9]{64})\b",
+    r"(?:visualcrossing).{0,40}\b([0-9A-Z]{25})\b",
+    r"(?:voicegain).{0,40}\b(ey[0-9a-zA-Z_-]{34}.ey[0-9a-zA-Z_-]{108}.[0-9a-zA-Z_-]{43})\b",
+    r"(?:vouchery).{0,40}\b([a-z0-9-]{36})\b",
+    r"(?:vouchery).{0,40}\b([a-zA-Z0-9-\S]{2,20})\b",
+    r"(?:vpnapi).{0,40}\b([a-z0-9A-Z]{32})\b",
+    r"(?:vultr).{0,40} \b([A-Z0-9]{36})\b",
+    r"(?:vyte).{0,40}\b([0-9a-z]{50})\b",
+    r"(?:walkscore).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:weatherbit).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:weatherstack).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:error).{0,40}(redirect_uri_mismatch)",
+    r"(?:webex).{0,40}\b([A-Za-z0-9_-]{65})\b",
+    r"(?:webex).{0,40}\b([A-Za-z0-9_-]{64})\b",
+    r"(?:webflow).{0,40}\b([a-zA0-9]{64})\b",
+    r"(?:webscraper).{0,40}\b([a-zA-Z0-9]{60})\b",
+    r"(?:webscraping).{0,40}\b([0-9A-Za-z]{32})\b",
+    r"(?:wepay).{0,40}\b([a-zA-Z0-9_?]{62})\b",
+    r"(?:whoxy).{0,40}\b([0-9a-z]{33})\b",
+    r"(?:worksnaps).{0,40}\b([0-9A-Za-z]{40})\b",
+    r"(?:workstack).{0,40}\b([0-9Aa-zA-Z]{60})\b",
+    r"(?:worldcoinindex).{0,40}\b([a-zA-Z0-9]{35})\b",
+    r"(?:worldweather).{0,40}\b([0-9a-z]{31})\b",
+    r"(?:wrike).{0,40}\b(ey[a-zA-Z0-9-._]{333})\b",
+    r"(?:yandex).{0,40}\b([a-z0-9A-Z.]{83})\b",
+    r"(?:youneedabudget).{0,40}\b([0-9a-f]{64})\b",
+    r"(?:yousign).{0,40}\b([0-9a-z]{32})\b",
+    r"(https:\/\/hooks.zapier.com\/hooks\/catch\/[A-Za-z0-9\/]{16})",
+    r"(?:zendesk).{0,40}([A-Za-z0-9_-]{40})",
+    r"(?:zenkit).{0,40}\b([0-9a-z]{8}\-[0-9A-Za-z]{32})\b",
+    r"(?:zenscrape).{0,40}\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b",
+    r"(?:zenserp).{0,40}\b([0-9a-z-]{36})\b",
+    r"(?:zeplin).{0,40}\b([a-zA-Z0-9-.]{350,400})\b",
+    r"(?:zerobounce).{0,40}\b([a-z0-9]{32})\b",
+    r"(?:zipapi).{0,40}\b([a-zA-Z0-9!=@#$%^]{7,})",
+    r"(?:zipapi).{0,40}\b([0-9a-z]{32})\b",
+    r"(?:zipcodeapi).{0,40}\b([a-zA-Z0-9]{64})\b",
+    r"(?:zonka).{0,40}\b([A-Za-z0-9]{36})\b",
+    r"amazon[_-]?secret[_-]?access[_-]?key(=| =|:| :)",
+    r"ansible[_-]?vault[_-]?password(=| =|:| :)",
+    r"chrome[_-]?client[_-]?secret(=| =|:| :)",
+    r"chrome[_-]?refresh[_-]?token(=| =|:| :)",
+    r"ci[_-]?deploy[_-]?password(=| =|:| :)",
+    r"ci[_-]?project[_-]?url(=| =|:| :)",
+    r"ci[_-]?registry[_-]?user(=| =|:| :)",
+    r"ci[_-]?server[_-]?name(=| =|:| :)",
+    r"cloud[_-]?api[_-]?key(=| =|:| :)",
+    r"cloudflare[_-]?api[_-]?key(=| =|:| :)",
+    r"cloudflare[_-]?auth[_-]?email(=| =|:| :)",
+    r"consumer[_-]?key(=| =|:| :)",
+    r"database[_-]?username(=| =|:| :)",
+    r"db[_-]?password(=| =|:| :)",
+    r"db[_-]?pw(=| =|:| :)",
+    r"docker[_-]?hub[_-]?password(=| =|:| :)",
+    r"docker[_-]?passwd(=| =|:| :)",
+    r"docker[_-]?password(=| =|:| :)",
+    r"docker[_-]?token(=| =|:| :)",
+    r"dockerhub[_-]?password(=| =|:| :)",
+    r"doordash[_-]?auth[_-]?token(=| =|:| :)",
+    r"dropbox[_-]?oauth[_-]?bearer(=| =|:| :)",
+    r"droplet[_-]?travis[_-]?password(=| =|:| :)",
+    r"env[_-]?github[_-]?oauth[_-]?token(=| =|:| :)",
+    r"env[_-]?heroku[_-]?api[_-]?key(=| =|:| :)",
+    r"(EAACEdEose0cBA[0-9A-Za-z]+)",
+    r"firebase[_-]?api[_-]?json(=| =|:| :)",
+    r"firebase[_-]?api[_-]?token(=| =|:| :)",
+    r"firebase[_-]?key(=| =|:| :)",
+    r"firebase[_-]?token(=| =|:| :)",
+    r"firefox[_-]?secret(=| =|:| :)",
+    r"ftp[_-]?pw(=| =|:| :)",
+    r"gh[_-]?api[_-]?key(=| =|:| :)",
+    r"github[_-]?api[_-]?key(=| =|:| :)",
+    r"github[_-]?oauth(=| =|:| :)",
+    r"github[_-]?token(=| =|:| :)",
+    r"github[_-]?tokens(=| =|:| :)",
+    r"google[_-]?client[_-]?id(=| =|:| :)",
+    r"google[_-]?client[_-]?secret(=| =|:| :)",
+    r"google[_-]?maps[_-]?api[_-]?key(=| =|:| :)",
+    r"(ya29.[0-9A-Za-z-_]+)",
+    r"(W(?:[a-f0-9]{32}(-us[0-9]{1,2}))a-zA-Z0-9)",
+    r"mailgun[_-]?priv[_-]?key(=| =|:| :)",
+    r"mailgun[_-]?secret[_-]?api[_-]?key(=| =|:| :)",
+    r"(master_password).+",
+    r"mg[_-]?public[_-]?api[_-]?key(=| =|:| :)",
+    r"mysql[_-]?root[_-]?password(=| =|:| :)",
+    r"netlify[_-]?api[_-]?key(=| =|:| :)",
+    r"rabbitmq[_-]?password(=| =|:| :)",
+    r"rediscloud[_-]?url(=| =|:| :)",
+    r"release[_-]?gh[_-]?token(=| =|:| :)",
+    r"rubygems[_-]?auth[_-]?token(=| =|:| :)",
+    r"travis[_-]?secure[_-]?env[_-]?vars(=| =|:| :)",
+    r"travis[_-]?token(=| =|:| :)",
+    r"twilio[_-]?api[_-]?key(=| =|:| :)",
+    r"twilio[_-]?api[_-]?secret(=| =|:| :)",
+    r"twilio[_-]?chat[_-]?account[_-]?api[_-]?service(=| =|:| :)",
+    r"twilio[_-]?token(=| =|:| :)",
+    r"twitter[_-]?consumer[_-]?key(=| =|:| :)",
+    r"twitter[_-]?consumer[_-]?secret(=| =|:| :)",
+    r"twitteroauthaccesssecret(=| =|:| :)",
+    r"twitteroauthaccesstoken(=| =|:| :)",
+    r"urban[_-]?master[_-]?secret(=| =|:| :)",
+    r"use[_-]?ssh(=| =|:| :)",
+    r"user[_-]?assets[_-]?access[_-]?key[_-]?id(=| =|:| :)",
+    r"virustotal[_-]?apikey(=| =|:| :)",
+]
 
 
-class Detected(NamedTuple):
-    kind: DetectorKind
-    start: int
-    end: int
-    val: str
-
-
-class BaseDetector(ABC):
-    @abstractmethod
-    def detect_all(self, content: str) -> list[Detected]:
-        pass
-
-
-class DetectorRegex(BaseDetector):
-    def __init__(
-        self,
-        re_expression: re.Pattern,
-        g: int = 1,
-        kind: DetectorKind = DetectorKind.REGEX,
-    ):
-        self.re_expression = re_expression
-        self.g = g
-        self.kind = kind
-
-    def finditer(self, content: str) -> Iterable[Detected]:
-        matches = self.re_expression.finditer(content)
-        for match in matches:
-            # noinspection PyTypeChecker
-            yield self._get_detected_from_match(match)
-
-    def match(self, content: str) -> Optional[Detected]:
-        if match := self.re_expression.match(content):
-            return self._get_detected_from_match(match)
-
-        return None
-
-    def _get_detected_from_match(self, match: regex.Match) -> Detected:
-        value = match.group(self.g)
-        start, end = match.span(self.g)
-
-        return Detected(
-            kind=self.kind,
-            start=start,
-            end=end,
-            val=value,
-        )
-
-    def detect_all(self, content: str) -> list[Detected]:
-        return list(self.finditer(content))
+class BaseDetector:
+    def redact_all(self, content: str) -> int:
+        return self.expression.sub(string=content, repl=self.replacement)
 
 
 class DetectorRegexEmail(BaseDetector):
-    def __init__(self):
-        re_expression = regex.compile(email_pattern, regex.MULTILINE | regex.VERBOSE)
-        self.det = DetectorRegex(re_expression, kind=DetectorKind.EMAIL)
-
-    def detect_all(self, content: str) -> list[Detected]:
-        return self.det.detect_all(content)
+    def __init__(
+        self, pattern: str = email_pattern, replacement: str = DEFAULT_REPLACEMENT_EMAIL
+    ):
+        self.expression = regex.compile(pattern, regex.MULTILINE | regex.VERBOSE)
+        self.replacement = replacement
 
 
 class DetectorRegexIPV6(BaseDetector):
-    def __init__(self):
-        re_expression = regex.compile(ipv6_pattern, regex.MULTILINE | regex.VERBOSE)
-        self.det = DetectorRegex(re_expression, kind=DetectorKind.IPV6)
-
-    def detect_all(self, content: str) -> list[Detected]:
-        return self.det.detect_all(content)
+    def __init__(
+        self, pattern: str = ipv6_pattern, replacement: str = DEFAULT_REPLACEMENT_IPV6
+    ):
+        self.expression = regex.compile(pattern, regex.MULTILINE | regex.VERBOSE)
+        self.replacement = replacement
 
 
 class DetectorRegexIPV4(BaseDetector):
-    def __init__(self):
-        re_expression = regex.compile(ipv4_pattern, regex.MULTILINE | regex.VERBOSE)
-        self.det = DetectorRegex(re_expression, kind=DetectorKind.IPV4)
-
-    def detect_all(self, content: str) -> list[Detected]:
-        return self.det.detect_all(content)
-
-
-class DetectorBasicAuthSecrets(BaseDetector):
-    plugins = [{"name": "BasicAuthDetector"}]
-    kind = DetectorKind.SECRET
-
-    def _get_detected_from_secret(self, content: str, secret: PotentialSecret):
-        start = content.index(f":{secret.secret_value}@") + 1
-        end = start + len(secret.secret_value)
-
-        return Detected(
-            kind=self.kind,
-            start=start,
-            end=end,
-            val=secret.secret_value,
-        )
-
-    def detect_all(self, content: str) -> list[Detected]:
-        detected = []
-        for secret in _run_detect_secrets_plugins(content, self.plugins):
-            detected.append(self._get_detected_from_secret(content, secret))
-
-        return detected
+    def __init__(
+        self, pattern: str = ipv4_pattern, replacement: str = DEFAULT_REPLACEMENT_IPV4
+    ):
+        self.expression = regex.compile(pattern, regex.MULTILINE | regex.VERBOSE)
+        self.replacement = replacement
 
 
-class DetectorTokenSecrets(BaseDetector):
-    kind = DetectorKind.SECRET
-    filters = [
-        {"path": "detect_secrets.filters.heuristic.is_potential_uuid"},
-        {"path": "detect_secrets.filters.heuristic.is_likely_id_string"},
-        {"path": "detect_secrets.filters.heuristic.is_templated_secret"},
-        {"path": "detect_secrets.filters.heuristic.is_sequential_string"},
-    ]
-    plugins = [
-        {"name": "TwilioKeyDetector"},
-        {"name": "JwtTokenDetector"},
-        {"name": "ArtifactoryDetector"},
-        {"name": "SendGridDetector"},
-        {"name": "AzureStorageKeyDetector"},
-        {"name": "DiscordBotTokenDetector"},
-    ]
 
-    def _get_detected_from_secret(
-        self, content: str, secret: PotentialSecret
-    ) -> Detected:
-        start = content.index(secret.secret_value)
-        end = start + len(secret.secret_value)
+class DetectorRegexSecrets(BaseDetector):
+    def __init__(
+        self,
+        patterns: list[str] = secret_token_patterns,
+        replacement: str = DEFAULT_REPLACEMENT_SECRET,
+    ):
+        self.expressions = [re.compile(pattern) for pattern in patterns]
+        self.replacement = replacement
 
-        return Detected(
-            kind=self.kind,
-            start=start,
-            end=end,
-            val=secret.secret_value,
-        )
+    def redact_all(self, content: str) -> str:
+        for expression in self.expressions:
+            content = expression.sub(string=content, repl=self.replacement)
 
-    def detect_all(self, content) -> list[Detected]:
-        detected = []
-        for secret in _run_detect_secrets_plugins(content, self.plugins):
-            detected.append(self._get_detected_from_secret(content, secret))
-
-        return detected
+        return content
 
 
-class DetectorKeywordsSecrets(BaseDetector):
-    def __init__(self):
-        self.detectors = []
-        groups = [
-            # we can add more groups when start analyzing file extensions
-            # use case we're able to detect now. URL:
-            # https://github.com/Yelp/detect-secrets/blob/master/tests/plugins/keyword_test.py#L126
-            QUOTES_REQUIRED_DENYLIST_REGEX_TO_GROUP,
-        ]
-        for group in groups:
-            for exp, g in group.items():
-                self.detectors.append(DetectorRegex(exp, g, DetectorKind.SECRET))
-
-    def detect_all(self, content: str) -> list[Detected]:
-        detected = set()
-        for det in self.detectors:
-            detected.update(det.detect_all(content))
-        return list(detected)
+PII_DETECTORS = [
+    DetectorRegexEmail(),
+    # a different order of IPVx detectors may change the output
+    DetectorRegexIPV6(),
+    DetectorRegexIPV4(),
+    DetectorRegexSecrets(),
+]
 
 
-def _run_detect_secrets_plugins(
-    content: str,
-    plugins: list[dict[str, str]],
-    filters: Optional[list[dict[str, str]]] = None,
-) -> Iterable[PotentialSecret]:
-    # https://github.com/Yelp/detect-secrets/blob/master/docs
-    settings = {
-        "plugins_used": plugins,
-        "filters_used": filters if filters else [],
-    }
+class PiiRedactor:
+    def __init__(self, detectors: List = PII_DETECTORS):
+        self.pii_detectors = detectors
 
-    lines = content.splitlines()
-    with transient_settings(settings) as _:
-        lines_enumerated = list(enumerate(lines, start=1))
+    def redact_pii(self, content: str) -> str:
+        for detector in self.pii_detectors:
+            content = detector.redact_all(content)
 
-        # we use the private method of `detect_secrets` to avoid writing files with content
-        # we do not need to pass any file names and can pass the empty value
-        for potential_secret in _process_line_based_plugins(lines_enumerated, ""):
-            yield potential_secret
+        return content

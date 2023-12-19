@@ -1,340 +1,191 @@
 import pytest
 
 from ai_gateway.code_suggestions.detectors import (
-    Detected,
-    DetectorBasicAuthSecrets,
-    DetectorKeywordsSecrets,
-    DetectorKind,
     DetectorRegexEmail,
     DetectorRegexIPV4,
     DetectorRegexIPV6,
-    DetectorTokenSecrets,
+    DetectorRegexSecrets,
+    PiiRedactor,
 )
 
 
 @pytest.mark.parametrize(
     "test_content,expected_output",
     [
-        ("no address", []),
+        (
+            "no address",
+            "no address",
+        ),
         (
             "one address: email@ex.com",
-            [Detected(kind=DetectorKind.EMAIL, start=13, end=25, val="email@ex.com")],
+            "one address: EMAIL",
         ),
         (
             "one: one@ex.com, two: two@ex.com",
-            [
-                Detected(kind=DetectorKind.EMAIL, start=5, end=15, val="one@ex.com"),
-                Detected(kind=DetectorKind.EMAIL, start=22, end=32, val="two@ex.com"),
-            ],
+            "one: EMAIL, two: EMAIL",
         ),
-        ("wrong address: email@com", []),
-        ("wrong address: email@.com", []),
+        (
+            "wrong address: email@com",
+            "wrong address: email@com",
+        ),
+        (
+            "wrong address: email@.com",
+            "wrong address: email@.com",
+        ),
     ],
 )
-def test_detector_email_detect_all(test_content, expected_output):
-    det = DetectorRegexEmail()
-    detected = det.detect_all(test_content)
+def test_detector_email(test_content, expected_output):
+    det = DetectorRegexEmail(replacement="EMAIL")
+    redacted = det.redact_all(test_content)
 
-    assert detected == expected_output
+    assert redacted == expected_output
 
 
 @pytest.mark.parametrize(
     "test_content,expected_output",
     [
-        ("no ip address", []),
-        ("no ipv6 address 33.01.33.33", []),
+        (
+            "no ip address",
+            "no ip address",
+        ),
+        (
+            "no ipv6 address 33.01.33.33",
+            "no ipv6 address 33.01.33.33",
+        ),
         (
             "test 1:2:3:4:5:6:7:8",
-            [Detected(kind=DetectorKind.IPV6, start=5, end=20, val="1:2:3:4:5:6:7:8")],
+            "test IPV6",
         ),
         (
             "test 1::, 1:2:3:4:5:6:7::",
-            [
-                Detected(kind=DetectorKind.IPV6, start=5, end=8, val="1::"),
-                Detected(
-                    kind=DetectorKind.IPV6, start=10, end=25, val="1:2:3:4:5:6:7::"
-                ),
-            ],
+            "test IPV6, IPV6",
         ),
         (
             "test 1::8, 1:2:3:4:5:6::8, 1:2:3:4:5:6::8",
-            [
-                Detected(kind=DetectorKind.IPV6, start=5, end=9, val="1::8"),
-                Detected(
-                    kind=DetectorKind.IPV6, start=11, end=25, val="1:2:3:4:5:6::8"
-                ),
-                Detected(
-                    kind=DetectorKind.IPV6, start=27, end=41, val="1:2:3:4:5:6::8"
-                ),
-            ],
+            "test IPV6, IPV6, IPV6",
         ),
         (
             "test 1::7:8, 1:2:3:4:5::7:8, 1:2:3:4:5::8",
-            [
-                Detected(kind=DetectorKind.IPV6, start=5, end=11, val="1::7:8"),
-                Detected(
-                    kind=DetectorKind.IPV6, start=13, end=27, val="1:2:3:4:5::7:8"
-                ),
-                Detected(kind=DetectorKind.IPV6, start=29, end=41, val="1:2:3:4:5::8"),
-            ],
+            "test IPV6, IPV6, IPV6",
         ),
         (
             "test 1::6:7:8, 1:2:3:4::6:7:8, 1:2:3:4::8",
-            [
-                Detected(kind=DetectorKind.IPV6, start=5, end=13, val="1::6:7:8"),
-                Detected(
-                    kind=DetectorKind.IPV6, start=15, end=29, val="1:2:3:4::6:7:8"
-                ),
-                Detected(kind=DetectorKind.IPV6, start=31, end=41, val="1:2:3:4::8"),
-            ],
+            "test IPV6, IPV6, IPV6",
         ),
         (
             "test 1::5:6:7:8, 1:2:3::5:6:7:8, 1:2:3::8",
-            [
-                Detected(kind=DetectorKind.IPV6, start=5, end=15, val="1::5:6:7:8"),
-                Detected(
-                    kind=DetectorKind.IPV6, start=17, end=31, val="1:2:3::5:6:7:8"
-                ),
-                Detected(kind=DetectorKind.IPV6, start=33, end=41, val="1:2:3::8"),
-            ],
+            "test IPV6, IPV6, IPV6",
         ),
         (
             "test 1::4:5:6:7:8, 1:2::4:5:6:7:8, 1:2::8",
-            [
-                Detected(kind=DetectorKind.IPV6, start=5, end=17, val="1::4:5:6:7:8"),
-                Detected(
-                    kind=DetectorKind.IPV6, start=19, end=33, val="1:2::4:5:6:7:8"
-                ),
-                Detected(kind=DetectorKind.IPV6, start=35, end=41, val="1:2::8"),
-            ],
+            "test IPV6, IPV6, IPV6",
         ),
         (
             "test 1::3:4:5:6:7:8, 1::3:4:5:6:7:8, 1::8",
-            [
-                Detected(kind=DetectorKind.IPV6, start=5, end=19, val="1::3:4:5:6:7:8"),
-                Detected(
-                    kind=DetectorKind.IPV6, start=21, end=35, val="1::3:4:5:6:7:8"
-                ),
-                Detected(kind=DetectorKind.IPV6, start=37, end=41, val="1::8"),
-            ],
+            "test IPV6, IPV6, IPV6",
         ),
         (
             "test ::2:3:4:5:6:7:8, ::2:3:4:5:6:7:8, ::8, ::",
-            [
-                Detected(
-                    kind=DetectorKind.IPV6, start=5, end=20, val="::2:3:4:5:6:7:8"
-                ),
-                Detected(
-                    kind=DetectorKind.IPV6, start=22, end=37, val="::2:3:4:5:6:7:8"
-                ),
-                Detected(kind=DetectorKind.IPV6, start=39, end=42, val="::8"),
-                Detected(kind=DetectorKind.IPV6, start=44, end=46, val="::"),
-            ],
+            "test IPV6, IPV6, IPV6, IPV6",
         ),
         (
             "test fe80::7:8%eth0, fe80::7:8%1",
-            [
-                Detected(kind=DetectorKind.IPV6, start=5, end=19, val="fe80::7:8%eth0"),
-                Detected(kind=DetectorKind.IPV6, start=21, end=32, val="fe80::7:8%1"),
-            ],
+            "test IPV6, IPV6",
         ),
         (
             "test ::255.255.255.255, ::ffff:255.255.255.255, ::ffff:0:255.255.255.255",
-            [
-                Detected(
-                    kind=DetectorKind.IPV6, start=5, end=22, val="::255.255.255.255"
-                ),
-                Detected(
-                    kind=DetectorKind.IPV6,
-                    start=24,
-                    end=46,
-                    val="::ffff:255.255.255.255",
-                ),
-                Detected(
-                    kind=DetectorKind.IPV6,
-                    start=48,
-                    end=72,
-                    val="::ffff:0:255.255.255.255",
-                ),
-            ],
+            "test IPV6, IPV6, IPV6",
         ),
         (
             "test 2001:db8:3:4::192.0.2.33, 64:ff9b::192.0.2.33",
-            [
-                Detected(
-                    kind=DetectorKind.IPV6,
-                    start=5,
-                    end=29,
-                    val="2001:db8:3:4::192.0.2.33",
-                ),
-                Detected(
-                    kind=DetectorKind.IPV6, start=31, end=50, val="64:ff9b::192.0.2.33"
-                ),
-            ],
+            "test IPV6, IPV6",
         ),
     ],
 )
-def test_detector_ipv6_detect_all(test_content, expected_output):
-    det = DetectorRegexIPV6()
-    detected = det.detect_all(test_content)
+def test_detector_ipv6(test_content, expected_output):
+    det = DetectorRegexIPV6(replacement="IPV6")
+    redacted = det.redact_all(test_content)
 
-    assert detected == expected_output
+    assert redacted == expected_output
 
 
 @pytest.mark.parametrize(
     "test_content,expected_output",
     [
-        ("test no ip", []),
-        ("test no ip 2020.10", []),
-        ("test no ip 20.10.01", []),
-        ("test no ipv4 1::3:4:5:6:7:8", []),
+        ("test no ip", "test no ip"),
+        ("test no ip 2020.10", "test no ip 2020.10"),
+        ("test no ip 20.10.01", "test no ip 20.10.01"),
+        ("test no ipv4 1::3:4:5:6:7:8", "test no ipv4 1::3:4:5:6:7:8"),
         (
             "test 127.0.0.1",
-            [Detected(kind=DetectorKind.IPV4, start=5, end=14, val="127.0.0.1")],
+            "test IPV4",
         ),
         (
             "test 255.255.255.255",
-            [Detected(kind=DetectorKind.IPV4, start=5, end=20, val="255.255.255.255")],
+            "test IPV4",
         ),
         (
             "test 10.1.1.124",
-            [Detected(kind=DetectorKind.IPV4, start=5, end=15, val="10.1.1.124")],
+            "test IPV4",
+        ),
+        (
+            "test 127.0.0.1, 255.255.255.255",
+            "test IPV4, IPV4",
         ),
         # detect this ip even if it's invalid
         (
             "test 10.01.1.124",
-            [Detected(kind=DetectorKind.IPV4, start=5, end=16, val="10.01.1.124")],
+            "test IPV4",
         ),
     ],
 )
-def test_detector_ipv4_detect_all(test_content, expected_output):
-    det = DetectorRegexIPV4()
-    detected = det.detect_all(test_content)
+def test_detector_ipv4(test_content, expected_output):
+    det = DetectorRegexIPV4(replacement="IPV4")
+    redacted = det.redact_all(test_content)
 
-    assert detected == expected_output
+    assert redacted == expected_output
 
 
 @pytest.mark.parametrize(
     "test_content,expected_output",
     [
-        ("no secrets", []),
-        (
-            "basic auth: git clone https://username:1eeccr334f@gitlab.com/username/repository.git",
-            [Detected(kind=DetectorKind.SECRET, start=39, end=49, val="1eeccr334f")],
-        ),
-        (
-            "basic auth with 1eeccr334f': git clone https://username:1eeccr334f@gitlab.com/username/repository.git",
-            [Detected(kind=DetectorKind.SECRET, start=56, end=66, val="1eeccr334f")],
-        ),
-    ],
-)
-def test_detector_basic_auth_secrets_detect_all(test_content, expected_output):
-    det = DetectorBasicAuthSecrets()
-    detected = det.detect_all(test_content)
-
-    assert detected == expected_output
-
-
-@pytest.mark.parametrize(
-    "test_content,expected_output",
-    [
-        ("no secrets", []),
-        (
-            "artifactory credentials artif-key:AKCxxxxxxxxx1\nartifactoryx:_password=AKCxxxxxxxxx1",
-            [
-                Detected(
-                    kind=DetectorKind.SECRET, start=33, end=47, val=":AKCxxxxxxxxx1"
-                ),
-                Detected(
-                    kind=DetectorKind.SECRET, start=70, end=84, val="=AKCxxxxxxxxx1"
-                ),
-            ],
-        ),
+        ("no secrets", "no secrets"),
         (
             "sendgrid tokens: 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",
-            [
-                Detected(
-                    kind=DetectorKind.SECRET,
-                    start=17,
-                    end=86,
-                    val="SG.ngeVfQFYQlKU0ufo8x5d1A.TwL2iGABf9DHoTf"
-                    "-09kqeF8tAmbihYzrnopKc-1s5cr",
-                )
-            ],
-        ),
-        (
-            "azure: AccountKey=lJzRc1YdHaAA2KCNJJ1tkYwF/+mKK6Ygw0NGe170Xu592euJv2wYUtBlV8z+qnlcNQSnIYVTkLWntUO1F8j8rQ==",
-            [
-                Detected(
-                    kind=DetectorKind.SECRET,
-                    start=7,
-                    end=106,
-                    val="AccountKey=lJzRc1YdHaAA2KCNJJ1tkYwF/+"
-                    "mKK6Ygw0NGe170Xu592euJv2wYUtBlV8z+qnl"
-                    "cNQSnIYVTkLWntUO1F8j8rQ==",
-                )
-            ],
+            "SECRET",
         ),
         (
             "discord: MTk4NjIyNDgzNDcxOTI1MjQ4.Cl2FMQ.ZnCjm1XVW7vRze4b7Cq4se7kKWs",
-            [
-                Detected(
-                    kind=DetectorKind.SECRET,
-                    start=9,
-                    end=68,
-                    val="MTk4NjIyNDgzNDcxOTI1MjQ4.Cl2FMQ"
-                    ".ZnCjm1XVW7vRze4b7Cq4se7kKWs",
-                )
-            ],
+            "SECRET",
         ),
         (
-            "twilio: SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx1\nACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx1",
-            [
-                Detected(
-                    kind=DetectorKind.SECRET,
-                    start=8,
-                    end=42,
-                    val="SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx1",
-                ),
-                Detected(
-                    kind=DetectorKind.SECRET,
-                    start=43,
-                    end=77,
-                    val="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx1",
-                ),
-            ],
+            "GitLab token: glpat-xEpxjYPbvfwGX8KyBsW9\nglpat-xEpxjYPbvfwGX8KyBsW8",
+            "GitLab token: SECRET\nSECRET",
+        ),
+        (
+            "GitLab token: glpat-xEpxjYPbvfwGX8KyBsW9\nglpat-xEpxjYPbvfwGX8KyBsW8",
+            "GitLab token: SECRET\nSECRET",
         ),
     ],
 )
 def test_detector_token_secrets_detect_all(test_content, expected_output):
-    det = DetectorTokenSecrets()
-    detected = det.detect_all(test_content)
+    det = DetectorRegexSecrets(replacement="SECRET")
+    redacted = det.redact_all(test_content)
 
-    assert detected == expected_output
+    assert redacted == expected_output
 
 
 @pytest.mark.parametrize(
     "test_content,expected_output",
     [
-        ("no secrets: if (api_key == password) {\n\tprint('password')\n}", []),
         (
-            "has secrets: if (api_key == 'password') {\n\tprint('password')\n}",
-            [Detected(kind=DetectorKind.SECRET, start=29, end=37, val="password")],
-        ),
-        (
-            "has another secret: aws_secret_access_key: 'key'\napikey_myservice: 'another key'",
-            [
-                Detected(kind=DetectorKind.SECRET, start=44, end=47, val="key"),
-                Detected(kind=DetectorKind.SECRET, start=68, end=79, val="another key"),
-            ],
+            "The token for IP 127.0.0.1 is glpat-xEpxjYPbvfwGX8KyBsW9",
+            "The token for IP <x.x.x.x> is <secret>",
         ),
     ],
 )
-def test_detector_keyword_secrets_detect_all(test_content, expected_output):
-    det = DetectorKeywordsSecrets()
-    detected = det.detect_all(test_content)
+def test_pii_redactor(test_content, expected_output):
+    redactor = PiiRedactor()
+    redacted = redactor.redact_pii(test_content)
 
-    detected = sorted(detected, key=lambda d: d.start)
-    expected_output = sorted(expected_output, key=lambda d: d.start)
-
-    assert detected == expected_output
+    assert redacted == expected_output

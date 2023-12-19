@@ -24,6 +24,7 @@ from ai_gateway.code_suggestions import (
     CodeGenerations,
     CodeSuggestionsChunk,
     ModelProvider,
+    PiiRedactor,
 )
 from ai_gateway.deps import CodeSuggestionsContainer
 
@@ -60,6 +61,9 @@ async def code_completion(
         Provide[CodeSuggestionsContainer.code_completions_anthropic.provider]
     ),
 ):
+    payload.content_above_cursor = redact_pii(payload.content_above_cursor)
+    payload.content_below_cursor = redact_pii(payload.content_below_cursor)
+
     if payload.model_provider == ModelProvider.ANTHROPIC:
         engine = code_completions_anthropic()
     else:
@@ -99,6 +103,9 @@ async def code_generation(
         Provide[CodeSuggestionsContainer.code_generations_anthropic.provider]
     ),
 ):
+    payload.content_above_cursor = redact_pii(payload.content_above_cursor)
+    payload.content_below_cursor = redact_pii(payload.content_below_cursor)
+
     if payload.model_provider == ModelProvider.ANTHROPIC:
         engine = code_generations_anthropic()
     else:
@@ -141,3 +148,11 @@ async def _handle_stream(
     return StreamSuggestionsResponse(
         _stream_generator(), media_type="text/event-stream"
     )
+
+
+@inject
+def redact_pii(
+    content: str,
+    pii_redactor: PiiRedactor = Depends(Provide[CodeSuggestionsContainer.pii_redactor]),
+) -> (str, str):
+    return pii_redactor.redact_pii(content=content)
