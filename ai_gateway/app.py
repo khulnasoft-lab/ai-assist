@@ -10,6 +10,7 @@ from ai_gateway import Config
 from ai_gateway.api import create_fast_api_server
 from ai_gateway.deps import (
     _PROBS_ENDPOINTS,
+    ChatContainer,
     CodeSuggestionsContainer,
     FastApiContainer,
     XRayContainer,
@@ -31,6 +32,8 @@ def main():
     fast_api_container = FastApiContainer()
     fast_api_container.config.auth.from_value(config.auth._asdict())
     fast_api_container.config.fastapi.from_value(config.fastapi._asdict())
+
+    chat_container = ChatContainer()
 
     code_suggestions_container = CodeSuggestionsContainer()
     code_suggestions_container.config.palm_text_model.from_value(
@@ -71,6 +74,7 @@ def main():
     def on_server_startup():
         fast_api_container.init_resources()
         code_suggestions_container.init_resources()
+        chat_container.init_resources()
         x_ray_container.init_resources()
 
         # https://github.com/trallnag/prometheus-fastapi-instrumentator/issues/10
@@ -86,6 +90,7 @@ def main():
     @app.on_event("shutdown")
     def on_server_shutdown():
         fast_api_container.shutdown_resources()
+        chat_container.shutdown_resources()
         code_suggestions_container.shutdown_resources()
         x_ray_container.shutdown_resources()
 
