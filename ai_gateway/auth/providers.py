@@ -57,7 +57,7 @@ class GitLabOidcProvider(AuthProvider):
             scopes = jwt_claims.get("scopes", [])
             is_allowed = True
         except JWTError as err:
-            log_exception(err)
+            log_exception(err, {"token": token})
 
         return User(
             authenticated=is_allowed,

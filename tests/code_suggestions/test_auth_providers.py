@@ -7,6 +7,7 @@ import pytest
 import requests
 import responses
 from jose import exceptions, jwt
+from structlog.testing import capture_logs
 
 from ai_gateway.auth import GitLabOidcProvider
 
@@ -371,3 +372,28 @@ UGw3kIW+604fnnXLDm4TaLA=
 
         assert well_known_test_response.call_count == 1
         assert jwks_test_response.call_count == 1
+
+    @responses.activate
+    def test_malformed_token_logging(self):
+        with capture_logs() as cap_logs:
+            responses.get(
+                "http://test.com/.well-known/openid-configuration",
+                body='{"jwks_uri": "http://test.com/oauth/discovery/keys"}',
+                status=200,
+            )
+            responses.get(
+                "http://test.com/oauth/discovery/keys",
+                body=f'{{"keys": [{json.dumps(self.public_key_customers)}]}}',
+                status=200,
+            )
+            auth_provider = GitLabOidcProvider(
+                oidc_providers={
+                    "Gitlab": "http://test.com",
+                }
+            )
+            token = "malformed token"
+            auth_provider.authenticate(token)
+
+            assert len(cap_logs) == 1
+            assert cap_logs[0]["event"] == "Not enough segments"
+            assert cap_logs[0]["extra"]["token"] == "malformed token"
