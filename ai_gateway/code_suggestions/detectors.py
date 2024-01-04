@@ -989,7 +989,6 @@ class DetectorRegexIPV4(BaseDetector):
         self.replacement = replacement
 
 
-
 class DetectorRegexSecrets(BaseDetector):
     def __init__(
         self,
