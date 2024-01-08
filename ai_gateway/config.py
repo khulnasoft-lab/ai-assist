@@ -33,6 +33,7 @@ class ConfigFastApi(BaseModel):
     docs_url: Optional[str] = None
     openapi_url: Optional[str] = None
     redoc_url: Optional[str] = None
+    limit_max_requests: Optional[int] = None
 
 
 class ConfigAuth(BaseModel):

@@ -89,6 +89,7 @@ def main():
         port=config.fastapi.api_port,
         log_config=config.fastapi.uvicorn_logger,
         forwarded_allow_ips="*",
+        limit_max_requests=config.fastapi.limit_max_requests,
     )
 
 
