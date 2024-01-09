@@ -1,6 +1,7 @@
 from typing import Any, Callable, NamedTuple, Optional
 
 import structlog
+from fastapi.concurrency import run_in_threadpool
 from transformers import PreTrainedTokenizer
 
 from ai_gateway.code_suggestions.processing.base import (
@@ -191,7 +192,7 @@ class ModelEngineCompletions(ModelEngineBase):
         stream: bool = False,
         **kwargs: Any,
     ) -> ModelEngineOutput:
-        prompt = self._build_prompt(prefix, file_name, suffix, lang_id)
+        prompt = await self._abuild_prompt(prefix, file_name, suffix, lang_id)
 
         empty_output = ModelEngineOutput(
             text="",
@@ -237,6 +238,26 @@ class ModelEngineCompletions(ModelEngineBase):
                 watch_container.register_model_exception(str(ex), ex.code)
 
         return empty_output
+
+    async def _abuild_prompt(
+        self,
+        prefix: str,
+        file_name: str,
+        suffix: str,
+        lang_id: Optional[LanguageId] = None,
+    ) -> Prompt:
+        """Build a prompt for the model in a separate thread.
+
+        Execute the CPU intensive task in a separate thread so that it does not block the server process.
+        Inspired by https://stackoverflow.com/questions/71516140/fastapi-runs-api-calls-in-serial-instead-of-parallel-fashion
+        """
+        return await run_in_threadpool(
+            self._build_prompt,
+            prefix,
+            file_name,
+            suffix,
+            lang_id,
+        )
 
     def _build_prompt(
         self,

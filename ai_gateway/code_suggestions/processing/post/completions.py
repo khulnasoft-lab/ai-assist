@@ -1,6 +1,8 @@
 from functools import partial
 from typing import Any, Callable, NewType, Optional
 
+from fastapi.concurrency import run_in_threadpool
+
 from ai_gateway.code_suggestions.processing.ops import strip_whitespaces
 from ai_gateway.code_suggestions.processing.post.base import PostProcessorBase
 from ai_gateway.code_suggestions.processing.post.ops import (
@@ -71,3 +73,11 @@ class PostProcessor(PostProcessorBase):
                 return ""
 
         return completion
+
+    async def aprocess(self, completion: str, **kwargs: Any) -> str:
+        """Perform the post processing in a separate thread.
+
+        Execute the CPU intensive task in a separate thread so that it does not block the server process.
+        Inspired by https://stackoverflow.com/questions/71516140/fastapi-runs-api-calls-in-serial-instead-of-parallel-fashion
+        """
+        return await run_in_threadpool(self.process, completion, **kwargs)
