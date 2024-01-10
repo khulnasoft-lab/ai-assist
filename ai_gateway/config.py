@@ -26,7 +26,7 @@ class ConfigLogging(BaseModel):
 
 class ConfigFastApi(BaseModel):
     api_host: str = "0.0.0.0"
-    api_port: int = 5052
+    api_port: int = 5000
     metrics_host: str = "0.0.0.0"
     metrics_port: int = 8082
     uvicorn_logger: dict = {"version": 1, "disable_existing_loggers": False}
