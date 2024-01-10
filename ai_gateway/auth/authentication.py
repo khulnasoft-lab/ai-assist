@@ -34,6 +34,9 @@ def allowed_beta_scopes(scopes: typing.Sequence[str]) -> typing.Sequence[str]:
 
 
 def in_beta(time: str) -> bool:
+    if time is None:
+      return False
+
     service_start_time = datetime.strptime(time, "%Y-%m-%d %H:%MZ")
 
     return service_start_time > datetime.today()
