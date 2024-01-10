@@ -360,3 +360,11 @@ class XRayContainer(containers.DeclarativeContainer):
         client_anthropic=client_anthropic,
         use_fake=config.use_fake_models,
     )
+
+
+class CloudConnectorContainer(containers.DeclarativeContainer):
+    config = providers.Configuration(strict=True)
+    config.from_dict(Config().model_dump())
+
+    services = config.cloud_connector.services()
+    print(services)

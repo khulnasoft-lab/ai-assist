@@ -26,7 +26,7 @@ class ConfigLogging(BaseModel):
 
 class ConfigFastApi(BaseModel):
     api_host: str = "0.0.0.0"
-    api_port: int = 5000
+    api_port: int = 5052
     metrics_host: str = "0.0.0.0"
     metrics_port: int = 8082
     uvicorn_logger: dict = {"version": 1, "disable_existing_loggers": False}
@@ -73,6 +73,27 @@ class ConfigModelConcurrency(RootModel):
         return self.root.get(engine, {}).get(name, None)
 
 
+class CodeSuggestionsService(BaseModel):
+    service_start_time: str = "2024-02-15 00:00Z"
+
+
+class DuoChatService(BaseModel):
+    service_start_time: str = "2024-03-15 00:00Z"
+
+
+class CloudConnectorServices(BaseModel):
+    code_suggestions: Annotated[
+        CodeSuggestionsService, Field(default_factory=CodeSuggestionsService)
+    ]
+    duo_chat: Annotated[DuoChatService, Field(default_factory=DuoChatService)]
+
+
+class ConfigCloudConnector(BaseModel):
+    services: Annotated[
+        CloudConnectorServices, Field(default_factory=CloudConnectorServices)
+    ]
+
+
 class Config(BaseSettings):
     model_config = SettingsConfigDict(
         env_nested_delimiter="__",
@@ -91,6 +112,9 @@ class Config(BaseSettings):
     logging: Annotated[ConfigLogging, Field(default_factory=ConfigLogging)]
     fastapi: Annotated[ConfigFastApi, Field(default_factory=ConfigFastApi)]
     auth: Annotated[ConfigAuth, Field(default_factory=ConfigAuth)]
+    cloud_connector: Annotated[
+        ConfigCloudConnector, Field(default_factory=ConfigCloudConnector)
+    ]
     google_cloud_profiler: Annotated[
         ConfigGoogleCloudProfiler, Field(default_factory=ConfigGoogleCloudProfiler)
     ]
