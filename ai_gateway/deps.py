@@ -367,4 +367,3 @@ class CloudConnectorContainer(containers.DeclarativeContainer):
     config.from_dict(Config().model_dump())
 
     services = config.cloud_connector.services()
-    print(services)

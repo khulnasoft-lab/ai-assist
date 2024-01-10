@@ -1,6 +1,8 @@
 import json
+from datetime import datetime, timedelta
 
 import pytest
+from dependency_injector import containers, providers
 from dependency_injector.wiring import inject
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.testclient import TestClient
@@ -12,6 +14,7 @@ from structlog.testing import capture_logs
 from ai_gateway.api.middleware import MiddlewareAuthentication
 from ai_gateway.auth import User, UserClaims
 from ai_gateway.auth.authentication import requires
+from ai_gateway.deps import CloudConnectorContainer
 
 router = APIRouter(
     prefix="",
@@ -35,6 +38,17 @@ def homepage(request: Request):
 @pytest.fixture(scope="class")
 def fast_api_router():
     return router
+
+
+# Overriding ``Container`` with ``OverridingContainer``:
+@containers.override(CloudConnectorContainer)
+class OverridingContainer(containers.DeclarativeContainer):
+    services = providers.Dict(
+        {
+            "feature1": {"start_service_time": datetime.now() + timedelta(days=1)},
+            "feature3": {"start_service_time": datetime.now() - timedelta(days=1)},
+        }
+    )
 
 
 expected_log_keys = [
@@ -252,6 +266,60 @@ def test_failed_authorization_logging(
         assert cap_logs[0]["status_code"] == expected_status_code
         assert cap_logs[0]["method"] == "POST"
         assert set(cap_logs[0].keys()) == set(expected_log_keys + log_keys)
+
+
+@pytest.mark.parametrize(
+    (
+        "expected_status_code",
+        "auth_user",
+        "expected_response",
+    ),
+    [
+        (
+            200,
+            User(
+                authenticated=True,
+                claims=UserClaims(scopes=["feature1_beta", "feature2", "feature3"]),
+            ),
+            {
+                "authenticated": True,
+                "is_debug": False,
+                "scopes": ["feature1_beta", "feature2", "feature3"],
+            },
+        ),
+        (
+            200,
+            User(
+                authenticated=True,
+                claims=UserClaims(scopes=["feature1", "feature2_beta", "feature3"]),
+            ),
+            {
+                "authenticated": True,
+                "is_debug": False,
+                "scopes": ["feature1", "feature2_beta", "feature3"],
+            },
+        ),
+        (
+            403,
+            User(
+                authenticated=True,
+                claims=UserClaims(scopes=["feature1", "feature2", "feature3_beta"]),
+            ),
+            {"detail": "Forbidden"},
+        ),
+    ],
+)
+def test_authorization_with_beta_scopes(
+    mock_client, expected_status_code, expected_response
+):
+    headers = {
+        "Authorization": "Bearer 12345",
+        "X-Gitlab-Authentication-Type": "oidc",
+    }
+    response = mock_client.post("/", headers=headers, data=None)
+
+    assert response.status_code == expected_status_code
+    assert response.json() == expected_response
 
 
 def test_bypass_auth(fast_api_router, stub_auth_provider):

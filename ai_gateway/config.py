@@ -73,19 +73,15 @@ class ConfigModelConcurrency(RootModel):
         return self.root.get(engine, {}).get(name, None)
 
 
-class CodeSuggestionsService(BaseModel):
-    service_start_time: str = "2024-02-15 00:00Z"
-
-
-class DuoChatService(BaseModel):
-    service_start_time: str = "2024-03-15 00:00Z"
+class ServiceStartTime(BaseModel):
+    service_start_time: str = None
 
 
 class CloudConnectorServices(BaseModel):
     code_suggestions: Annotated[
-        CodeSuggestionsService, Field(default_factory=CodeSuggestionsService)
+        ServiceStartTime, Field(default_factory=ServiceStartTime)
     ]
-    duo_chat: Annotated[DuoChatService, Field(default_factory=DuoChatService)]
+    duo_chat: Annotated[ServiceStartTime, Field(default_factory=ServiceStartTime)]
 
 
 class ConfigCloudConnector(BaseModel):

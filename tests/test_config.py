@@ -4,8 +4,10 @@ from unittest import mock
 import pytest
 
 from ai_gateway.config import (
+    CloudConnectorServices,
     Config,
     ConfigAuth,
+    ConfigCloudConnector,
     ConfigFastApi,
     ConfigGoogleCloudProfiler,
     ConfigLogging,
@@ -13,6 +15,7 @@ from ai_gateway.config import (
     ConfigSnowplow,
     ConfigVertexTextModel,
     FFlagsCodeSuggestions,
+    ServiceStartTime,
 )
 
 
@@ -200,6 +203,33 @@ def test_config_vertex_text_model(values: dict, expected: ConfigVertexTextModel)
         config = Config(_env_file=None)
 
         assert config.vertex_text_model == expected
+
+
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        ({}, ConfigCloudConnector()),
+        (
+            {
+                "AIGW_CLOUD_CONNECTOR__SERVICES__CODE_SUGGESTIONS__SERVICE_START_TIME": "2024-02-15 00:00Z",
+                "AIGW_CLOUD_CONNECTOR__SERVICES__DUO_CHAT__SERVICE_START_TIME": "2024-03-15 00:00Z",
+            },
+            ConfigCloudConnector(
+                services=CloudConnectorServices(
+                    code_suggestions=ServiceStartTime(
+                        service_start_time="2024-02-15 00:00Z"
+                    ),
+                    duo_chat=ServiceStartTime(service_start_time="2024-03-15 00:00Z"),
+                )
+            ),
+        ),
+    ],
+)
+def test_config_cloud_connector_model(values: dict, expected: ConfigVertexTextModel):
+    with mock.patch.dict(os.environ, values, clear=True):
+        config = Config(_env_file=None)
+
+        assert config.cloud_connector == expected
 
 
 @pytest.mark.parametrize(
