@@ -13,10 +13,8 @@ def has_required_scope(conn: HTTPConnection, scopes: typing.Sequence[str]) -> bo
         return True
 
     for scope in scopes:
-        print("subscopes")
         sub_scopes = scope.split("|")
         sub_scopes.extend(allowed_beta_scopes(sub_scopes))
-        print(sub_scopes)
         inside_scopes = [scope in conn.auth.scopes for scope in sub_scopes]
 
         if not any(inside_scopes):
