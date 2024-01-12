@@ -8,8 +8,9 @@ from ai_gateway.instrumentators.model_requests import ModelRequestInstrumentator
 
 
 class TestModelRequestInstrumentator:
+    @mock.patch("prometheus_client.Histogram.labels")
     @mock.patch("prometheus_client.Gauge.labels")
-    def test_watch_sync(self, mock_gauges):
+    def test_watch_sync(self, mock_gauges, mock_histogram):
         instrumentator = ModelRequestInstrumentator(
             model_engine="anthropic", model_name="claude", concurrency_limit=None
         )
@@ -28,6 +29,10 @@ class TestModelRequestInstrumentator:
         assert mock_gauges.mock_calls == [
             mock.call(model_engine="anthropic", model_name="claude"),
             mock.call().dec(),
+        ]
+        assert mock_histogram.mock_calls == [
+            mock.call(model_engine="anthropic", model_name="claude"),
+            mock.call().observe(mock.ANY),
         ]
 
     @mock.patch("prometheus_client.Gauge.labels")

@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, AsyncIterator, Callable, Optional, Union
+from typing import Any, AsyncIterator, Optional, Union
 
 import httpx
 import structlog
@@ -12,6 +12,7 @@ from anthropic import (
 )
 from anthropic._types import NOT_GIVEN
 
+from ai_gateway.instrumentators.model_requests import ModelRequestInstrumentator
 from ai_gateway.models.base import (
     KindModelProvider,
     ModelAPICallError,
@@ -150,7 +151,7 @@ class AnthropicModel(TextGenBaseModel):
                 raise AnthropicAPIConnectionError.from_exception(ex)
 
             if stream:
-                return self._handle_stream(suggestion, lambda: watcher.finish())
+                return self._handle_stream(suggestion, watcher)
 
         return TextGenModelOutput(
             text=suggestion.completion,
@@ -160,14 +161,18 @@ class AnthropicModel(TextGenBaseModel):
         )
 
     async def _handle_stream(
-        self, response: AsyncStream, after_callback: Callable
+        self, response: AsyncStream, watcher: ModelRequestInstrumentator
     ) -> AsyncIterator[TextGenModelChunk]:
         try:
+            idx = 0
             async for event in response:
                 chunk_content = TextGenModelChunk(text=event.completion)
                 yield chunk_content
+                if idx == 0:
+                    watcher.finish_first_response()
+                idx += 1
         finally:
-            after_callback()
+            watcher.finish()
 
     @classmethod
     def from_model_name(

@@ -308,6 +308,7 @@ async def test_anthropic_model_generate_stream_instrumented():
 
         mock_watch.assert_called_once_with(stream=True)
         watcher.finish.assert_called_once()
+        watcher.finish_first_response.assert_called_once()
 
 
 @pytest.mark.asyncio

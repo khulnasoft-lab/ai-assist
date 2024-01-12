@@ -1,7 +1,8 @@
+import time
 from contextlib import contextmanager
 from typing import Optional
 
-from prometheus_client import Gauge
+from prometheus_client import Gauge, Histogram
 
 from ai_gateway.tracking.errors import log_exception
 
@@ -19,6 +20,13 @@ MAX_CONCURRENT_MODEL_INFERENCES = Gauge(
     METRIC_LABELS,
 )
 
+INFERENCE_FIRST_RESPONSE_HISTOGRAM = Histogram(
+    "code_suggestions_inference_first_response_duration_seconds",
+    "Duration of the inference request until the first response chunk in seconds",
+    METRIC_LABELS,
+    buckets=(0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 10, 15, 20, 30, 60, 120),
+)
+
 
 class ModelRequestInstrumentator:
     class WatchContainer:
@@ -27,6 +35,7 @@ class ModelRequestInstrumentator:
             self.concurrency_limit = concurrency_limit
 
         def start(self):
+            self.start_time = time.perf_counter()
             if self.concurrency_limit is not None:
                 MAX_CONCURRENT_MODEL_INFERENCES.labels(**self.labels).set(
                     self.concurrency_limit
@@ -35,6 +44,10 @@ class ModelRequestInstrumentator:
 
         def finish(self):
             INFERENCE_IN_FLIGHT_GAUGE.labels(**self.labels).dec()
+
+        def finish_first_response(self):
+            duration = time.perf_counter() - self.start_time
+            INFERENCE_FIRST_RESPONSE_HISTOGRAM.labels(**self.labels).observe(duration)
 
     def __init__(
         self,
@@ -58,4 +71,5 @@ class ModelRequestInstrumentator:
             raise
         finally:
             if not stream:
+                watcher.finish_first_response()
                 watcher.finish()
