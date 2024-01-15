@@ -164,13 +164,10 @@ class AnthropicModel(TextGenBaseModel):
         self, response: AsyncStream, watcher: ModelRequestInstrumentator
     ) -> AsyncIterator[TextGenModelChunk]:
         try:
-            idx = 0
             async for event in response:
                 chunk_content = TextGenModelChunk(text=event.completion)
                 yield chunk_content
-                if idx == 0:
-                    watcher.finish_first_response()
-                idx += 1
+                watcher.finish_chunk()
         finally:
             watcher.finish()
 

@@ -24,7 +24,7 @@ INFERENCE_FIRST_RESPONSE_HISTOGRAM = Histogram(
     "code_suggestions_inference_first_response_duration_seconds",
     "Duration of the inference request until the first response chunk in seconds",
     METRIC_LABELS,
-    buckets=(0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 10, 15, 20, 30, 60, 120),
+    buckets=(0.5, 1, 2.5, 5, 10, 30, 60),
 )
 
 
@@ -33,6 +33,7 @@ class ModelRequestInstrumentator:
         def __init__(self, labels: dict[str, str], concurrency_limit: Optional[int]):
             self.labels = labels
             self.concurrency_limit = concurrency_limit
+            self.chunk_counter = 0
 
         def start(self):
             self.start_time = time.perf_counter()
@@ -45,9 +46,11 @@ class ModelRequestInstrumentator:
         def finish(self):
             INFERENCE_IN_FLIGHT_GAUGE.labels(**self.labels).dec()
 
-        def finish_first_response(self):
-            duration = time.perf_counter() - self.start_time
-            INFERENCE_FIRST_RESPONSE_HISTOGRAM.labels(**self.labels).observe(duration)
+        def finish_chunk(self):
+            self.chunk_counter += 1
+            if self.chunk_counter == 1:
+              duration = time.perf_counter() - self.start_time
+              INFERENCE_FIRST_RESPONSE_HISTOGRAM.labels(**self.labels).observe(duration)
 
     def __init__(
         self,
@@ -71,5 +74,5 @@ class ModelRequestInstrumentator:
             raise
         finally:
             if not stream:
-                watcher.finish_first_response()
+                watcher.finish_chunk()
                 watcher.finish()
