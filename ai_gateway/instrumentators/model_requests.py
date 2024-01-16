@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from typing import Optional
 
 from prometheus_client import Gauge, Histogram
+from starlette_context import context
 
 from ai_gateway.tracking.errors import log_exception
 
@@ -50,6 +51,7 @@ class ModelRequestInstrumentator:
             self.chunk_counter += 1
             if self.chunk_counter == 1:
               duration = time.perf_counter() - self.start_time
+              context.data["inference_first_chunk_duration_s"] = duration
               INFERENCE_FIRST_RESPONSE_HISTOGRAM.labels(**self.labels).observe(duration)
 
     def __init__(
