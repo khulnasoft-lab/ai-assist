@@ -50,9 +50,11 @@ class ModelRequestInstrumentator:
         def finish_chunk(self):
             self.chunk_counter += 1
             if self.chunk_counter == 1:
-              duration = time.perf_counter() - self.start_time
-              context.data["inference_first_chunk_duration_s"] = duration
-              INFERENCE_FIRST_RESPONSE_HISTOGRAM.labels(**self.labels).observe(duration)
+                duration = time.perf_counter() - self.start_time
+                context.data["inference_first_chunk_duration_s"] = duration
+                INFERENCE_FIRST_RESPONSE_HISTOGRAM.labels(**self.labels).observe(
+                    duration
+                )
 
     def __init__(
         self,
