@@ -59,6 +59,10 @@ class ConfigSnowplow(BaseModel):
     enabled: bool = False
     endpoint: Optional[str] = None
 
+class ConfigCustomModels(BaseModel):
+    enabled: bool = False
+    endpoint: Optional[str] = None
+    prompt_template: Optional[str] = None
 
 class ConfigVertexTextModel(BaseModel):
     project: str = "unreview-poc-390200e5"
@@ -96,6 +100,7 @@ class Config(BaseSettings):
     ]
     f: Annotated[FFlags, Field(default_factory=FFlags)]
     snowplow: Annotated[ConfigSnowplow, Field(default_factory=ConfigSnowplow)]
+    custom_models: Annotated[ConfigCustomModels, Field(default_factory=ConfigCustomModels)]
     vertex_text_model: Annotated[
         ConfigVertexTextModel, Field(default_factory=ConfigVertexTextModel)
     ]

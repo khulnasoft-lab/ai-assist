@@ -5,6 +5,7 @@ from typing import Any, AsyncIterator, NamedTuple, Union
 from anthropic import AsyncAnthropic
 from google.cloud.aiplatform.gapic import PredictionServiceAsyncClient
 from pydantic import BaseModel
+import httpx
 
 from ai_gateway.config import Config
 from ai_gateway.instrumentators.model_requests import ModelRequestInstrumentator
@@ -26,12 +27,14 @@ __all__ = [
     "TextGenBaseModel",
     "grpc_connect_vertex",
     "connect_anthropic",
+    "connect_custom_models",
 ]
 
 
 class KindModelProvider(str, Enum):
     ANTHROPIC = "anthropic"
     VERTEX_AI = "vertex-ai"
+    CUSTOM = "custom"
 
 
 class ModelAPIError(Exception):
@@ -136,3 +139,6 @@ def grpc_connect_vertex(client_options: dict) -> PredictionServiceAsyncClient:
 
 def connect_anthropic(**kwargs: Any) -> AsyncAnthropic:
     return AsyncAnthropic(**kwargs)
+
+def connect_custom_models(**kwargs: Any) -> httpx.AsyncClient:
+    return httpx.AsyncClient()

@@ -11,6 +11,7 @@ from ai_gateway.code_suggestions.processing.ops import (
 from ai_gateway.experimentation import ExperimentTelemetry
 from ai_gateway.models import (
     KindAnthropicModel,
+    KindCustomModel,
     KindModelProvider,
     KindVertexTextModel,
     ModelMetadata,
@@ -39,18 +40,19 @@ class KindUseCase(str, Enum):
 PROVIDERS_MODELS_MAP = {
     KindModelProvider.ANTHROPIC: KindAnthropicModel,
     KindModelProvider.VERTEX_AI: KindVertexTextModel,
+    KindModelProvider.CUSTOM: KindCustomModel,
 }
 
 USE_CASES_MODELS_MAP = {
     KindUseCase.CODE_COMPLETIONS: {
         KindAnthropicModel.CLAUDE_INSTANT_1_1,
         KindAnthropicModel.CLAUDE_INSTANT_1_2,
-        KindVertexTextModel.CODE_GECKO_002,
+        KindVertexTextModel.CODE_GECKO_002
     },
     KindUseCase.CODE_GENERATIONS: {
         KindAnthropicModel.CLAUDE_2_0,
         KindAnthropicModel.CLAUDE_2_1,
-        KindVertexTextModel.CODE_BISON_002,
+        KindVertexTextModel.CODE_BISON_002
     },
 }
 

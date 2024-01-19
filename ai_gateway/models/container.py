@@ -5,7 +5,8 @@ from dependency_injector import containers, providers
 from google.cloud.aiplatform.gapic import PredictionServiceAsyncClient
 
 from ai_gateway.models.anthropic import AnthropicModel
-from ai_gateway.models.base import connect_anthropic, grpc_connect_vertex
+from ai_gateway.models.custom import CustomModel
+from ai_gateway.models.base import connect_anthropic, grpc_connect_vertex, connect_custom_models
 from ai_gateway.models.fake import FakePalmTextGenModel
 from ai_gateway.models.vertex_text import (
     PalmCodeBisonModel,
@@ -43,6 +44,14 @@ def _init_anthropic_client(use_fake: bool) -> Iterator[Optional[AsyncAnthropic]]
     yield client
     client.close()
 
+def _init_custom_models_client(use_fake: bool) -> Iterator[Optional[AsyncAnthropic]]:
+    if use_fake:
+        yield None
+        return
+
+    client = connect_custom_models()
+    yield client
+    client.close()
 
 class ContainerModels(containers.DeclarativeContainer):
     # We need to resolve the model based on the model name provided by the upstream container.
@@ -60,6 +69,10 @@ class ContainerModels(containers.DeclarativeContainer):
 
     http_client_anthropic = providers.Resource(
         _init_anthropic_client, use_fake=config.use_fake_models
+    )
+
+    http_client_custom_models = providers.Resource(
+        _init_custom_models_client, use_fake=config.use_fake_models
     )
 
     vertex_text_bison = providers.Selector(
@@ -102,5 +115,16 @@ class ContainerModels(containers.DeclarativeContainer):
             client=http_client_anthropic,
         ),
         # TODO: We need to update our fake models to make them generic
+        fake=providers.Factory(FakePalmTextGenModel),
+    )
+
+    custom_model = providers.Selector(
+        real_or_fake,
+        real=providers.Factory(
+            CustomModel.from_model_name,
+            client=http_client_custom_models,
+            prompt_template=config.custom_models.prompt_template,
+            url=config.custom_models.endpoint,
+        ),
         fake=providers.Factory(FakePalmTextGenModel),
     )

@@ -75,9 +75,13 @@ async def completions(
     completions_anthropic_factory: Factory[CodeCompletions] = Depends(
         Provide[ContainerApplication.code_suggestions.completions.anthropic.provider]
     ),
+    completions_custom_model_factory: Factory[CodeCompletions] = Depends(
+        Provide[ContainerApplication.code_suggestions.completions.custom_model_factory.provider]
+    ),
     snowplow_instrumentator: SnowplowInstrumentator = Depends(
         Provide[ContainerApplication.snowplow.instrumentator]
     ),
+
 ):
     try:
         track_snowplow_event(request, payload, snowplow_instrumentator)
@@ -94,7 +98,10 @@ async def completions(
     )
 
     kwargs = {}
-    if payload.model_provider == KindModelProvider.ANTHROPIC:
+    if payload.model_provider == KindModelProvider.CUSTOM:
+        code_completions = completions_custom_model_factory(
+            model__name=payload.model_name)
+    elif payload.model_provider == KindModelProvider.ANTHROPIC:
         code_completions = completions_anthropic_factory()
 
         # We support the prompt version 2 only with the Anthropic models
@@ -168,7 +175,7 @@ async def generations(
         current_file_name=payload.current_file.file_name,
         stream=payload.stream,
     )
-
+    
     if payload.model_provider == KindModelProvider.ANTHROPIC:
         code_generations = _resolve_code_generations_anthropic(
             payload,

@@ -25,6 +25,7 @@ class ContainerCodeGenerations(containers.DeclarativeContainer):
     tokenizer = providers.Dependency(instance_of=PreTrainedTokenizerFast)
     vertex_code_bison = providers.Dependency(instance_of=TextGenBaseModel)
     anthropic_claude = providers.Dependency(instance_of=TextGenBaseModel)
+    custom_model = providers.Dependency(instance_of=TextGenBaseModel)
 
     vertex = providers.Factory(
         CodeGenerations,
@@ -55,11 +56,21 @@ class ContainerCodeGenerations(containers.DeclarativeContainer):
         model__name=KindAnthropicModel.CLAUDE_2_0,
     )
 
+    custom_model_factory = providers.Factory(
+        CodeGenerations,
+        model=providers.Factory(
+            custom_model
+        ),
+        tokenization_strategy=providers.Factory(
+            TokenizerTokenStrategy, tokenizer=tokenizer
+        ),
+    )
 
 class ContainerCodeCompletions(containers.DeclarativeContainer):
     tokenizer = providers.Dependency(instance_of=PreTrainedTokenizerFast)
     vertex_code_gecko = providers.Dependency(instance_of=TextGenBaseModel)
     anthropic_claude = providers.Dependency(instance_of=TextGenBaseModel)
+    custom_model = providers.Dependency(instance_of=TextGenBaseModel)
 
     config = providers.Configuration(strict=True)
 
@@ -92,6 +103,16 @@ class ContainerCodeCompletions(containers.DeclarativeContainer):
         ),
     )
 
+    custom_model_factory = providers.Factory(
+        CodeCompletions,
+        model=providers.Factory(
+            custom_model
+        ),
+        tokenization_strategy=providers.Factory(
+            TokenizerTokenStrategy, tokenizer=tokenizer
+        ),
+    )
+
 
 class ContainerCodeSuggestions(containers.DeclarativeContainer):
     models = providers.DependenciesContainer()
@@ -105,6 +126,7 @@ class ContainerCodeSuggestions(containers.DeclarativeContainer):
         tokenizer=tokenizer,
         vertex_code_bison=models.vertex_code_bison,
         anthropic_claude=models.anthropic_claude,
+        custom_model=models.custom_model,
     )
 
     completions = providers.Container(
@@ -112,5 +134,6 @@ class ContainerCodeSuggestions(containers.DeclarativeContainer):
         tokenizer=tokenizer,
         vertex_code_gecko=models.vertex_code_gecko,
         anthropic_claude=models.anthropic_claude,
+        custom_model=models.custom_model,
         config=config,
     )
