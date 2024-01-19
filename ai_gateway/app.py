@@ -10,7 +10,7 @@ from prometheus_fastapi_instrumentator import Instrumentator, metrics
 from ai_gateway.api import create_fast_api_server
 from ai_gateway.config import Config
 from ai_gateway.container import _PROBS_ENDPOINTS, ContainerApplication
-from ai_gateway.instrumentators.threads import monitor_threads
+from ai_gateway.instrumentators.server_resources import monitor_server_resources
 from ai_gateway.profiling import setup_profiling
 from ai_gateway.structured_logging import setup_logging
 
@@ -55,11 +55,11 @@ def main():
     def on_server_startup():
         container_application.init_resources()
 
-        if config.instrumentator.thread_monitoring_enabled:
+        if config.instrumentator.server_resource_monitoring_enabled:
             loop = asyncio.get_running_loop()
             loop.create_task(
-                monitor_threads(
-                    loop, interval=config.instrumentator.thread_monitoring_interval
+                monitor_server_resources(
+                    loop, interval=config.instrumentator.server_resource_monitoring_interval
                 )
             )
 

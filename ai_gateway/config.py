@@ -47,8 +47,8 @@ class ConfigGoogleCloudProfiler(BaseModel):
 
 
 class ConfigInstrumentator(BaseModel):
-    thread_monitoring_enabled: bool = False
-    thread_monitoring_interval: int = 60
+    server_resource_monitoring_enabled: bool = False
+    server_resource_monitoring_interval: int = 60
 
 
 class FFlagsCodeSuggestions(BaseModel):
