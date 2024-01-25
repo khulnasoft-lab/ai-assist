@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 
 import structlog
 from asgi_correlation_id.context import correlation_id
-from fastapi import Response
+from fastapi import Response, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
 from pydantic import ValidationError
 from starlette.authentication import (
@@ -150,7 +150,8 @@ class MiddlewareLogRequest(Middleware):
                 fields.update(context.data)
 
                 # Recreate the Uvicorn access log format, but add all parameters as structured information
-                access_logger.info(
+                BackgroundTasks().add_task(
+                    access_logger.info,
                     f"""{client_host}:{client_port} - "{http_method} {url} HTTP/{http_version}" {status_code}""",
                     **fields,
                 )
