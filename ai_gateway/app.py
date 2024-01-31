@@ -20,6 +20,7 @@ from ai_gateway.container import (
 from ai_gateway.instrumentators.threads import monitor_threads
 from ai_gateway.profiling import setup_profiling
 from ai_gateway.structured_logging import setup_logging
+from ai_gateway.tracking.signals import register_signal_handlers
 
 # load env variables from .env if exists
 load_dotenv()
@@ -88,6 +89,8 @@ def main():
     async def custom_http_exception_handler(request, exc):
         context["http_exception_details"] = str(exc)
         return await http_exception_handler(request, exc)
+
+    register_signal_handlers()
 
     # For now, trust all IPs for proxy headers until https://github.com/encode/uvicorn/pull/1611 is available.
     uvicorn.run(
