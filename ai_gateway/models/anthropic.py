@@ -81,7 +81,7 @@ class AnthropicModel(TextGenBaseModel):
     }
 
     OPTS_MODEL = {
-        "timeout": httpx.Timeout(30.0, connect=5.0),
+        "timeout": httpx.Timeout(60.0, connect=5.0),
         "max_tokens_to_sample": 2048,
         "stop_sequences": NOT_GIVEN,
         "temperature": 0.2,
