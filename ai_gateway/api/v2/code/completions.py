@@ -4,7 +4,7 @@ from typing import Annotated, AsyncIterator, Union
 import anthropic
 import structlog
 from dependency_injector.providers import Factory
-from fastapi import APIRouter, Body, Depends, Request
+from fastapi import APIRouter, Body, Depends, Request, WebSocket
 from starlette.datastructures import CommaSeparatedStrings
 
 from ai_gateway.api.feature_category import feature_category
@@ -81,61 +81,85 @@ async def completions(
         get_snowplow_instrumentator
     ),
 ):
-    try:
-        track_snowplow_event(request, payload, snowplow_instrumentator)
-    except Exception as e:
-        log_exception(e)
+    # try:
+    #     track_snowplow_event(request, payload, snowplow_instrumentator)
+    # except Exception as e:
+    #     log_exception(e)
 
-    log.debug(
-        "code completion input:",
-        prompt=payload.prompt if hasattr(payload, "prompt") else None,
-        prefix=payload.current_file.content_above_cursor,
-        suffix=payload.current_file.content_below_cursor,
-        current_file_name=payload.current_file.file_name,
-        stream=payload.stream,
-    )
+    # log.debug(
+    #     "code completion input:",
+    #     prompt=payload.prompt if hasattr(payload, "prompt") else None,
+    #     prefix=payload.current_file.content_above_cursor,
+    #     suffix=payload.current_file.content_below_cursor,
+    #     current_file_name=payload.current_file.file_name,
+    #     stream=payload.stream,
+    # )
 
-    kwargs = {}
-    if payload.model_provider == KindModelProvider.ANTHROPIC:
-        code_completions = completions_anthropic_factory()
+    # kwargs = {}
+    # if payload.model_provider == KindModelProvider.ANTHROPIC:
+    #     code_completions = completions_anthropic_factory()
 
-        # We support the prompt version 2 only with the Anthropic models
-        if payload.prompt_version == 2:
-            kwargs.update({"raw_prompt": payload.prompt})
-    else:
-        code_completions = completions_legacy_factory()
+    #     # We support the prompt version 2 only with the Anthropic models
+    #     if payload.prompt_version == 2:
+    #         kwargs.update({"raw_prompt": payload.prompt})
+    # else:
+    #     code_completions = completions_legacy_factory()
 
-    with TelemetryInstrumentator().watch(payload.telemetry):
-        suggestion = await code_completions.execute(
-            prefix=payload.current_file.content_above_cursor,
-            suffix=payload.current_file.content_below_cursor,
-            file_name=payload.current_file.file_name,
-            editor_lang=payload.current_file.language_identifier,
-            stream=payload.stream,
-            **kwargs,
-        )
+    # with TelemetryInstrumentator().watch(payload.telemetry):
+    #     suggestion = await code_completions.execute(
+    #         prefix=payload.current_file.content_above_cursor,
+    #         suffix=payload.current_file.content_below_cursor,
+    #         file_name=payload.current_file.file_name,
+    #         editor_lang=payload.current_file.language_identifier,
+    #         stream=payload.stream,
+    #         **kwargs,
+    #     )
 
-    if isinstance(suggestion, AsyncIterator):
-        return await _handle_stream(suggestion)
+    # if isinstance(suggestion, AsyncIterator):
+    #     return await _handle_stream(suggestion)
 
-    log.debug(
-        "code completion suggestion:",
-        suggestion=suggestion.text,
-        score=suggestion.score,
-        language=suggestion.lang,
-    )
+    # log.debug(
+    #     "code completion suggestion:",
+    #     suggestion=suggestion.text,
+    #     score=suggestion.score,
+    #     language=suggestion.lang,
+    # )
 
     return SuggestionsResponse(
         id="id",
         created=int(time()),
         model=SuggestionsResponse.Model(
-            engine=suggestion.model.engine,
-            name=suggestion.model.name,
-            lang=suggestion.lang,
+            engine='fake',
+            name='fake',
+            lang='fake',
         ),
-        experiments=suggestion.metadata.experiments,
-        choices=_suggestion_choices(suggestion.text),
+        experiments=[],
+        choices=[],
     )
+
+
+@router.websocket("/code/completions/ws")
+@requires("code_suggestions")
+async def websocket_endpoint(
+    websocket: WebSocket,
+    completions_legacy_factory: Factory[CodeCompletionsLegacy] = Depends(
+        get_code_suggestions_completions_vertex_legacy_provider
+    ),
+):
+    code_completions = code_completions_legacy()
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
+
+        # suggestion = await code_completions.execute(
+        #     prefix=data,
+        #     suffix="",
+        #     file_name="test.py",
+        #     editor_lang="python",
+        #     stream=False,
+        # )
+
+        await websocket.send_text(f"Suggestion was: fake response")
 
 
 @router.post("/code/generations")
