@@ -140,13 +140,13 @@ async def completions(
 
 @router.websocket("/code/completions/ws")
 @requires("code_suggestions")
+@feature_category("code_suggestions")
 async def websocket_endpoint(
     websocket: WebSocket,
     completions_legacy_factory: Factory[CodeCompletionsLegacy] = Depends(
         get_code_suggestions_completions_vertex_legacy_provider
     ),
 ):
-    code_completions = code_completions_legacy()
     await websocket.accept()
     while True:
         data = await websocket.receive_text()
@@ -158,8 +158,19 @@ async def websocket_endpoint(
         #     editor_lang="python",
         #     stream=False,
         # )
+        response = SuggestionsResponse(
+            id="id",
+            created=int(time()),
+            model=SuggestionsResponse.Model(
+                engine='fake',
+                name='fake',
+                lang='fake',
+            ),
+            experiments=[],
+            choices=[],
+        )
 
-        await websocket.send_text(f"Suggestion was: fake response")
+        await websocket.send_text(str(response))
 
 
 @router.post("/code/generations")
