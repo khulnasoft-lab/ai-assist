@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 
 import structlog
 from asgi_correlation_id.context import correlation_id
-from fastapi import Response
+from fastapi import Response, BackgroundTasks
 from fastapi.encoders import jsonable_encoder
 from pydantic import ValidationError
 from starlette.authentication import (
@@ -24,6 +24,7 @@ from starlette.responses import JSONResponse
 from starlette_context import context
 from uvicorn.protocols.utils import get_path_with_query_string
 
+from ai_gateway.api.tasks import compliant_access_logger
 from ai_gateway.api.timing import timing
 from ai_gateway.auth import AuthProvider, UserClaims
 from ai_gateway.instrumentators.base import Telemetry, TelemetryInstrumentator
@@ -38,7 +39,6 @@ __all__ = [
 
 
 log = logging.getLogger("codesuggestions")
-access_logger = structlog.stdlib.get_logger("api.access")
 
 X_GITLAB_REALM_HEADER = "X-Gitlab-Realm"
 X_GITLAB_INSTANCE_ID_HEADER = "X-Gitlab-Instance-Id"
@@ -154,7 +154,8 @@ class MiddlewareLogRequest(Middleware):
                 fields.update(context.data)
 
                 # Recreate the Uvicorn access log format, but add all parameters as structured information
-                access_logger.info(
+                BackgroundTasks().add_task(
+                    compliant_access_logger.info,
                     f"""{client_host}:{client_port} - "{http_method} {url} HTTP/{http_version}" {status_code}""",
                     **fields,
                 )
