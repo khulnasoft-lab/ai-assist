@@ -22,6 +22,8 @@ from ai_gateway.models.base import (
     TextGenBaseModel,
     TextGenModelChunk,
     TextGenModelOutput,
+    Message,
+    Role,
 )
 from ai_gateway.models.chat_model_base import ChatModelBase, Message, Role
 
@@ -148,7 +150,7 @@ class AnthropicModel(TextGenBaseModel):
 
     async def generate(
         self,
-        prompt: Union[str, MessagesPromptComponent],
+        prompt: Union[str, list[Message]],
         _suffix: Optional[str] = "",
         stream: bool = False,
         **kwargs: Any,
@@ -163,11 +165,17 @@ class AnthropicModel(TextGenBaseModel):
                     KindAnthropicModel.CLAUDE_3_SONNET.value,
                     KindAnthropicModel.CLAUDE_3_HAIKU.value,
                 ]:
+                    if not isinstance(prompt, list):
+                        raise ModelAPIError("Claude 3 requires message-based prompt input")
+
+                    system_prompt = next((m.content for m in prompt if m.role == Role.SYSTEM), 0)
+                    messages = [m for m in prompt if m.role != Role.SYSTEM]
+
                     suggestion = await self.client.messages.create(
                         model=self.metadata.name,
-                        system=prompt.system,
+                        system=system_prompt,
                         stream=stream,
-                        messages=prompt.messages,
+                        messages=messages,
                         **opts,
                     )
                 else:

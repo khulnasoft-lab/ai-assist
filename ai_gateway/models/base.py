@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, AsyncIterator, NamedTuple, Optional, Union
+from typing import Annotated, Any, AsyncIterator, NamedTuple, Optional, Union
 
 from anthropic import AsyncAnthropic
 from google.cloud.aiplatform.gapic import PredictionServiceAsyncClient
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints
 
 from ai_gateway.config import Config
 from ai_gateway.instrumentators.model_requests import ModelRequestInstrumentator
@@ -27,6 +27,8 @@ __all__ = [
     "TextGenBaseModel",
     "grpc_connect_vertex",
     "connect_anthropic",
+    "Message",
+    "Role",
 ]
 
 
@@ -143,3 +145,13 @@ def grpc_connect_vertex(client_options: dict) -> PredictionServiceAsyncClient:
 
 def connect_anthropic(**kwargs: Any) -> AsyncAnthropic:
     return AsyncAnthropic(**kwargs)
+
+class Role(str, Enum):
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
+
+
+class Message(BaseModel):
+    role: Role
+    content: Annotated[str, StringConstraints(max_length=400000)]

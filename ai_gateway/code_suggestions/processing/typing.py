@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Mapping, NamedTuple, Optional
+from typing import Mapping, NamedTuple, Optional, Union
 
 from ai_gateway.experimentation.base import ExperimentTelemetry
 
@@ -55,7 +55,7 @@ class CodeContent(NamedTuple):
 
 
 class Prompt(NamedTuple):
-    prefix: str
+    prefix: Union[str | list]
     metadata: MetadataPromptBuilder
     suffix: Optional[str] = None
 

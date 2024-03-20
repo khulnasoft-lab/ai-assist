@@ -22,6 +22,7 @@ from ai_gateway.models import (
     TextGenModelChunk,
     TextGenModelOutput,
 )
+from ai_gateway.models.base import Message
 from ai_gateway.prompts import PromptTemplate
 from ai_gateway.tracking.instrumentator import SnowplowInstrumentator
 from ai_gateway.tracking.snowplow import SnowplowEvent
@@ -78,7 +79,7 @@ class CodeGenerations:
 
         return prompt
 
-    def with_prompt_prepared(self, prompt: str):
+    def with_prompt_prepared(self, prompt: Union[str | list[Message]]):
         self.prompt = self.prompt_builder.wrap(prompt)
 
     async def execute(

@@ -10,6 +10,7 @@ from pydantic import (
 )
 from starlette.responses import StreamingResponse
 
+from ai_gateway.api.v1.chat.typing import Message
 from ai_gateway.code_suggestions import (
     PROVIDERS_MODELS_MAP,
     USE_CASES_MODELS_MAP,
@@ -95,6 +96,11 @@ class CompletionsRequestV2(CompletionsRequest):
 class GenerationsRequestV2(GenerationsRequest):
     prompt_version: Literal[2]
     prompt: str
+
+
+class GenerationsRequestV3(GenerationsRequest):
+    prompt_version: Literal[3]
+    prompt: list[Message]
 
 
 class SuggestionsResponse(BaseModel):

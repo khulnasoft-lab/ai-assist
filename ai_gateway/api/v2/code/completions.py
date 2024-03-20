@@ -21,6 +21,7 @@ from ai_gateway.api.v2.code.typing import (
     CompletionsRequestV2,
     GenerationsRequestV1,
     GenerationsRequestV2,
+    GenerationsRequestV3,
     StreamSuggestionsResponse,
     SuggestionsRequest,
     SuggestionsResponse,
@@ -61,7 +62,7 @@ CompletionsRequestWithVersion = Annotated[
 ]
 
 GenerationsRequestWithVersion = Annotated[
-    Union[GenerationsRequestV1, GenerationsRequestV2],
+    Union[GenerationsRequestV1, GenerationsRequestV2, GenerationsRequestV3],
     Body(discriminator="prompt_version"),
 ]
 
@@ -182,7 +183,7 @@ async def generations(
     else:
         code_generations = generations_vertex_factory()
 
-    if payload.prompt_version == 2:
+    if payload.prompt_version == 2 or payload.prompt_version == 3:
         code_generations.with_prompt_prepared(payload.prompt)
 
     with TelemetryInstrumentator().watch(payload.telemetry):

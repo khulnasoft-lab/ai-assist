@@ -32,17 +32,6 @@ class AnthropicParams(BaseModel):
     max_tokens_to_sample: Annotated[int, Field(ge=1, le=2_048)] = 2_048
 
 
-class Role(str, Enum):
-    SYSTEM = "system"
-    USER = "user"
-    ASSISTANT = "assistant"
-
-
-class Message(BaseModel):
-    role: Role
-    content: Annotated[str, StringConstraints(max_length=400000)]
-
-
 class PromptPayload(BaseModel):
     content: Union[
         Annotated[str, StringConstraints(max_length=400000)],
