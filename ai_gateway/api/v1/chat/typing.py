@@ -1,5 +1,7 @@
 from typing import Annotated, List, Literal, Optional, Union
 
+from enum import Enum
+
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, StringConstraints
 
@@ -28,6 +30,17 @@ class AnthropicParams(BaseModel):
     ]
     temperature: Annotated[float, Field(ge=0.0, le=1.0)] = 0.2
     max_tokens_to_sample: Annotated[int, Field(ge=1, le=2_048)] = 2_048
+
+
+class Role(str, Enum):
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
+
+
+class Message(BaseModel):
+    role: Role
+    content: Annotated[str, StringConstraints(max_length=400000)]
 
 
 class PromptPayload(BaseModel):
