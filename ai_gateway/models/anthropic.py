@@ -62,11 +62,6 @@ class AnthropicAPITimeoutError(ModelAPIError):
         return wrapper
 
 
-class MessagesPromptComponent(BaseModel):
-    system: str
-    messages: list
-
-
 class KindAnthropicModel(str, Enum):
     # Avoid using model versions that only specify the major version number.
     # More info - https://docs.anthropic.com/claude/reference/selecting-a-model
