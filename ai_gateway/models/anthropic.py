@@ -22,8 +22,6 @@ from ai_gateway.models.base import (
     TextGenBaseModel,
     TextGenModelChunk,
     TextGenModelOutput,
-    Message,
-    Role,
 )
 from ai_gateway.models.chat_model_base import ChatModelBase, Message, Role
 
@@ -113,7 +111,7 @@ class AnthropicModel(TextGenBaseModel):
         client_opts = self._obtain_client_opts(version, **kwargs)
 
         self.client = client.with_options(**client_opts)
-        self.model_opts = self._obtain_model_opts(model_name, **kwargs)
+        self.model_opts = self._obtain_model_opts(**kwargs)
 
         self._metadata = ModelMetadata(
             name=model_name,
@@ -121,18 +119,8 @@ class AnthropicModel(TextGenBaseModel):
         )
 
     @staticmethod
-    def _obtain_model_opts(model_name: str, **kwargs: Any):
-        opts = _obtain_opts(AnthropicModel.OPTS_MODEL, **kwargs)
-
-        if model_name in [
-            KindAnthropicModel.CLAUDE_3_OPUS.value,
-            KindAnthropicModel.CLAUDE_3_SONNET.value,
-            KindAnthropicModel.CLAUDE_3_HAIKU.value,
-        ]:
-            del opts["max_tokens_to_sample"]
-            opts["max_tokens"] = 2048
-
-        return opts
+    def _obtain_model_opts(**kwargs: Any):
+        return _obtain_opts(AnthropicModel.OPTS_MODEL, **kwargs)
 
     @staticmethod
     def _obtain_client_opts(version: str, **kwargs: Any):
@@ -150,7 +138,7 @@ class AnthropicModel(TextGenBaseModel):
 
     async def generate(
         self,
-        prompt: Union[str, list[Message]],
+        prefix: str,
         _suffix: Optional[str] = "",
         stream: bool = False,
         **kwargs: Any,
@@ -160,31 +148,12 @@ class AnthropicModel(TextGenBaseModel):
 
         with self.instrumentator.watch(stream=stream) as watcher:
             try:
-                if self.metadata.name in [
-                    KindAnthropicModel.CLAUDE_3_OPUS.value,
-                    KindAnthropicModel.CLAUDE_3_SONNET.value,
-                    KindAnthropicModel.CLAUDE_3_HAIKU.value,
-                ]:
-                    if not isinstance(prompt, list):
-                        raise ModelAPIError("Claude 3 requires message-based prompt input")
-
-                    system_prompt = next((m.content for m in prompt if m.role == Role.SYSTEM), 0)
-                    messages = [m for m in prompt if m.role != Role.SYSTEM]
-
-                    suggestion = await self.client.messages.create(
-                        model=self.metadata.name,
-                        system=system_prompt,
-                        stream=stream,
-                        messages=messages,
-                        **opts,
-                    )
-                else:
-                    suggestion = await self.client.completions.create(
-                        model=self.metadata.name,
-                        prompt=prompt,
-                        stream=stream,
-                        **opts,
-                    )
+                suggestion = await self.client.completions.create(
+                    model=self.metadata.name,
+                    prompt=prefix,
+                    stream=stream,
+                    **opts,
+                )
             except APIStatusError as ex:
                 raise AnthropicAPIStatusError.from_exception(ex)
             except APITimeoutError as ex:
@@ -195,17 +164,8 @@ class AnthropicModel(TextGenBaseModel):
             if stream:
                 return self._handle_stream(suggestion, lambda: watcher.finish())
 
-            if self.metadata.name in [
-                KindAnthropicModel.CLAUDE_3_OPUS.value,
-                KindAnthropicModel.CLAUDE_3_SONNET.value,
-                KindAnthropicModel.CLAUDE_3_HAIKU.value,
-            ]:
-                text = suggestion.content[0].text
-            else:
-                text = suggestion.completion
-
         return TextGenModelOutput(
-            text=text,
+            text=suggestion.completion,
             # Give a high value, the model doesn't return scores.
             score=10**5,
             safety_attributes=SafetyAttributes(),
@@ -216,16 +176,8 @@ class AnthropicModel(TextGenBaseModel):
     ) -> AsyncIterator[TextGenModelChunk]:
         try:
             async for event in response:
-                if isinstance(event, Completion):
-                    yield TextGenModelChunk(text=event.completion)
-
-                if isinstance(event, ContentBlockDeltaEvent):
-                    if not event.delta:
-                        yield TextGenModelChunk(text="")
-
-                    yield TextGenModelChunk(text=event.delta.text)
-                else:
-                    continue
+                chunk_content = TextGenModelChunk(text=event.completion)
+                yield chunk_content
         finally:
             after_callback()
 

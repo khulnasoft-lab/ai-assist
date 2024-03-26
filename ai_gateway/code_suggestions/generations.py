@@ -21,8 +21,8 @@ from ai_gateway.models import (
     TextGenBaseModel,
     TextGenModelChunk,
     TextGenModelOutput,
+    Message
 )
-from ai_gateway.models.base import Message
 from ai_gateway.prompts import PromptTemplate
 from ai_gateway.tracking.instrumentator import SnowplowInstrumentator
 from ai_gateway.tracking.snowplow import SnowplowEvent

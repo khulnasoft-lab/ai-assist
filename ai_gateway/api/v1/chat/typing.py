@@ -1,7 +1,5 @@
 from typing import Annotated, List, Literal, Optional, Union
 
-from enum import Enum
-
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, StringConstraints
 

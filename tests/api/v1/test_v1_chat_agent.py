@@ -22,7 +22,6 @@ from ai_gateway.models import (
     TextGenModelChunk,
     TextGenModelOutput,
 )
-from ai_gateway.models.anthropic import MessagesPromptComponent
 
 
 @pytest.fixture(scope="class")
