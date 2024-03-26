@@ -29,6 +29,7 @@ from ai_gateway.api.v2.code.typing import (
 from ai_gateway.async_dependency_resolver import (
     get_code_suggestions_completions_anthropic_provider,
     get_code_suggestions_completions_vertex_legacy_provider,
+    get_code_suggestions_generations_anthropic_chat_factory_provider,
     get_code_suggestions_generations_anthropic_factory_provider,
     get_code_suggestions_generations_vertex_provider,
     get_snowplow_instrumentator,
@@ -155,6 +156,9 @@ async def generations(
     generations_anthropic_factory: Factory[CodeGenerations] = Depends(
         get_code_suggestions_generations_anthropic_factory_provider
     ),
+    generations_anthropic_chat_factory: Factory[CodeGenerations] = Depends(
+        get_code_suggestions_generations_anthropic_chat_factory_provider
+    ),
     snowplow_instrumentator: SnowplowInstrumentator = Depends(
         get_snowplow_instrumentator
     ),
@@ -176,10 +180,16 @@ async def generations(
     )
 
     if payload.model_provider == KindModelProvider.ANTHROPIC:
-        code_generations = _resolve_code_generations_anthropic(
-            payload,
-            generations_anthropic_factory,
-        )
+        if payload.prompt_version == 3:
+            code_generations = _resolve_code_generations_anthropic_chat(
+                payload,
+                generations_anthropic_chat_factory,
+            )
+        else:
+            code_generations = _resolve_code_generations_anthropic(
+                payload,
+                generations_anthropic_factory,
+            )
     else:
         code_generations = generations_vertex_factory()
 
@@ -228,6 +238,15 @@ def _resolve_code_generations_anthropic(
     return generations_anthropic_factory(
         model__name=model_name,
         model__stop_sequences=["</new_code>", anthropic.HUMAN_PROMPT],
+    )
+
+
+def _resolve_code_generations_anthropic_chat(
+    payload: SuggestionsRequest,
+    generations_anthropic_chat_factory: Factory[CodeGenerations],
+) -> CodeGenerations:
+    return generations_anthropic_chat_factory(
+        model__name=payload.model_name,
     )
 
 
