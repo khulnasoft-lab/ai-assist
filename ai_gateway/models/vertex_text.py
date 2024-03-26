@@ -1,11 +1,12 @@
 from abc import abstractmethod
 from enum import Enum
-from typing import Any, Optional, Sequence, Union
+from typing import Any, AsyncIterator, Callable, Optional, Sequence, Union
 
 import structlog
 from google.api_core.exceptions import GoogleAPICallError, GoogleAPIError
 from google.cloud.aiplatform.gapic import PredictionServiceAsyncClient, PredictResponse
 from google.protobuf import json_format, struct_pb2
+from vertexai.preview.generative_models import GenerativeModel, GenerationResponse
 
 from ai_gateway.models.base import (
     KindModelProvider,
@@ -15,9 +16,11 @@ from ai_gateway.models.base import (
     ModelMetadata,
     SafetyAttributes,
     TextGenBaseModel,
+    TextGenModelChunk,
     TextGenModelOutput,
     TokensConsumptionMetadata,
 )
+from ai_gateway.models.chat_model_base import ChatModelBase, Message
 
 __all__ = [
     "PalmCodeBisonModel",
@@ -27,6 +30,7 @@ __all__ = [
     "KindVertexTextModel",
     "VertexAPIConnectionError",
     "VertexAPIStatusError",
+    "GeminiProModel",
 ]
 
 log = structlog.stdlib.get_logger("codesuggestions")
@@ -90,6 +94,7 @@ class KindVertexTextModel(str, Enum):
     CODE_BISON_002 = "code-bison@002"
     CODE_GECKO_002 = "code-gecko@002"
     TEXT_BISON_002 = "text-bison@002"
+    GEMINI_PRO_1_5 = "gemini-1.5-pro-preview-0215"
 
 
 class PalmCodeGenBaseModel(TextGenBaseModel):
@@ -366,6 +371,75 @@ class PalmCodeGeckoModel(PalmCodeGenBaseModel):
         name = _resolve_model_name(name, "code-gecko")
 
         return cls(client, project, location, model_name=name.value, **kwargs)
+
+
+class GeminiProModel(ChatModelBase):
+    MAX_MODEL_LEN = 100_000
+    DEFAULT_VERSION = KindVertexTextModel.GEMINI_PRO_1_5.value
+
+    def __init__(
+        self,
+        client: GenerativeModel,
+        version: str = DEFAULT_VERSION,
+        model_name: str = KindVertexTextModel.GEMINI_PRO_1_5.value,
+        **kwargs: Any,
+    ):
+        self.client = client
+
+        self._metadata = ModelMetadata(
+            name=model_name, engine=KindModelProvider.VERTEX_AI.value
+        )
+
+    @property
+    def metadata(self) -> ModelMetadata:
+        return self._metadata
+
+    async def generate(
+        self,
+        messages: list[Message],
+        stream: bool = False,
+        **kwargs: Any,
+    ) -> Union[TextGenModelOutput, AsyncIterator[TextGenModelChunk]]:
+        with self.instrumentator.watch(stream=stream) as watcher:
+            chat = self.client.start_chat()
+            response = chat.send_message([m.content for m in messages], stream=stream, **kwargs)
+            suggestion = response.text
+
+            if stream:
+                return self._handle_stream(response, lambda: watcher.finish())
+
+        return TextGenModelOutput(
+            text=suggestion,
+            # Give a high value, the model doesn't return scores.
+            score=10**5,
+            safety_attributes=SafetyAttributes(),
+        )
+
+
+    async def _handle_stream(
+        self, response: GenerationResponse, after_callback: Callable
+    ) -> AsyncIterator[TextGenModelChunk]:
+        try:
+            async for event in response:
+                if isinstance(event, GenerationResponse):
+                    yield TextGenModelChunk(text=event.text)
+                else:
+                    continue
+        finally:
+            after_callback()
+
+    @classmethod
+    def from_model_name(
+        cls,
+        client: GenerativeModel,
+        **kwargs: Any,
+    ):
+        # try:
+        #     kind_model = KindVertexTextModel(name)
+        # except ValueError:
+        #     raise ValueError(f"no model found by the name '{name}'")
+
+        return cls(client, model_name=cls.DEFAULT_VERSION, **kwargs)
 
 
 def _resolve_model_name(

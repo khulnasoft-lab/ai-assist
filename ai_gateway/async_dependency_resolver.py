@@ -52,6 +52,10 @@ async def get_code_suggestions_generations_vertex_provider():
     yield get_container_application().code_suggestions.generations.vertex
 
 
+async def get_code_suggestions_generations_vertex_gemini_provider():
+    yield get_container_application().code_suggestions.generations.vertex_gemini_factory
+
+
 async def get_code_suggestions_generations_anthropic_factory_provider():
     yield get_container_application().code_suggestions.generations.anthropic_factory
 

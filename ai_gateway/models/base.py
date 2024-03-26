@@ -5,6 +5,7 @@ from typing import Any, AsyncIterator, NamedTuple, Optional, Union
 from anthropic import AsyncAnthropic
 from google.cloud.aiplatform.gapic import PredictionServiceAsyncClient
 from pydantic import BaseModel
+from vertexai.preview.generative_models import GenerativeModel
 
 from ai_gateway.config import Config
 from ai_gateway.instrumentators.model_requests import ModelRequestInstrumentator
@@ -143,3 +144,7 @@ def grpc_connect_vertex(client_options: dict) -> PredictionServiceAsyncClient:
 
 def connect_anthropic(**kwargs: Any) -> AsyncAnthropic:
     return AsyncAnthropic(**kwargs)
+
+
+def connect_gemini(model_name: str, **kwargs: Any) -> GenerativeModel:
+    return GenerativeModel(model_name, **kwargs)

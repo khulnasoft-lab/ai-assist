@@ -54,6 +54,7 @@ USE_CASES_MODELS_MAP = {
         KindAnthropicModel.CLAUDE_3_OPUS,
         KindAnthropicModel.CLAUDE_3_SONNET,
         KindAnthropicModel.CLAUDE_3_HAIKU,
+        KindVertexTextModel.GEMINI_PRO_1_5,
     },
 }
 

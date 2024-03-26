@@ -3,11 +3,17 @@ from typing import Iterator, Optional
 from anthropic import AsyncAnthropic
 from dependency_injector import containers, providers
 from google.cloud.aiplatform.gapic import PredictionServiceAsyncClient
+from vertexai.preview.generative_models import GenerativeModel
 
 from ai_gateway.models.anthropic import AnthropicChatModel, AnthropicModel
-from ai_gateway.models.base import connect_anthropic, grpc_connect_vertex
+from ai_gateway.models.base import (
+    connect_anthropic,
+    connect_gemini,
+    grpc_connect_vertex,
+)
 from ai_gateway.models.fake import FakePalmTextGenModel
 from ai_gateway.models.vertex_text import (
+    GeminiProModel,
     PalmCodeBisonModel,
     PalmCodeGeckoModel,
     PalmTextBisonModel,
@@ -44,6 +50,15 @@ def _init_anthropic_client(use_fake: bool) -> Iterator[Optional[AsyncAnthropic]]
     client.close()
 
 
+def _init_gemini_client(use_fake: bool) -> Iterator[Optional[GenerativeModel]]:
+    if use_fake:
+        yield None
+        return
+
+    client = connect_gemini(GeminiProModel.DEFAULT_VERSION)
+    yield client
+
+
 class ContainerModels(containers.DeclarativeContainer):
     # We need to resolve the model based on the model name provided by the upstream container.
     # Hence, `VertexTextBaseModel.from_model_name` and `AnthropicModel.from_model_name` are only partially applied here.
@@ -60,6 +75,10 @@ class ContainerModels(containers.DeclarativeContainer):
 
     http_client_anthropic = providers.Resource(
         _init_anthropic_client, use_fake=config.use_fake_models
+    )
+
+    gemini_client = providers.Resource(
+        _init_gemini_client, use_fake=config.use_fake_models
     )
 
     vertex_text_bison = providers.Selector(
@@ -92,6 +111,12 @@ class ContainerModels(containers.DeclarativeContainer):
             project=config.vertex_text_model.project,
             location=config.vertex_text_model.location,
         ),
+        fake=providers.Factory(FakePalmTextGenModel),
+    )
+
+    vertex_code_gemini = providers.Selector(
+        real_or_fake,
+        real=providers.Factory(GeminiProModel.from_model_name, client=gemini_client),
         fake=providers.Factory(FakePalmTextGenModel),
     )
 

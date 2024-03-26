@@ -31,6 +31,7 @@ from ai_gateway.async_dependency_resolver import (
     get_code_suggestions_completions_vertex_legacy_provider,
     get_code_suggestions_generations_anthropic_chat_factory_provider,
     get_code_suggestions_generations_anthropic_factory_provider,
+    get_code_suggestions_generations_vertex_gemini_provider,
     get_code_suggestions_generations_vertex_provider,
     get_snowplow_instrumentator,
 )
@@ -153,6 +154,9 @@ async def generations(
     generations_vertex_factory: Factory[CodeGenerations] = Depends(
         get_code_suggestions_generations_vertex_provider
     ),
+    generations_vertex_gemini_factory: Factory[CodeGenerations] = Depends(
+        get_code_suggestions_generations_vertex_gemini_provider
+    ),
     generations_anthropic_factory: Factory[CodeGenerations] = Depends(
         get_code_suggestions_generations_anthropic_factory_provider
     ),
@@ -191,7 +195,10 @@ async def generations(
                 generations_anthropic_factory,
             )
     else:
-        code_generations = generations_vertex_factory()
+        if payload.prompt_version == 3:
+            code_generations = generations_vertex_gemini_factory()
+        else:
+            code_generations = generations_vertex_factory()
 
     if payload.prompt_version == 2 or payload.prompt_version == 3:
         code_generations.with_prompt_prepared(payload.prompt)
