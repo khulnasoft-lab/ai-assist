@@ -15,17 +15,18 @@ EXPERIMENT_LABELS = ["exp_names", "exp_variants"]
 METRIC_LABELS = ["model_engine", "model_name"]
 TELEMETRY_LABELS = METRIC_LABELS + ["lang"] + EXPERIMENT_LABELS
 PROMPT_LABELS = METRIC_LABELS + ["component"]
+INFERENCE_LABELS = METRIC_LABELS + ["success"]
 
 INFERENCE_COUNTER = Counter(
     "code_suggestions_inference_requests",
     "Number of times an inference request was made",
-    METRIC_LABELS,
+    INFERENCE_LABELS,
 )
 
 INFERENCE_HISTOGRAM = Histogram(
     "code_suggestions_inference_request_duration_seconds",
     "Duration of the inference request in seconds",
-    METRIC_LABELS,
+    INFERENCE_LABELS,
     buckets=(0.5, 1, 2.5, 5, 10, 30, 60),
 )
 
@@ -157,7 +158,6 @@ class TextGenModelInstrumentator:
             INFERENCE_PROMPT_HISTOGRAM.labels(**labels).observe(md.length)
             INFERENCE_PROMPT_TOKENS_HISTOGRAM.labels(**labels).observe(md.length_tokens)
 
-        INFERENCE_COUNTER.labels(**self.labels).inc()
         self._track_model_cost("input", prompt_length_stripped)
 
         watch_container = TextGenModelInstrumentator.WatchContainer(**kwargs)
@@ -166,10 +166,17 @@ class TextGenModelInstrumentator:
         try:
             yield watch_container
         finally:
-            duration = time.perf_counter() - start_time
-            INFERENCE_HISTOGRAM.labels(**self.labels).observe(duration)
-
             container_dict = watch_container.dict()
+
+            success_label = "yes"
+            if "model_exception_status_code" in watch_container.dict():
+                success_label = "no"
+
+            labels = {**self.labels, "success": success_label}
+            duration = time.perf_counter() - start_time
+            INFERENCE_HISTOGRAM.labels(**labels).observe(duration)
+            INFERENCE_COUNTER.labels(**labels).inc()
+
             self._track_model_cost(
                 "output", container_dict.get("model_output_length_stripped", 0)
             )

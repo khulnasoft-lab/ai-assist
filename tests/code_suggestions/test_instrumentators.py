@@ -45,29 +45,58 @@ class TestTextGenModelInstrumentator:
             ) as watch_container:
                 watch_container.register_model_output_length(completion)
 
+        mock_labels.mock_calls == [
+            # track inference count
+            mock.call(model_engine="vertex-ai", model_name="code-gecko", success="yes"),
+            mock.call().inc(),
+            # track model cost input
+            mock.call(
+                item="completions/completion/input",
+                unit="characters",
+                vendor="vertex-ai",
+                model="code-gecko",
+                feature_category="code_suggestions",
+            ),
+            mock.call().inc(5),  # prefix + suffix
+            # track model cost output
+            mock.call(
+                item="completions/completion/output",
+                unit="characters",
+                vendor="vertex-ai",
+                model="code-gecko",
+                feature_category="code_suggestions",
+            ),
+            mock.call().inc(3),
+        ]
+
+    @mock.patch("prometheus_client.Counter.labels")
+    def test_failure_metrics(self, mock_labels):
+        prefix = "abc"
+        metadata = MetadataPromptBuilder(
+            components={
+                "prefix": MetadataCodeContent(length=10, length_tokens=2),
+            },
+        )
+        prompt = Prompt(prefix=prefix, metadata=metadata)
+
+        model_engine = "vertex-ai"
+        model_name = "code-gecko"
+        feature_category = "code_suggestions"
+        instrumentator = TextGenModelInstrumentator(
+            model_engine=model_engine, model_name=model_name
+        )
+
+        with request_cycle_context({}):
+            with instrumentator.watch(prompt) as watch_container:
+                watch_container.register_model_exception("broken", 500)
+
         mock_labels.assert_has_calls(
             [
                 # track inference count
-                mock.call(model_engine="vertex-ai", model_name="code-gecko"),
+                mock.call(
+                    model_engine="vertex-ai", model_name="code-gecko", success="no"
+                ),
                 mock.call().inc(),
-                # track model cost input
-                mock.call(
-                    item="completions/completion/input",
-                    unit="characters",
-                    vendor="vertex-ai",
-                    model="code-gecko",
-                    feature_category="code_suggestions",
-                ),
-                mock.call().inc(5),  # prefix + suffix
-                # track model cost output
-                mock.call(
-                    item="completions/completion/output",
-                    unit="characters",
-                    vendor="vertex-ai",
-                    model="code-gecko",
-                    feature_category="code_suggestions",
-                ),
-                mock.call().inc(3),
             ]
         )
 
