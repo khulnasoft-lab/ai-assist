@@ -247,6 +247,7 @@ def _resolve_code_generations_anthropic_chat(
 ) -> CodeGenerations:
     return generations_anthropic_chat_factory(
         model__name=payload.model_name,
+        model__stop_sequences=["</new_code>"],
     )
 
 

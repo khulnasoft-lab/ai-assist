@@ -17,6 +17,7 @@ from ai_gateway.code_suggestions import (
 )
 from ai_gateway.experimentation import ExperimentTelemetry
 from ai_gateway.instrumentators.base import Telemetry
+from ai_gateway.models import KindModelProvider, Message
 
 __all__ = [
     "CompletionsRequestV1",
@@ -26,8 +27,6 @@ __all__ = [
     "SuggestionsResponse",
     "StreamSuggestionsResponse",
 ]
-
-from ai_gateway.models import KindModelProvider, Message
 
 
 class CurrentFile(BaseModel):

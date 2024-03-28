@@ -80,7 +80,7 @@ class CodeGenerations:
 
         return prompt
 
-    def with_prompt_prepared(self, prompt: Union[str | list[Message]]):
+    def with_prompt_prepared(self, prompt: str | list[Message]):
         self.prompt = self.prompt_builder.wrap(prompt)
 
     async def execute(

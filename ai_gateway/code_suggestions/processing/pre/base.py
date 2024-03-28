@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Union
+from typing import Any
 
 from ai_gateway.code_suggestions.processing.typing import (
     MetadataCodeContent,
@@ -40,7 +40,7 @@ class PromptBuilderBase(ABC):
         return tpl_len
 
     def wrap(
-        self, prompt: Union[str | list[Message]], ignore_exception: bool = False
+        self, prompt: str | list[Message], ignore_exception: bool = False
     ) -> Prompt:
         if isinstance(prompt, list):
             prompt_text = "".join(m.content for m in prompt)
