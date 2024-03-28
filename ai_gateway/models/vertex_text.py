@@ -6,7 +6,7 @@ import structlog
 from google.api_core.exceptions import GoogleAPICallError, GoogleAPIError
 from google.cloud.aiplatform.gapic import PredictionServiceAsyncClient, PredictResponse
 from google.protobuf import json_format, struct_pb2
-from vertexai.preview.generative_models import GenerativeModel, GenerationResponse
+from vertexai.preview.generative_models import GenerationResponse, GenerativeModel
 
 from ai_gateway.models.base import (
     KindModelProvider,
@@ -94,6 +94,9 @@ class KindVertexTextModel(str, Enum):
     CODE_BISON_002 = "code-bison@002"
     CODE_GECKO_002 = "code-gecko@002"
     TEXT_BISON_002 = "text-bison@002"
+    GEMINI_1_0 = "gemini-1.0"
+    GEMINI_1_5 = "gemini-1.5"
+    GEMINI_PRO_1_0 = "gemini-1.0-pro"
     GEMINI_PRO_1_5 = "gemini-1.5-pro-preview-0215"
 
 
@@ -379,12 +382,10 @@ class GeminiProModel(ChatModelBase):
 
     def __init__(
         self,
-        client: GenerativeModel,
-        version: str = DEFAULT_VERSION,
         model_name: str = KindVertexTextModel.GEMINI_PRO_1_5.value,
         **kwargs: Any,
     ):
-        self.client = client
+        self.client = GenerativeModel(model_name)
 
         self._metadata = ModelMetadata(
             name=model_name, engine=KindModelProvider.VERTEX_AI.value
@@ -402,7 +403,9 @@ class GeminiProModel(ChatModelBase):
     ) -> Union[TextGenModelOutput, AsyncIterator[TextGenModelChunk]]:
         with self.instrumentator.watch(stream=stream) as watcher:
             chat = self.client.start_chat()
-            response = chat.send_message([m.content for m in messages], stream=stream, **kwargs)
+            response = chat.send_message(
+                [m.content for m in messages], stream=stream, **kwargs
+            )
             suggestion = response.text
 
             if stream:
@@ -414,7 +417,6 @@ class GeminiProModel(ChatModelBase):
             score=10**5,
             safety_attributes=SafetyAttributes(),
         )
-
 
     async def _handle_stream(
         self, response: GenerationResponse, after_callback: Callable
@@ -431,15 +433,12 @@ class GeminiProModel(ChatModelBase):
     @classmethod
     def from_model_name(
         cls,
-        client: GenerativeModel,
+        name: Union[str, KindVertexTextModel],
         **kwargs: Any,
     ):
-        # try:
-        #     kind_model = KindVertexTextModel(name)
-        # except ValueError:
-        #     raise ValueError(f"no model found by the name '{name}'")
+        model_name = _resolve_model_name(name, cls.DEFAULT_VERSION)
 
-        return cls(client, model_name=cls.DEFAULT_VERSION, **kwargs)
+        return cls(model_name=model_name, **kwargs)
 
 
 def _resolve_model_name(

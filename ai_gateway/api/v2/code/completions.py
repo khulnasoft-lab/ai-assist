@@ -196,7 +196,10 @@ async def generations(
             )
     else:
         if payload.prompt_version == 3:
-            code_generations = generations_vertex_gemini_factory()
+            code_generations = _resolve_code_generations_vertex_gemini(
+                payload,
+                generations_vertex_gemini_factory,
+            )
         else:
             code_generations = generations_vertex_factory()
 
@@ -255,6 +258,15 @@ def _resolve_code_generations_anthropic_chat(
     return generations_anthropic_chat_factory(
         model__name=payload.model_name,
         model__stop_sequences=["</new_code>"],
+    )
+
+
+def _resolve_code_generations_vertex_gemini(
+    payload: SuggestionsRequest,
+    generations_vertex_gemini_factory: Factory[CodeGenerations],
+) -> CodeGenerations:
+    return generations_vertex_gemini_factory(
+        model__name=payload.model_name,
     )
 
 
