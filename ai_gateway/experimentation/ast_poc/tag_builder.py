@@ -20,6 +20,7 @@ class Tag:
     name: str
     kind: str
     end_line: int
+    grammar: str
 
 
 # This class is responsible for building tags for a given file
@@ -74,6 +75,7 @@ class TagsBuilder:
                         kind=kind,
                         line=node.start_point[0],
                         end_line=node.end_point[0],
+                        grammar=code_parser.grammar,
                     )
                 )
 
@@ -99,6 +101,7 @@ class TagsBuilder:
                         kind="ref",
                         line=-1,
                         end_line=-1,
+                        grammar=code_parser.grammar,
                     )
                 )
 

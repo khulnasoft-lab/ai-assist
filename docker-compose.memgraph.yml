@@ -6,7 +6,7 @@ services:
     ports:
       - "7687:7687"
       - "7444:7444"
-    command: ["--log-level=TRACE"]
+    command: ["--log-level=TRACE", "--query-execution-timeout-sec=6000"]
     volumes:
       - ./.tmp:/import
   lab:
