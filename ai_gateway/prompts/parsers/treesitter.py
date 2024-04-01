@@ -141,12 +141,13 @@ class CodeParser(BaseCodeParser):
         lang_def = ProgramLanguage.from_language_id(lang_id)
 
         try:
-            parser = get_parser(lang_def.grammar_name)
+            grammar = lang_def.get_grammar_name()
+            parser = get_parser(grammar)
             tree = parser.parse(bytes(content, "utf8"))
         except (AttributeError, TypeError) as ex:
             raise ValueError(f"Unsupported code content: {str(ex)}")
 
-        return cls(tree, lang_id)
+        return cls(tree, lang_id, grammar)
    
     @classmethod
     async def from_filename(
