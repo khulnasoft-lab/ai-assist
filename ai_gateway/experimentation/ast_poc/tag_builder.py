@@ -22,15 +22,22 @@ class Tag:
     end_line: int
 
 
+# This class is responsible for building tags for a given file
+# It uses tree-sitter to parse the file and extract tags
+# We're using pygments to backfill references for languages that only provide definitions
+
+
 class TagsBuilder:
     def __init__(
         self,
+        executor: ThreadPoolExecutor,
     ):
         self.scm_cache: Dict[str, str] = {}
-        self.executor = ThreadPoolExecutor()
+        self.executor = executor
 
-    async def get_tags_for_file(self, filepath: str, relative_filepath: str) -> List[Tag]:
+    async def get_tags_for_file(self, filepath: str, project_root_path: str) -> List[Tag]:
         try:
+            relative_filepath = self.get_relative_filepath(filepath, project_root_path)
             file_content = await asyncio.get_running_loop().run_in_executor(
                 self.executor, self._read_file, filepath
             )
@@ -75,16 +82,12 @@ class TagsBuilder:
             if "def" not in saw:
                 return tags
 
-            # We saw defs, without any refs
-            # Some tags files only provide defs (cpp, for example)
-            # Use pygments to backfill refs
-
             try:
                 lexer = guess_lexer_for_filename(filepath, file_content)
             except ClassNotFound:
                 return tags
 
-            tokens = list(lexer.get_tokens(code))
+            tokens = list(lexer.get_tokens(file_content))
             tokens = [token[1] for token in tokens if token[0] in Token.Name]
 
             for token in tokens:
@@ -101,7 +104,7 @@ class TagsBuilder:
 
             return tags
         except Exception as e:
-            print(f"Error in get_tags_raw: {e}")
+            print(f"Error in get_tags_for_file: {e}")
             return []
 
     def _read_file(self, filepath: str) -> str:
@@ -128,3 +131,6 @@ class TagsBuilder:
         )
         self.scm_cache[lang] = query_scm_content
         return query_scm_content
+
+    def get_relative_filepath(self, filepath: str, rootPath) -> str:
+        return path.relpath(filepath, rootPath)

@@ -1,7 +1,6 @@
 import os
-from typing import List, Dict,Sequence, Union
+from typing import List, Dict, Tuple
 from git import Repo
-
 
 class FinalFile:
     def __init__(self, path: str, size: int):
@@ -11,12 +10,12 @@ class FinalFile:
 class TreeSitterLanguage:
   name: str
   extensions: List[str]
-  wasmPath: str
+  scmPath: str
   
-  def __init__(self, name: str, extensions: List[str], wasmPath: str):
+  def __init__(self, name: str, extensions: List[str], scmPath: str):
     self.name = name
     self.extensions = extensions
-    self.wasmPath = wasmPath
+    self.scmPath = scmPath
 
 class TreeSitterParser:
   def __init__(self, languages: List[TreeSitterLanguage]):
@@ -36,51 +35,42 @@ class DirectoryTraversal:
         for item in self.repo.tree().traverse():
             if item.type == "blob":
                 file_path = os.path.join(self.repo.working_dir, item.path)
-                if self.tree_sitter_parser.get_tree_sitter_language_for_file(file_path):
+                if self.tree_sitter_parser.get_tree_sitter_language_for_file(file_path) and not self.is_test_file(file_path):
                     self.final_files.append(FinalFile(file_path, item.size))
 
         self.final_files.sort(key=lambda file: file.size, reverse=True)
 
     def get_all_files_sorted_by_size(self) -> List[FinalFile]:
         return self.final_files
+      
+    def is_test_file(self, file_path: str) -> bool:
+        # Define file extensions and test file patterns for each language
+        language_patterns: Dict[str, List[str]] = {
+            ".rb": ["_test.rb", "_spec.rb"],
+            ".js": ["test.js", ".test.js", ".spec.js"],
+            ".py": ["test_", "_test.py"],
+            ".ts": ["test.ts", ".test.ts", ".spec.ts"],
+        }
+
+        # Extract the file extension from the file path
+        file_extension: str = "." + file_path.split(".")[-1]
+
+        # Check if the file extension exists in the language patterns dictionary
+        if file_extension in language_patterns:
+            patterns: List[str] = language_patterns[file_extension]
+            # Check if the file name matches any test file pattern for the language
+            for pattern in patterns:
+                if pattern.startswith("."):
+                    if file_path.endswith(pattern):
+                        return True
+                else:
+                    if pattern in file_path:
+                        return True
+
+        # Return False if the file is not recognized as a test file
+        return False
 
 
-if __name__ == "__main__":
-    from repo_map_builder import RepoMap
-    import sys
-    languages = [
-      TreeSitterLanguage(name="javascript", extensions=[".js", ".jsx"], wasmPath="tree-sitter-javascript.wasm"),
-      TreeSitterLanguage(name="typescript", extensions=[".ts", ".tsx"], wasmPath="tree-sitter-typescript.wasm"),
-      TreeSitterLanguage(name="python", extensions=[".py"], wasmPath="tree-sitter-python.wasm"),
-      TreeSitterLanguage(name="ruby", extensions=[".rb"], wasmPath="tree-sitter-ruby.wasm"),      
-      # Add more languages and their extensions as needed
-    ]
-
-    tree_sitter_parser = TreeSitterParser(languages)
-    directory_traversal = DirectoryTraversal(sys.argv[1], tree_sitter_parser)
-    directory_traversal.get_relevant_files()
-    all_files = directory_traversal.get_all_files_sorted_by_size()
-    
-    class IO:
-      def read_text(self, filename: str) -> str:
-          with open(str(filename), "r", encoding='utf8') as f:
-                return f.read()
-      def tool_output(self, msg: str) -> None:
-          print(msg)
-      def tool_error(self, msg: str) -> None:
-          print(msg)
-       
-              
-    repo_map = RepoMap(
-      io=IO(),
-      verbose=True,
-    )
-    
-    print("files length : ", len(all_files))
-    
-    ranked_tags = repo_map.get_repo_map([sys.argv[2]],( file.path for file in all_files))
-    print(ranked_tags)
-    # print(type(ranked_tags))
 
 
 
