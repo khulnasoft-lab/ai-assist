@@ -20,7 +20,7 @@ if __name__ == "__main__":
     print('Total files:', len(all_files))
     executor = ThreadPoolExecutor()
     graph_builder = GraphBuilder(memgraph=Memgraph(host="127.0.0.1", port=7687), executor=executor, project_root_path=sys.argv[1])
-    asyncio.run(graph_builder.update_graph([file.path for file in all_files]))
+    asyncio.run(graph_builder.update_graph_from_csv([file.path for file in all_files]))
     
     
               

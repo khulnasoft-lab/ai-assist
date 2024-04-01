@@ -1,5 +1,4 @@
 version: "3"
-
 services:
   memgraph:
     image: memgraph/memgraph-mage:latest
@@ -8,7 +7,8 @@ services:
       - "7687:7687"
       - "7444:7444"
     command: ["--log-level=TRACE"]
-
+    volumes:
+      - ./.tmp:/import
   lab:
     image: memgraph/lab:latest
     container_name: memgraph-lab
