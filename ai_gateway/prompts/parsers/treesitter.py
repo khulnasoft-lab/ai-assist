@@ -2,7 +2,7 @@ import asyncio
 from typing import Optional
 
 from tree_sitter import Node, Tree
-from tree_sitter_languages import get_parser
+from tree_sitter_languages import get_parser, get_language
 
 from ai_gateway.code_suggestions.processing.ops import (
     LanguageId,
@@ -26,11 +26,15 @@ from ai_gateway.prompts.parsers.function_signatures import (
 from ai_gateway.prompts.parsers.imports import ImportVisitorFactory
 from ai_gateway.prompts.parsers.treetraversal import tree_dfs
 
+from ai_gateway.code_suggestions.processing.ops import lang_from_filename
+
 
 class CodeParser(BaseCodeParser):
-    def __init__(self, tree: Tree, lang_id: LanguageId):
+    def __init__(self, tree: Tree, lang_id: LanguageId, grammar: str = None):
         self.tree = tree
         self.lang_id = lang_id
+        self.grammar = grammar
+        self.tree_sitter_language = get_language(self.grammar)
 
     def imports(self) -> list[str]:
         visitor = ImportVisitorFactory.from_language_id(self.lang_id)
@@ -143,3 +147,30 @@ class CodeParser(BaseCodeParser):
             raise ValueError(f"Unsupported code content: {str(ex)}")
 
         return cls(tree, lang_id)
+   
+    @classmethod
+    async def from_filename(
+        cls,
+        content: str,
+        filename: str,
+    ):
+        return await asyncio.to_thread(cls._from_filename, content, filename)
+    
+    @classmethod
+    
+    def _from_filename(
+        cls,
+        content: str,
+        filename: str,
+    ):
+        lang_id = lang_from_filename(filename)
+        if lang_id is None:
+            raise ValueError(f"Unsupported language: {lang_id}")
+        try: 
+          grammar = ProgramLanguage.from_language_id(lang_id).get_grammar_name()
+          parser = get_parser(grammar)
+          tree = parser.parse(bytes(content, "utf8"))
+        except (AttributeError, TypeError) as ex:
+            raise ValueError(f"Unsupported code content: {str(ex)}")
+        return cls(tree, lang_id, grammar)
+   
