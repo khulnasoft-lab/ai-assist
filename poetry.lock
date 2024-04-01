@@ -13,13 +13,13 @@ files = [
 
 [[package]]
 name = "anthropic"
-version = "0.20.0"
+version = "0.21.3"
 description = "The official Python library for the anthropic API"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "anthropic-0.20.0-py3-none-any.whl", hash = "sha256:754fe24596efbe1d7a49d3d59818a2a25d2bf29539e036eafd8a43427cd58134"},
-    {file = "anthropic-0.20.0.tar.gz", hash = "sha256:f9f1a5213af4710d6e1f9b83208a4b158355d1a95eb4ae0906c7580aa0e0f1d1"},
+    {file = "anthropic-0.21.3-py3-none-any.whl", hash = "sha256:5869115453b543a46ded6515c9f29b8d610b6e94bbba3230ad80ac947d2b0862"},
+    {file = "anthropic-0.21.3.tar.gz", hash = "sha256:02f1ab5694c497e2b2d42d30d51a4f2edcaca92d2ec86bb64fe78a9c7434a869"},
 ]
 
 [package.dependencies]
@@ -1579,18 +1579,18 @@ twisted = ["twisted"]
 
 [[package]]
 name = "prometheus-fastapi-instrumentator"
-version = "6.1.0"
+version = "7.0.0"
 description = "Instrument your FastAPI with Prometheus metrics."
 optional = false
-python-versions = ">=3.7.0,<4.0.0"
+python-versions = ">=3.8.1,<4.0.0"
 files = [
-    {file = "prometheus_fastapi_instrumentator-6.1.0-py3-none-any.whl", hash = "sha256:2279ac1cf5b9566a4c3a07f78c9c5ee19648ed90976ab87d73d672abc1bfa017"},
-    {file = "prometheus_fastapi_instrumentator-6.1.0.tar.gz", hash = "sha256:1820d7a90389ce100f7d1285495ead388818ae0882e761c1f3e6e62a410bdf13"},
+    {file = "prometheus_fastapi_instrumentator-7.0.0-py3-none-any.whl", hash = "sha256:96030c43c776ee938a3dae58485ec24caed7e05bfc60fe067161e0d5b5757052"},
+    {file = "prometheus_fastapi_instrumentator-7.0.0.tar.gz", hash = "sha256:5ba67c9212719f244ad7942d75ded80693b26331ee5dfc1e7571e4794a9ccbed"},
 ]
 
 [package.dependencies]
-fastapi = ">=0.38.1,<1.0.0"
 prometheus-client = ">=0.8.0,<1.0.0"
+starlette = ">=0.30.0,<1.0.0"
 
 [[package]]
 name = "proto-plus"
@@ -1906,13 +1906,13 @@ testing = ["argcomplete", "attrs (>=19.2.0)", "hypothesis (>=3.56)", "mock", "no
 
 [[package]]
 name = "pytest-asyncio"
-version = "0.23.5"
+version = "0.23.6"
 description = "Pytest support for asyncio"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pytest-asyncio-0.23.5.tar.gz", hash = "sha256:3a048872a9c4ba14c3e90cc1aa20cbc2def7d01c7c8db3777ec281ba9c057675"},
-    {file = "pytest_asyncio-0.23.5-py3-none-any.whl", hash = "sha256:4e7093259ba018d58ede7d5315131d21923a60f8a6e9ee266ce1589685c89eac"},
+    {file = "pytest-asyncio-0.23.6.tar.gz", hash = "sha256:ffe523a89c1c222598c76856e76852b787504ddb72dd5d9b6617ffa8aa2cde5f"},
+    {file = "pytest_asyncio-0.23.6-py3-none-any.whl", hash = "sha256:68516fdd1018ac57b846c9846b954f0393b26f094764a28c955eabb0536a4e8a"},
 ]
 
 [package.dependencies]
@@ -2763,13 +2763,13 @@ telegram = ["requests"]
 
 [[package]]
 name = "transformers"
-version = "4.38.2"
+version = "4.39.1"
 description = "State-of-the-art Machine Learning for JAX, PyTorch and TensorFlow"
 optional = false
 python-versions = ">=3.8.0"
 files = [
-    {file = "transformers-4.38.2-py3-none-any.whl", hash = "sha256:c4029cb9f01b3dd335e52f364c52d2b37c65b4c78e02e6a08b1919c5c928573e"},
-    {file = "transformers-4.38.2.tar.gz", hash = "sha256:c5fc7ad682b8a50a48b2a4c05d4ea2de5567adb1bdd00053619dbe5960857dd5"},
+    {file = "transformers-4.39.1-py3-none-any.whl", hash = "sha256:df167e08b27ab254044a38bb7c439461cd3916332205416e9b6b1592b517a1a5"},
+    {file = "transformers-4.39.1.tar.gz", hash = "sha256:ab9c1e1912843b9976e6cc62b27cd5434284fc0dab465e1b660333acfa81c6bc"},
 ]
 
 [package.dependencies]
@@ -3154,4 +3154,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10.0"
-content-hash = "17a0c15d4a8880b8069ebccf09fdf41d284bfc3970bab159bfc75312023f7491"
+content-hash = "dd71dbe10e18d4f7a2516daac952f9372000e71d6780278553c65a1d234b48ad"
