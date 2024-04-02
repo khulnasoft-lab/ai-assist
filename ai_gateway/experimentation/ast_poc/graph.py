@@ -5,20 +5,26 @@ from ai_gateway.experimentation.ast_poc.tag_builder import TagsBuilder, Tag
 from concurrent.futures import ThreadPoolExecutor
 from os import unlink, makedirs, path, curdir
 import csv
+from neo4j import GraphDatabase
+from neo4j.exceptions import TransientError
+import random
 
 
 class GraphBuilder:
     def __init__(
-        self, memgraph: Memgraph, executor: ThreadPoolExecutor, project_root_path: str
+        self, memgraph: Memgraph, tags_builder: TagsBuilder, project_root_path: str, 
     ):
         self.project_root_path = project_root_path
         self.memgraph = memgraph
-        self.tags_builder = TagsBuilder(executor=executor)
-        self.executor = executor
+        self.tags_builder = tags_builder
         self.processed_files = 0
 
-    async def update_graph_for_file(self, file_path: str, project_root_path: str):
-        tags = await self.tags_builder.get_tags_for_file(file_path, project_root_path)
+    async def update_graph_for_file(
+        self, file_path: str, project_root_path: str, executor: ThreadPoolExecutor
+    ):
+        tags = await self.tags_builder.get_tags_for_file(
+            filepath=file_path, project_root_path=project_root_path, executor=executor
+        )
         print(f"Updating graph for {file_path}")
 
         def_tags = [tag for tag in tags if tag.kind == "def"]
@@ -85,8 +91,7 @@ class GraphBuilder:
             },
         )
 
-
-    async def update_graph_from_csv(self, file_paths: List[str]):
+    async def update_graph_from_csv(self, file_paths: List[str], executor: ThreadPoolExecutor):
         temp_dir = path.join(path.abspath(curdir), ".tmp")
         makedirs(temp_dir, exist_ok=True)
         temp_csv_path = path.join(temp_dir, "temp.csv")
@@ -112,6 +117,7 @@ class GraphBuilder:
             for file_path in file_paths:
                 task = asyncio.create_task(
                     self._write_tags_to_csv(
+                      executor=executor,
                         file_path=file_path, csv_writer=csv_writer, num_files=num_files
                     )
                 )
@@ -136,9 +142,11 @@ class GraphBuilder:
         # Clean up the temporary CSV file
         unlink(temp_csv.name)
 
-    async def _write_tags_to_csv(self, file_path: str, csv_writer, num_files: int):
+    async def _write_tags_to_csv(
+        self, file_path: str, csv_writer, num_files: int, executor: ThreadPoolExecutor
+    ):
         tags = await self.tags_builder.get_tags_for_file(
-            file_path, self.project_root_path
+            file_path, self.project_root_path, executor=executor
         )
         for tag in tags:
             csv_writer.writerow(
@@ -159,6 +167,106 @@ class GraphBuilder:
                 f"Processed {self.processed_files} files - {self.processed_files/num_files*100}%"
             )
 
+    async def _process_batch(
+        self,
+        executor: ThreadPoolExecutor,
+        file_paths: List[str],
+    ):
+        for file_path in file_paths:
+            file_tags = await self.tags_builder.get_tags_for_file(
+                filepath=file_path,
+                project_root_path=self.project_root_path,
+                executor=executor,
+            )
+            await self._update_graph_for_tags(
+                file_tags
+            )
+
+    async def _update_graph_for_tags(
+        self,
+        tags: List[Tag],
+        max_retries: int = 3,
+        initial_wait_time: float = 0.2,
+        backoff_factor: float = 1.1,
+        jitter: float = 0.1,
+    ):
+        query = """
+          UNWIND $tags AS tag
+          MERGE (d:Definer {name: tag.name, file: tag.file, line: toInteger(tag.line), end_line: toInteger(tag.end_line), grammar: tag.grammar, project_root: tag.project_root})
+          WITH d, tag WHERE tag.kind = 'ref'
+          MERGE (s:Source {name: tag.name, file: tag.file, line: toInteger(tag.line), end_line: toInteger(tag.end_line), grammar: tag.grammar, project_root: tag.project_root})
+          MERGE (s)-[r:REFERENCES {ident: tag.ident}]->(d)
+          ON CREATE SET r.weight = 1
+          ON MATCH SET r.weight = r.weight + 1
+          """
+
+        async def run_transaction():
+            def process_transaction(tx):
+                tx.run(
+                    query,
+                    {
+                        "tags": [
+                            {
+                                "name": tag.name,
+                                "file": tag.rel_filepath,
+                                "kind": tag.kind,
+                                "ident": tag.name,
+                                "line": tag.line,
+                                "end_line": tag.end_line,
+                                "grammar": tag.grammar,
+                                "project_root": self.project_root_path,
+                            }
+                            for tag in tags
+                        ]
+                    },
+                )
+
+            # Create a Neo4j driver instance
+            driver = GraphDatabase.driver(
+                uri="bolt://localhost:7687",
+                auth=("neo4j", "password"),
+            )
+            print(f"Updating graph for {len(tags)} tags")
+            with driver.session() as session:
+                for attempt in range(max_retries):
+                    try:
+                        session.write_transaction(process_transaction)
+                        break
+                    except TransientError as te:
+                        jitter_time = random.uniform(0, jitter) * initial_wait_time
+                        wait_time = (
+                            initial_wait_time * (backoff_factor**attempt) + jitter_time
+                        )
+                        print(
+                            f"Transient error occurred. Retrying in {wait_time:.2f} seconds..."
+                        )
+                        await asyncio.sleep(
+                            wait_time
+                        )  # Use asyncio.sleep for non-blocking wait
+                    except Exception as e:
+                        print(f"Error occurred during transaction: {str(e)}")
+                        raise
+
+        await run_transaction()
+
+    async def update_graph_in_batches(
+        self,
+        executor: ThreadPoolExecutor,
+        file_paths: List[str],
+    ):
+        chunks = self._create_file_path_batch(file_paths)
+
+        tasks = [
+            asyncio.create_task(self._process_batch(executor, chunk))
+            for chunk in chunks
+        ]
+        await asyncio.gather(*tasks)
+
+    def _create_file_path_batch(self, file_paths: List[str], chunk_size: int = 1000):
+        return [
+            file_paths[i : i + chunk_size]
+            for i in range(0, len(file_paths), chunk_size)
+        ]
 
     async def query_graph(self, chat_file_paths: List[str]):
         personalization = {}

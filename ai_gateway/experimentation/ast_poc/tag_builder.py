@@ -31,23 +31,21 @@ class Tag:
 class TagsBuilder:
     def __init__(
         self,
-        executor: ThreadPoolExecutor,
     ):
         self.scm_cache: Dict[str, str] = {}
-        self.executor = executor
 
-    async def get_tags_for_file(self, filepath: str, project_root_path: str) -> List[Tag]:
+    async def get_tags_for_file(self, filepath: str, project_root_path: str, executor: ThreadPoolExecutor) -> List[Tag]:
         try:
             relative_filepath = self.get_relative_filepath(filepath, project_root_path)
             file_content = await asyncio.get_running_loop().run_in_executor(
-                self.executor, self._read_file, filepath
+                executor, self._read_file, filepath
             )
             if not file_content:
                 return []
             code_parser = await CodeParser.from_filename(file_content, filepath)
 
             # Load the tags queries from cache
-            query_scm = await self._get_scm_file(code_parser.grammar)
+            query_scm = await self._get_scm_file(lang=code_parser.grammar, executor=executor)
             if not query_scm:
                 return []
 
@@ -114,7 +112,7 @@ class TagsBuilder:
         with open(filepath, "r", encoding="utf-8") as f:
             return f.read()
 
-    async def _get_scm_file(self, lang: str) -> Optional[str]:
+    async def _get_scm_file(self, lang: str, executor: ThreadPoolExecutor) -> Optional[str]:
         if lang in self.scm_cache:
             return self.scm_cache[lang]
 
@@ -130,7 +128,7 @@ class TagsBuilder:
             return None
 
         query_scm_content = await asyncio.get_running_loop().run_in_executor(
-            self.executor, query_scm.read_text
+            executor, query_scm.read_text
         )
         self.scm_cache[lang] = query_scm_content
         return query_scm_content
