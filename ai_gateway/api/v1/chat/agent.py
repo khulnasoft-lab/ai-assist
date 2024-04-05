@@ -1,9 +1,9 @@
 from time import time
 from typing import AsyncIterator, Union
-
+import asyncio
 import structlog
 from dependency_injector.providers import FactoryAggregate
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, WebSocket
 from starlette.authentication import requires
 
 from ai_gateway.api.feature_category import feature_category
@@ -82,6 +82,16 @@ async def chat(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Anthropic API Connection Error.",
         )
+
+@router.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        print("receive_json")
+        data = await websocket.receive_json()
+        # await websocket.send_text(f"Message text was: {data}")
+        print("send_json")
+        await websocket.send_json({ "message": data })
 
 
 async def _generate_completion(
