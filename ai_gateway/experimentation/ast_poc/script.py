@@ -52,19 +52,21 @@ if __name__ == "__main__":
         tags_builder=TagsBuilder(),
         project_root_path=sys.argv[1]
     )
-    chunks = list(create_chunks([file.path for file in all_files], n=len(all_files) // 32))
+    
+    asyncio.run(graph_builder.update_graph_from_csv([file.path for file in all_files], executor))
+    # chunks = list(create_chunks([file.path for file in all_files], n=len(all_files) // 32))
 
-    async def update_graph_concurrently():
-        total_chunks = len(chunks)
-        completed_chunks = 0
+    # async def update_graph_concurrently():
+    #     total_chunks = len(chunks)
+    #     completed_chunks = 0
 
-        async def process_chunk(chunk):
-            nonlocal completed_chunks
-            await graph_builder.update_graph_in_batches(file_paths=chunk, executor=executor)
-            completed_chunks += 1
-            print(f"Completed chunk {completed_chunks}/{total_chunks} - {completed_chunks/total_chunks*100:.2f}%")
+    #     async def process_chunk(chunk):
+    #         nonlocal completed_chunks
+    #         await graph_builder.update_graph_in_batches(file_paths=chunk, executor=executor)
+    #         completed_chunks += 1
+    #         print(f"Completed chunk {completed_chunks}/{total_chunks} - {completed_chunks/total_chunks*100:.2f}%")
 
-        tasks = [asyncio.create_task(process_chunk(chunk)) for chunk in chunks]
-        await asyncio.gather(*tasks)
+    #     tasks = [asyncio.create_task(process_chunk(chunk)) for chunk in chunks]
+    #     await asyncio.gather(*tasks)
 
-    asyncio.run(update_graph_concurrently())
+    # asyncio.run(update_graph_concurrently())

@@ -124,20 +124,21 @@ class GraphBuilder:
                 tasks.append(task)
             await asyncio.gather(*tasks)
 
-        # Create indexes to speed up the import process
-        self.memgraph.execute("CREATE INDEX ON :Definer(name)")
-        self.memgraph.execute("CREATE INDEX ON :Source(name)")
+        # # Create indexes to speed up the import process
+        # self.memgraph.execute("CREATE INDEX ON :Definer(name)")
+        # self.memgraph.execute("CREATE INDEX ON :Source(name)")
+        # self.memgraph.execute("CREATE INDEX ON :Source(grammar)")
 
-        # Load data from CSV into Memgraph
-        self.memgraph.execute(
-            f"LOAD CSV FROM '/import/temp.csv' WITH HEADER AS row "
-            "MERGE (d:Definer {name: row.name, file: row.file, line: toInteger(row.line), end_line: toInteger(row.end_line), grammar: row.grammar, project_root: row.project_root}) "
-            "WITH d, row WHERE row.kind = 'ref' "
-            "MERGE (s:Source {name: row.name, file: row.file, line: toInteger(row.line), end_line: toInteger(row.end_line), grammar: row.grammar, project_root: row.project_root}) "
-            "MERGE (s)-[r:REFERENCES {ident: row.ident}]->(d) "
-            "ON CREATE SET r.weight = 1 "
-            "ON MATCH SET r.weight = r.weight + 1"
-        )
+        # # Load data from CSV into Memgraph
+        # self.memgraph.execute(
+        #     f"LOAD CSV FROM '/import/temp.csv' WITH HEADER AS row "
+        #     "MERGE (d:Definer {name: row.name, file: row.file, line: toInteger(row.line), end_line: toInteger(row.end_line), grammar: row.grammar, project_root: row.project_root}) "
+        #     "WITH d, row WHERE row.kind = 'ref' "
+        #     "MERGE (s:Source {name: row.name, file: row.file, line: toInteger(row.line), end_line: toInteger(row.end_line), grammar: row.grammar, project_root: row.project_root}) "
+        #     "MERGE (s)-[r:REFERENCES {ident: row.ident}]->(d) "
+        #     "ON CREATE SET r.weight = 1 "
+        #     "ON MATCH SET r.weight = r.weight + 1"
+        # )
 
         # Clean up the temporary CSV file
         unlink(temp_csv.name)
@@ -146,7 +147,7 @@ class GraphBuilder:
         self, file_path: str, csv_writer, num_files: int, executor: ThreadPoolExecutor
     ):
         tags = await self.tags_builder.get_tags_for_file(
-            file_path, self.project_root_path, executor=executor
+            filepath=file_path, project_root_path=self.project_root_path, executor=executor
         )
         for tag in tags:
             csv_writer.writerow(
