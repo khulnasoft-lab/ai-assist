@@ -82,3 +82,9 @@ test: LIB_DIR ?= ${ROOT_DIR}/lib
 test: install-test-deps
 	@echo "Running test..."
 	@poetry run pytest
+
+.PHONY: test-watch
+test-watch: LIB_DIR ?= ${ROOT_DIR}/lib
+test-watch: install-test-deps
+	@echo "Running test..."
+	@poetry run ptw

@@ -120,6 +120,9 @@ class ProgramLanguage:
 
     def __getattr__(self, name):
         return getattr(self._lang_def, name)
+      
+    def get_grammar_name(self):
+        return self._lang_def.grammar_name
 
     @classmethod
     def from_language_id(cls, lang_id: LanguageId):
@@ -170,7 +173,9 @@ def trim_by_sep(s: str, sep: str = "```") -> str:
 def lang_from_filename(file_name: Union[str, Path]) -> Optional[LanguageId]:
     ext = Path(file_name).suffix.replace(".", "")
     return _EXTENSION_TO_LANG_ID.get(ext, None)
-
+  
+def lang_id_to_language(lang_id: LanguageId) -> Optional[ProgramLanguage]:
+    return ProgramLanguage.from_language_id(lang_id)
 
 def lang_from_editor_lang(editor_lang: str) -> Optional[LanguageId]:
     return _EDITOR_LANG_TO_LANG_ID.get(editor_lang, None)
