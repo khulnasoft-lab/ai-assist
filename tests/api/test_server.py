@@ -33,7 +33,7 @@ def fastapi_server_app() -> Iterator[FastAPI]:
     fast_api_container = ContainerApplication()
     fast_api_container.config.from_dict(config.model_dump())
 
-    yield create_fast_api_server()
+    yield create_fast_api_server(Config())
 
 
 @pytest.mark.parametrize("routes_expected", [_ROUTES_V1, _ROUTES_V2, _ROUTES_V3])
