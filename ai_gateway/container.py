@@ -22,6 +22,7 @@ class ContainerApplication(containers.DeclarativeContainer):
             "ai_gateway.api.v3.code.completions",
             "ai_gateway.api.server",
             "ai_gateway.api.monitoring",
+            "ai_gateway.async_dependency_resolver",
         ]
     )
 
@@ -34,6 +35,8 @@ class ContainerApplication(containers.DeclarativeContainer):
         enable_client_stream_send_time_histogram=True,
     )
 
+    snowplow = providers.Container(ContainerTracking, config=config.snowplow)
+
     pkg_models = providers.Container(
         ContainerModels,
         config=config,
@@ -42,6 +45,7 @@ class ContainerApplication(containers.DeclarativeContainer):
         ContainerCodeSuggestions,
         models=pkg_models,
         config=config.f.code_suggestions,
+        snowplow=snowplow,
     )
     x_ray = providers.Container(
         ContainerXRay,

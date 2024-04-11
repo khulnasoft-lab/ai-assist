@@ -17,6 +17,7 @@ from ai_gateway.code_suggestions import (
 )
 from ai_gateway.experimentation import ExperimentTelemetry
 from ai_gateway.instrumentators.base import Telemetry
+from ai_gateway.models import KindModelProvider, Message
 
 __all__ = [
     "CompletionsRequestV1",
@@ -27,14 +28,12 @@ __all__ = [
     "StreamSuggestionsResponse",
 ]
 
-from ai_gateway.models import KindModelProvider
-
 
 class CurrentFile(BaseModel):
     file_name: Annotated[str, StringConstraints(strip_whitespace=True, max_length=255)]
-    language_identifier: Optional[
-        Annotated[str, StringConstraints(max_length=255)]
-    ] = None  # https://code.visualstudio.com/docs/languages/identifiers
+    language_identifier: Optional[Annotated[str, StringConstraints(max_length=255)]] = (
+        None  # https://code.visualstudio.com/docs/languages/identifiers
+    )
     content_above_cursor: Annotated[str, StringConstraints(max_length=100000)]
     content_below_cursor: Annotated[str, StringConstraints(max_length=100000)]
 
@@ -95,6 +94,11 @@ class CompletionsRequestV2(CompletionsRequest):
 class GenerationsRequestV2(GenerationsRequest):
     prompt_version: Literal[2]
     prompt: str
+
+
+class GenerationsRequestV3(GenerationsRequest):
+    prompt_version: Literal[3]
+    prompt: list[Message]
 
 
 class SuggestionsResponse(BaseModel):

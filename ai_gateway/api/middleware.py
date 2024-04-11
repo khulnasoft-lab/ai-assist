@@ -14,7 +14,6 @@ from starlette.authentication import (
     BaseUser,
     HTTPConnection,
 )
-from starlette.concurrency import iterate_in_threadpool
 from starlette.middleware import Middleware
 from starlette.middleware.authentication import (
     AuthenticationBackend,
@@ -46,6 +45,7 @@ X_GITLAB_INSTANCE_ID_HEADER = "X-Gitlab-Instance-Id"
 X_GITLAB_GLOBAL_USER_ID_HEADER = "X-Gitlab-Global-User-Id"
 X_GITLAB_HOST_NAME_HEADER = "X-Gitlab-Host-Name"
 X_GITLAB_SAAS_NAMESPACE_IDS_HEADER = "X-Gitlab-Saas-Namespace-Ids"
+X_GITLAB_SAAS_DUO_PRO_NAMESPACE_IDS_HEADER = "X-Gitlab-Saas-Duo-Pro-Namespace-Ids"
 
 
 class _PathResolver:
@@ -126,17 +126,6 @@ class MiddlewareLogRequest(Middleware):
                 http_method = request.method
                 http_version = request.scope["http_version"]
 
-                if 400 <= status_code < 500:
-                    # StreamingResponse is received from the MiddlewareAuthentication, so
-                    # we need to read the response ourselves.
-                    response_body = [
-                        section async for section in response.body_iterator
-                    ]
-                    response.body_iterator = iterate_in_threadpool(iter(response_body))
-                    structlog.contextvars.bind_contextvars(
-                        response_body=response_body[0].decode()
-                    )
-
                 fields = dict(
                     url=str(request.url),
                     path=url,
@@ -154,6 +143,9 @@ class MiddlewareLogRequest(Middleware):
                         X_GITLAB_GLOBAL_USER_ID_HEADER
                     ),
                     gitlab_host_name=request.headers.get(X_GITLAB_HOST_NAME_HEADER),
+                    gitlab_saas_duo_pro_namespace_ids=request.headers.get(
+                        X_GITLAB_SAAS_DUO_PRO_NAMESPACE_IDS_HEADER
+                    ),
                     gitlab_saas_namespace_ids=request.headers.get(
                         X_GITLAB_SAAS_NAMESPACE_IDS_HEADER
                     ),
@@ -252,6 +244,7 @@ class MiddlewareAuthentication(Middleware):
     @staticmethod
     def on_auth_error(_: Request, e: Exception):
         content = jsonable_encoder({"error": str(e)})
+        context["auth_error_details"] = str(e)
         return JSONResponse(status_code=401, content=content)
 
     def __init__(

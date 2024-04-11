@@ -10,10 +10,16 @@ from ai_gateway.code_suggestions import CodeCompletionsLegacy, CodeGenerations
 from ai_gateway.code_suggestions.processing import ModelEngineCompletions
 from ai_gateway.code_suggestions.processing.post.completions import PostProcessor
 from ai_gateway.code_suggestions.processing.pre import TokenizerTokenStrategy
-from ai_gateway.container import ContainerApplication
 from ai_gateway.experimentation import ExperimentRegistry
-from ai_gateway.models import FakePalmTextGenModel
+from ai_gateway.models import (
+    AnthropicModel,
+    KindAnthropicModel,
+    KindVertexTextModel,
+    PalmCodeGeckoModel,
+)
+from ai_gateway.models.mock import LLM, ChatModel
 from ai_gateway.tokenizer import init_tokenizer
+from ai_gateway.tracking.instrumentator import SnowplowInstrumentator
 
 
 @pytest.fixture(scope="class")
@@ -29,10 +35,10 @@ def auth_user():
     )
 
 
-class TestFakeModels:
-    # Verify fake models with most used routes
+class TestMockedModels:
+    # Verify mocked models with most used routes
 
-    def test_fake_completions(
+    def test_completions(
         self,
         mock_client: TestClient,
         mock_container: containers.DeclarativeContainer,
@@ -40,14 +46,15 @@ class TestFakeModels:
         """Completions: v1 with Vertex AI models."""
 
         engine = ModelEngineCompletions(
-            model=FakePalmTextGenModel(),
-            tokenizer=init_tokenizer(),
+            model=LLM(),
+            tokenization_strategy=TokenizerTokenStrategy(init_tokenizer()),
             experiment_registry=ExperimentRegistry(),
         )
 
         code_completions_mock = CodeCompletionsLegacy(
             engine=engine,
             post_processor=PostProcessor,
+            snowplow_instrumentator=mock.Mock(spec=SnowplowInstrumentator),
         )
 
         with mock_container.code_suggestions.completions.vertex_legacy.override(
@@ -74,7 +81,7 @@ class TestFakeModels:
         assert response.status_code == 200
 
         body = response.json()
-        assert body["choices"][0]["text"] == "fake code suggestion from PaLM Text"
+        assert body["choices"][0]["text"].startswith("echo:")
 
     def test_fake_generations(
         self, mock_client: TestClient, mock_container: containers.DeclarativeContainer
@@ -84,7 +91,9 @@ class TestFakeModels:
         tokenization_strategy = TokenizerTokenStrategy(init_tokenizer())
 
         code_generations_mock = CodeGenerations(
-            model=FakePalmTextGenModel(), tokenization_strategy=tokenization_strategy
+            model=LLM(),
+            tokenization_strategy=tokenization_strategy,
+            snowplow_instrumentator=mock.Mock(spec=SnowplowInstrumentator),
         )
 
         with mock_container.code_suggestions.generations.anthropic_factory.override(
@@ -113,4 +122,4 @@ class TestFakeModels:
         assert response.status_code == 200
 
         body = response.json()
-        assert body["choices"][0]["text"] == "fake code suggestion from PaLM Text"
+        assert body["choices"][0]["text"].startswith("echo:")

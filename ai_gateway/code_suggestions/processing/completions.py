@@ -1,25 +1,22 @@
 from typing import Any, Callable, NamedTuple, Optional
 
 import structlog
-from transformers import PreTrainedTokenizer
 
 from ai_gateway.code_suggestions.processing.base import (
     MINIMIMUM_CONFIDENCE_SCORE,
     ModelEngineBase,
     ModelEngineOutput,
-    Prompt,
     PromptBuilderBase,
 )
-from ai_gateway.code_suggestions.processing.ops import (
-    remove_incomplete_block,
-    truncate_content,
-)
+from ai_gateway.code_suggestions.processing.ops import remove_incomplete_block
 from ai_gateway.code_suggestions.processing.typing import (
     CodeContent,
     LanguageId,
     MetadataCodeContent,
     MetadataExtraInfo,
     MetadataPromptBuilder,
+    Prompt,
+    TokenStrategyBase,
 )
 from ai_gateway.experimentation import ExperimentRegistry, ExperimentTelemetry
 from ai_gateway.instrumentators import TextGenModelInstrumentator
@@ -28,6 +25,7 @@ from ai_gateway.models import (
     VertexAPIConnectionError,
     VertexAPIStatusError,
 )
+from ai_gateway.models.base import TokensConsumptionMetadata
 from ai_gateway.prompts.parsers import CodeParser
 
 log = structlog.stdlib.get_logger("codesuggestions")
@@ -175,10 +173,10 @@ class ModelEngineCompletions(ModelEngineBase):
     def __init__(
         self,
         model: PalmCodeGenBaseModel,
-        tokenizer: PreTrainedTokenizer,
+        tokenization_strategy: TokenStrategyBase,
         experiment_registry: ExperimentRegistry,
     ):
-        super().__init__(model, tokenizer)
+        super().__init__(model, tokenization_strategy)
         self.experiment_registry = experiment_registry
 
     async def _generate(
@@ -198,6 +196,9 @@ class ModelEngineCompletions(ModelEngineBase):
             score=0,
             model=self.model.metadata,
             metadata=MetadataPromptBuilder(components={}),
+            tokens_consumption_metadata=TokensConsumptionMetadata(
+                input_tokens=0, output_tokens=0
+            ),
         )
 
         # TODO: keep watching the suffix length until logging ModelEngineOutput in the upper layer
@@ -226,12 +227,33 @@ class ModelEngineCompletions(ModelEngineBase):
                         watch_container.register_is_discarded()
                         completion = ""
 
+                    if res.metadata:
+                        log.debug(
+                            "token consumption metadata:",
+                            metadata=res.metadata,
+                        )
+                        tokens_consumption_metadata = res.metadata
+                    else:
+                        log.debug(
+                            "code completions: token consumption metadata is not available, using estimates"
+                        )
+                        tokens_consumption_metadata = TokensConsumptionMetadata(
+                            output_tokens=self.tokenization_strategy.estimate_length(
+                                completion
+                            )[0],
+                            input_tokens=sum(
+                                md.length_tokens
+                                for md in prompt.metadata.components.values()
+                            ),
+                        )
+
                     return ModelEngineOutput(
                         text=completion,
                         score=res.score,
                         model=self.model.metadata,
                         lang_id=lang_id,
                         metadata=prompt.metadata,
+                        tokens_consumption_metadata=tokens_consumption_metadata,
                     )
             except (VertexAPIConnectionError, VertexAPIStatusError) as ex:
                 watch_container.register_model_exception(str(ex), ex.code)
@@ -331,32 +353,25 @@ class ModelEngineCompletions(ModelEngineBase):
             comment_converter = COMMENT_GENERATOR[lang_id]
             contents = [comment_converter(content) for content in contents]
 
-        contents_tokenized = self.tokenizer(
-            contents,
-            return_length=True,
-            return_attention_mask=False,
-            add_special_tokens=False,
-        )
+        content_lengths = self.tokenization_strategy.estimate_length(contents)
 
         code_contents = [
             CodeContent(text=text, length_tokens=length)
-            for text, length in zip(contents, contents_tokenized["length"])
+            for text, length in zip(contents, content_lengths)
         ]
 
         return _CodeInfo(content=code_contents)
 
     def _get_body(self, prefix: str, suffix: str, max_length: int) -> _CodeBody:
         suffix_len = int(max_length * self.MAX_TOKENS_SUFFIX_PERCENT)
-        suffix_truncated = truncate_content(
-            self.tokenizer,
+        suffix_truncated = self.tokenization_strategy.truncate_content(
             suffix,
             max_length=suffix_len,
             truncation_side="right",
         )
 
         prefix_len = max_length - suffix_truncated.length_tokens
-        prefix_truncated = truncate_content(
-            self.tokenizer,
+        prefix_truncated = self.tokenization_strategy.truncate_content(
             prefix,
             max_length=prefix_len,
             truncation_side="left",

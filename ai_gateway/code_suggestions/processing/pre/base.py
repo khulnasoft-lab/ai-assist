@@ -1,35 +1,18 @@
 from abc import ABC, abstractmethod
-from typing import Any, NamedTuple, Union
+from typing import Any
 
-from ai_gateway.code_suggestions.processing import (
+from ai_gateway.code_suggestions.processing.typing import (
     MetadataCodeContent,
     MetadataPromptBuilder,
     Prompt,
+    TokenStrategyBase,
 )
+from ai_gateway.models import Message
 from ai_gateway.prompts import PromptTemplateBase
 
 __all__ = [
-    "CodeContent",
-    "TokenStrategyBase",
     "PromptBuilderBase",
 ]
-
-
-class CodeContent(NamedTuple):
-    text: str
-    length_tokens: int
-
-
-class TokenStrategyBase(ABC):
-    @abstractmethod
-    def truncate_content(
-        self, text: str, max_length: int, truncation_side: str = "left"
-    ) -> CodeContent:
-        pass
-
-    @abstractmethod
-    def estimate_length(self, *text: str) -> Union[int, list[int]]:
-        pass
 
 
 class PromptBuilderBase(ABC):
@@ -48,7 +31,7 @@ class PromptBuilderBase(ABC):
 
         # Apply all known arguments to get the number of reserved tokens
         tpl_raw = self.tpl.apply(**self.tpl_args)
-        tpl_len = self.tkn_strategy.estimate_length(tpl_raw)
+        tpl_len = self.tkn_strategy.estimate_length(tpl_raw)[0]
         if tpl_len > self.total_max_len:
             raise ValueError("the template size exceeds overall maximum length")
 
@@ -56,9 +39,15 @@ class PromptBuilderBase(ABC):
 
         return tpl_len
 
-    def wrap(self, prompt: str, ignore_exception: bool = False) -> Prompt:
-        length_tokens = self.tkn_strategy.estimate_length(prompt)
-        if length_tokens > self.total_max_len and not ignore_exception:
+    def wrap(
+        self, prompt: str | list[Message], ignore_exception: bool = False
+    ) -> Prompt:
+        if isinstance(prompt, list):
+            prompt_text = "".join(m.content for m in prompt)
+        else:
+            prompt_text = prompt
+        token_length = self.tkn_strategy.estimate_length(prompt_text)[0]
+        if token_length > self.total_max_len and not ignore_exception:
             raise ValueError("the prompt size exceeds overall maximum length")
 
         return Prompt(
@@ -66,8 +55,8 @@ class PromptBuilderBase(ABC):
             metadata=MetadataPromptBuilder(
                 components={
                     "prompt": MetadataCodeContent(
-                        length=len(prompt),
-                        length_tokens=length_tokens,
+                        length=len(prompt_text),
+                        length_tokens=token_length,
                     ),
                 }
             ),

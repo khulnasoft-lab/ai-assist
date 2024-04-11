@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Any, NamedTuple, Optional
 
 from prometheus_client import Counter
-from transformers import PreTrainedTokenizer
 
 from ai_gateway.code_suggestions.processing.ops import (
     lang_from_editor_lang,
@@ -14,10 +13,13 @@ from ai_gateway.code_suggestions.processing.typing import (
     LanguageId,
     MetadataCodeContent,
     MetadataPromptBuilder,
+    Prompt,
+    TokenStrategyBase,
 )
 from ai_gateway.experimentation import ExperimentTelemetry
 from ai_gateway.instrumentators import TextGenModelInstrumentator
 from ai_gateway.models import ModelMetadata, PalmCodeGenBaseModel
+from ai_gateway.models.base import TokensConsumptionMetadata
 
 __all__ = [
     "ModelEngineOutput",
@@ -48,6 +50,7 @@ class ModelEngineOutput(NamedTuple):
     score: float
     model: ModelMetadata
     metadata: MetadataPromptBuilder
+    tokens_consumption_metadata: TokensConsumptionMetadata
     lang_id: Optional[LanguageId] = None
 
     @property
@@ -56,9 +59,11 @@ class ModelEngineOutput(NamedTuple):
 
 
 class ModelEngineBase(ABC):
-    def __init__(self, model: PalmCodeGenBaseModel, tokenizer: PreTrainedTokenizer):
+    def __init__(
+        self, model: PalmCodeGenBaseModel, tokenization_strategy: TokenStrategyBase
+    ):
         self.model = model
-        self.tokenizer = tokenizer
+        self.tokenization_strategy = tokenization_strategy
         self.instrumentator = TextGenModelInstrumentator(
             model.metadata.engine, model.metadata.name
         )
@@ -127,12 +132,6 @@ class ModelEngineBase(ABC):
     def increment_experiment_counter(self, experiments: list[ExperimentTelemetry]):
         for exp in experiments:
             EXPERIMENT_COUNTER.labels(name=exp.name, variant=exp.variant).inc()
-
-
-class Prompt(NamedTuple):
-    prefix: str
-    metadata: MetadataPromptBuilder
-    suffix: Optional[str] = None
 
 
 class PromptBuilderBase(ABC):

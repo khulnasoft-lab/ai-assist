@@ -1,10 +1,12 @@
 ROOT_DIR := $(shell pwd)
 TESTS_DIR := ${ROOT_DIR}/tests
+LINTS_DIR := ${ROOT_DIR}/lints
 AI_GATEWAY_DIR := ${ROOT_DIR}/ai_gateway
 
 LINT_WORKING_DIR ?= ${AI_GATEWAY_DIR} \
 	${ROOT_DIR}/scripts \
-	${TESTS_DIR}
+	${TESTS_DIR} \
+	${LINTS_DIR} \
 
 COMPOSE_FILES := -f docker-compose.dev.yaml
 ifneq (,$(wildcard docker-compose.override.yaml))
@@ -48,7 +50,7 @@ isort: install-lint-deps
 format: black isort
 
 .PHONY: lint
-lint: flake8 check-black check-isort
+lint: flake8 check-black check-isort check-pylint
 
 .PHONY: flake8
 flake8: install-lint-deps
@@ -65,17 +67,27 @@ check-isort: install-lint-deps
 	@echo "Running isort check..."
 	@poetry run isort --check-only ${LINT_WORKING_DIR}
 
+.PHONY: check-pylint
+check-pylint: install-lint-deps
+	@echo "Running pylint check..."
+	@poetry run pylint ${LINT_WORKING_DIR}
+
 .PHONY: install-test-deps
 install-test-deps:
 	@echo "Installing test dependencies..."
 	@poetry install --with test
-	@echo 'Building tree-sitter library...'
-	@poetry run python scripts/build-tree-sitter-lib.py
-	@mkdir -p lib
-	@mv scripts/lib/*.so lib
 
 .PHONY: test
-test: LIB_DIR ?= ${ROOT_DIR}/lib
 test: install-test-deps
-	@echo "Running test..."
+	@echo "Running tests..."
 	@poetry run pytest
+
+.PHONY: test-coverage
+test-coverage: install-test-deps
+	@echo "Running tests with coverage..."
+	@poetry run pytest --cov=ai_gateway --cov=lints --cov-report term --cov-report html
+
+.PHONY: test-coverage-ci
+test-coverage-ci: install-test-deps
+	@echo "Running tests with coverage on CI..."
+	@poetry run pytest --cov=ai_gateway --cov=lints --cov-report term --cov-report xml:.test-reports/coverage.xml --junitxml=".test-reports/tests.xml"

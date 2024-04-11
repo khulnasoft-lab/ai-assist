@@ -1,10 +1,20 @@
 from logging.config import dictConfig
 
-import uvicorn
 from dotenv import load_dotenv
 
 from ai_gateway.api import create_fast_api_server
 from ai_gateway.config import Config
+from fastapi.exception_handlers import http_exception_handler
+from prometheus_client import start_http_server
+from prometheus_fastapi_instrumentator import Instrumentator, metrics
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette_context import context
+
+from ai_gateway.api import create_fast_api_server
+from ai_gateway.config import Config
+from ai_gateway.instrumentators.threads import monitor_threads
+from ai_gateway.profiling import setup_profiling
+from ai_gateway.structured_logging import setup_logging
 
 # load env variables from .env if exists
 load_dotenv()
@@ -16,16 +26,10 @@ config = Config()
 dictConfig(config.fastapi.uvicorn_logger)
 
 
-def main():
-    # For now, trust all IPs for proxy headers until https://github.com/encode/uvicorn/pull/1611 is available.
-    uvicorn.run(
-        create_fast_api_server(config),
-        host=config.fastapi.api_host,
-        port=config.fastapi.api_port,
-        log_config=config.fastapi.uvicorn_logger,
-        forwarded_allow_ips="*",
-    )
+def get_config():
+    return config
 
 
-if __name__ == "__main__":
-    main()
+def get_app():
+    app = create_fast_api_server(config)
+    return app

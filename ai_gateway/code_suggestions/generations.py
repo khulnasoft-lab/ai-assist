@@ -8,24 +8,25 @@ from ai_gateway.code_suggestions.base import (
     increment_lang_counter,
     resolve_lang_id,
 )
-from ai_gateway.code_suggestions.processing import LanguageId, Prompt
+from ai_gateway.code_suggestions.processing import LanguageId, Prompt, TokenStrategyBase
 from ai_gateway.code_suggestions.processing.post.generations import (
     PostProcessor,
     PostProcessorAnthropic,
 )
-from ai_gateway.code_suggestions.processing.pre import (
-    PromptBuilderPrefixBased,
-    TokenStrategyBase,
-)
+from ai_gateway.code_suggestions.processing.pre import PromptBuilderPrefixBased
 from ai_gateway.instrumentators import TextGenModelInstrumentator
 from ai_gateway.models import (
+    Message,
     ModelAPICallError,
     ModelAPIError,
     TextGenBaseModel,
     TextGenModelChunk,
     TextGenModelOutput,
 )
+from ai_gateway.models.base_chat import ChatModelBase
 from ai_gateway.prompts import PromptTemplate
+from ai_gateway.tracking.instrumentator import SnowplowInstrumentator
+from ai_gateway.tracking.snowplow import SnowplowEvent
 
 __all__ = ["CodeGenerations"]
 
@@ -44,6 +45,7 @@ class CodeGenerations:
         self,
         model: TextGenBaseModel,
         tokenization_strategy: TokenStrategyBase,
+        snowplow_instrumentator: SnowplowInstrumentator,
     ):
         self.model = model
 
@@ -54,6 +56,8 @@ class CodeGenerations:
         self.prompt_builder = PromptBuilderPrefixBased(
             model.MAX_MODEL_LEN, tokenization_strategy
         )
+        self.tokenization_strategy = tokenization_strategy
+        self.snowplow_instrumentator = snowplow_instrumentator
 
     def _get_prompt(
         self, prefix: str, file_name: str, lang_id: Optional[LanguageId] = None
@@ -76,7 +80,7 @@ class CodeGenerations:
 
         return prompt
 
-    def with_prompt_prepared(self, prompt: str):
+    def with_prompt_prepared(self, prompt: str | list[Message]):
         self.prompt = self.prompt_builder.wrap(prompt)
 
     async def execute(
@@ -93,13 +97,31 @@ class CodeGenerations:
 
         prompt = self._get_prompt(prefix, file_name, lang_id)
 
+        self.snowplow_instrumentator.watch(
+            SnowplowEvent(
+                context=None,
+                action="tokens_per_user_request_prompt",
+                label="code_generation",
+                value=sum(
+                    md.length_tokens for md in prompt.metadata.components.values()
+                ),
+            )
+        )
+
         with self.instrumentator.watch(prompt) as watch_container:
             try:
                 watch_container.register_lang(lang_id, editor_lang)
 
-                if res := await self.model.generate(
-                    prompt.prefix, "", stream=stream, **kwargs
-                ):
+                if isinstance(self.model, ChatModelBase):
+                    res = await self.model.generate(
+                        prompt.prefix, stream=stream, **kwargs
+                    )
+                else:
+                    res = await self.model.generate(
+                        prompt.prefix, "", stream=stream, **kwargs
+                    )
+
+                if res:
                     if isinstance(res, AsyncIterator):
                         return self._handle_stream(res)
 
@@ -118,18 +140,27 @@ class CodeGenerations:
                 watch_container.register_model_exception(str(ex), -1)
 
         return CodeSuggestionsOutput(
-            text="",
-            score=0,
-            model=self.model.metadata,
-            lang_id=lang_id,
+            text="", score=0, model=self.model.metadata, lang_id=lang_id
         )
 
     async def _handle_stream(
         self, response: AsyncIterator[TextGenModelChunk]
     ) -> AsyncIterator[CodeSuggestionsChunk]:
-        async for chunk in response:
-            chunk_content = CodeSuggestionsChunk(text=chunk.text)
-            yield chunk_content
+        chunks = []
+        try:
+            async for chunk in response:
+                chunk_content = CodeSuggestionsChunk(text=chunk.text)
+                chunks.append(chunk.text)
+                yield chunk_content
+        finally:
+            self.snowplow_instrumentator.watch(
+                SnowplowEvent(
+                    context=None,
+                    action="tokens_per_user_request_response",
+                    label="code_generation",
+                    value=sum(self.tokenization_strategy.estimate_length(chunks)),
+                )
+            )
 
     async def _handle_sync(
         self,
@@ -149,6 +180,15 @@ class CodeGenerations:
             else PostProcessor
         )
         generation = await processor(prefix).process(response.text)
+
+        self.snowplow_instrumentator.watch(
+            SnowplowEvent(
+                context=None,
+                action="tokens_per_user_request_response",
+                label="code_generation",
+                value=self.tokenization_strategy.estimate_length(response.text)[0],
+            )
+        )
 
         return CodeSuggestionsOutput(
             text=generation,

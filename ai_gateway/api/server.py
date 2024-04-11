@@ -3,6 +3,8 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
+from dependency_injector.wiring import Provide, inject
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import start_http_server
 from prometheus_fastapi_instrumentator import Instrumentator, metrics
@@ -109,9 +111,6 @@ def setup_router(app: FastAPI):
     sub_router.include_router(http_monitoring_router)
 
     app.include_router(sub_router)
-    # Include alias routes for Cloudflare LoadBalancer cloud.gitlab.com
-    # https://gitlab.com/gitlab-org/modelops/applied-ml/code-suggestions/ai-assist/-/issues/358
-    app.include_router(sub_router, prefix="/ai")
 
 
 def setup_prometheus_fastapi_instrumentator(app: FastAPI):

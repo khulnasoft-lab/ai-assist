@@ -4,7 +4,6 @@ from typing import Annotated, AsyncIterator, Union
 import anthropic
 import structlog
 from dependency_injector.providers import Factory
-from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Body, Depends, Request
 from starlette.datastructures import CommaSeparatedStrings
 
@@ -14,6 +13,7 @@ from ai_gateway.api.middleware import (
     X_GITLAB_HOST_NAME_HEADER,
     X_GITLAB_INSTANCE_ID_HEADER,
     X_GITLAB_REALM_HEADER,
+    X_GITLAB_SAAS_DUO_PRO_NAMESPACE_IDS_HEADER,
     X_GITLAB_SAAS_NAMESPACE_IDS_HEADER,
 )
 from ai_gateway.api.v2.code.typing import (
@@ -21,9 +21,18 @@ from ai_gateway.api.v2.code.typing import (
     CompletionsRequestV2,
     GenerationsRequestV1,
     GenerationsRequestV2,
+    GenerationsRequestV3,
     StreamSuggestionsResponse,
     SuggestionsRequest,
     SuggestionsResponse,
+)
+from ai_gateway.async_dependency_resolver import (
+    get_code_suggestions_completions_anthropic_provider,
+    get_code_suggestions_completions_vertex_legacy_provider,
+    get_code_suggestions_generations_anthropic_chat_factory_provider,
+    get_code_suggestions_generations_anthropic_factory_provider,
+    get_code_suggestions_generations_vertex_provider,
+    get_snowplow_instrumentator,
 )
 from ai_gateway.auth.authentication import requires
 from ai_gateway.code_suggestions import (
@@ -33,9 +42,9 @@ from ai_gateway.code_suggestions import (
     CodeSuggestionsChunk,
 )
 from ai_gateway.code_suggestions.processing.ops import lang_from_filename
-from ai_gateway.container import ContainerApplication
 from ai_gateway.instrumentators.base import TelemetryInstrumentator
 from ai_gateway.models import KindAnthropicModel, KindModelProvider
+from ai_gateway.tracking import RequestCount, SnowplowEvent, SnowplowEventContext
 from ai_gateway.tracking.errors import log_exception
 from ai_gateway.tracking.instrumentator import SnowplowInstrumentator
 
@@ -54,7 +63,7 @@ CompletionsRequestWithVersion = Annotated[
 ]
 
 GenerationsRequestWithVersion = Annotated[
-    Union[GenerationsRequestV1, GenerationsRequestV2],
+    Union[GenerationsRequestV1, GenerationsRequestV2, GenerationsRequestV3],
     Body(discriminator="prompt_version"),
 ]
 
@@ -63,24 +72,23 @@ GenerationsRequestWithVersion = Annotated[
 @router.post("/code/completions")
 @requires("code_suggestions")
 @feature_category("code_suggestions")
-@inject
 async def completions(
     request: Request,
     payload: CompletionsRequestWithVersion,
     completions_legacy_factory: Factory[CodeCompletionsLegacy] = Depends(
-        Provide[
-            ContainerApplication.code_suggestions.completions.vertex_legacy.provider
-        ]
+        get_code_suggestions_completions_vertex_legacy_provider
     ),
     completions_anthropic_factory: Factory[CodeCompletions] = Depends(
-        Provide[ContainerApplication.code_suggestions.completions.anthropic.provider]
+        get_code_suggestions_completions_anthropic_provider
     ),
     snowplow_instrumentator: SnowplowInstrumentator = Depends(
-        Provide[ContainerApplication.snowplow.instrumentator]
+        get_snowplow_instrumentator
     ),
 ):
     try:
-        track_snowplow_event(request, payload, snowplow_instrumentator)
+        snowplow_instrumentator.watch(
+            _suggestion_requested_snowplow_event(request, payload)
+        )
     except Exception as e:
         log_exception(e)
 
@@ -139,24 +147,26 @@ async def completions(
 @router.post("/code/generations")
 @requires("code_suggestions")
 @feature_category("code_suggestions")
-@inject
 async def generations(
     request: Request,
     payload: GenerationsRequestWithVersion,
     generations_vertex_factory: Factory[CodeGenerations] = Depends(
-        Provide[ContainerApplication.code_suggestions.generations.vertex.provider]
+        get_code_suggestions_generations_vertex_provider
     ),
     generations_anthropic_factory: Factory[CodeGenerations] = Depends(
-        Provide[
-            ContainerApplication.code_suggestions.generations.anthropic_factory.provider
-        ]
+        get_code_suggestions_generations_anthropic_factory_provider
+    ),
+    generations_anthropic_chat_factory: Factory[CodeGenerations] = Depends(
+        get_code_suggestions_generations_anthropic_chat_factory_provider
     ),
     snowplow_instrumentator: SnowplowInstrumentator = Depends(
-        Provide[ContainerApplication.snowplow.instrumentator]
+        get_snowplow_instrumentator
     ),
 ):
     try:
-        track_snowplow_event(request, payload, snowplow_instrumentator)
+        snowplow_instrumentator.watch(
+            _suggestion_requested_snowplow_event(request, payload)
+        )
     except Exception as e:
         log_exception(e)
 
@@ -170,14 +180,20 @@ async def generations(
     )
 
     if payload.model_provider == KindModelProvider.ANTHROPIC:
-        code_generations = _resolve_code_generations_anthropic(
-            payload,
-            generations_anthropic_factory,
-        )
+        if payload.prompt_version == 3:
+            code_generations = _resolve_code_generations_anthropic_chat(
+                payload,
+                generations_anthropic_chat_factory,
+            )
+        else:
+            code_generations = _resolve_code_generations_anthropic(
+                payload,
+                generations_anthropic_factory,
+            )
     else:
         code_generations = generations_vertex_factory()
 
-    if payload.prompt_version == 2:
+    if payload.prompt_version == 2 or payload.prompt_version == 3:
         code_generations.with_prompt_prepared(payload.prompt)
 
     with TelemetryInstrumentator().watch(payload.telemetry):
@@ -225,15 +241,24 @@ def _resolve_code_generations_anthropic(
     )
 
 
+def _resolve_code_generations_anthropic_chat(
+    payload: SuggestionsRequest,
+    generations_anthropic_chat_factory: Factory[CodeGenerations],
+) -> CodeGenerations:
+    return generations_anthropic_chat_factory(
+        model__name=payload.model_name,
+        model__stop_sequences=["</new_code>"],
+    )
+
+
 def _suggestion_choices(text: str) -> list:
     return [SuggestionsResponse.Choice(text=text)] if text else []
 
 
-def track_snowplow_event(
+def _suggestion_requested_snowplow_event(
     req: Request,
     payload: SuggestionsRequest,
-    snowplow_instrumentator: SnowplowInstrumentator,
-):
+) -> SnowplowEvent:
     language = lang_from_filename(payload.current_file.file_name) or ""
     if language:
         language = language.name.lower()
@@ -244,21 +269,40 @@ def track_snowplow_event(
     if not gitlab_realm and req.user and req.user.claims:
         gitlab_realm = req.user.claims.gitlab_realm
 
-    snowplow_instrumentator.watch(
-        telemetry=payload.telemetry,
-        prefix_length=len(payload.current_file.content_above_cursor),
-        suffix_length=len(payload.current_file.content_below_cursor),
-        language=language,
-        user_agent=req.headers.get("User-Agent", ""),
-        gitlab_realm=gitlab_realm if gitlab_realm else "",
-        gitlab_instance_id=req.headers.get(X_GITLAB_INSTANCE_ID_HEADER, ""),
-        gitlab_global_user_id=req.headers.get(X_GITLAB_GLOBAL_USER_ID_HEADER, ""),
-        gitlab_host_name=req.headers.get(X_GITLAB_HOST_NAME_HEADER, ""),
-        gitlab_saas_namespace_ids=list(
-            CommaSeparatedStrings(
-                req.headers.get(X_GITLAB_SAAS_NAMESPACE_IDS_HEADER, "")
-            )
-        ),
+    request_counts = [
+        RequestCount(
+            requests=stats.requests,
+            accepts=stats.accepts,
+            errors=stats.errors,
+            lang=stats.lang,
+            model_engine=stats.model_engine,
+            model_name=stats.model_name,
+        )
+        for stats in payload.telemetry
+    ]
+
+    return SnowplowEvent(
+        context=SnowplowEventContext(
+            request_counts=request_counts,
+            prefix_length=len(payload.current_file.content_above_cursor),
+            suffix_length=len(payload.current_file.content_below_cursor),
+            language=language,
+            user_agent=req.headers.get("User-Agent", ""),
+            gitlab_realm=gitlab_realm if gitlab_realm else "",
+            gitlab_instance_id=req.headers.get(X_GITLAB_INSTANCE_ID_HEADER, ""),
+            gitlab_global_user_id=req.headers.get(X_GITLAB_GLOBAL_USER_ID_HEADER, ""),
+            gitlab_host_name=req.headers.get(X_GITLAB_HOST_NAME_HEADER, ""),
+            gitlab_saas_duo_pro_namespace_ids=list(
+                CommaSeparatedStrings(
+                    req.headers.get(X_GITLAB_SAAS_DUO_PRO_NAMESPACE_IDS_HEADER, "")
+                )
+            ),
+            gitlab_saas_namespace_ids=list(
+                CommaSeparatedStrings(
+                    req.headers.get(X_GITLAB_SAAS_NAMESPACE_IDS_HEADER, "")
+                )
+            ),
+        )
     )
 
 

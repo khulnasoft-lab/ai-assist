@@ -52,6 +52,7 @@ class SnowplowEventContext:
     gitlab_global_user_id: str
     gitlab_host_name: str
     gitlab_saas_namespace_ids: list[int]
+    gitlab_saas_duo_pro_namespace_ids: list[int]
 
 
 @dataclass
@@ -61,6 +62,8 @@ class SnowplowEvent:
     context: Optional[SnowplowEventContext] = None
     category: str = "code_suggestions"
     action: str = "suggestion_requested"
+    label: str = None
+    value: int = None
 
 
 class Client(ABC):
@@ -98,9 +101,15 @@ class SnowplowClient(Client):
             event: A domain event which is transformed to Snowplow StructuredEvent for tracking.
         """
         structured_event = StructuredEvent(
-            context=[SelfDescribingJson(self.SCHEMA, asdict(event.context))],
+            context=(
+                [SelfDescribingJson(self.SCHEMA, asdict(event.context))]
+                if event.context
+                else None
+            ),
             category=event.category,
             action=event.action,
+            label=event.label,
+            value=event.value,
         )
 
         self.tracker.track(structured_event)

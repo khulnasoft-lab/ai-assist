@@ -15,26 +15,43 @@ You'll need:
 - `docker compose` >= 1.28
 - [`gcloud` CLI](https://cloud.google.com/docs/authentication/provide-credentials-adc#how-to)
 
-If you're working locally, you'll also need other tools to build a
-[`tree-sitter`](https://tree-sitter.github.io/tree-sitter/) library:
-
-- `gcc`
-
 ### Google Cloud SDK
 
-Install and setup cloud sdk by following the [GCP docs](https://cloud.google.com/sdk/docs/install). Post installation, authorize your google account to setup credentials using the command - `gcloud init`.
+Set up a Google Cloud project with access to the Vertex AI API and authenticate to it locally by following [these instructions](https://docs.gitlab.com/ee/development/ai_features/#gcp-vertex).
 
-## Developing
+## Testing
 
-Before submitting merge requests, run lints and tests with the following commands
-from the root of the repository.
+This project uses [Pytest](https://docs.pytest.org/en/stable/) for testing.
+To run the entire test suite, you can use the following command:
 
 ```shell
-# Lint python files
-make lint
-
-# Run tests
 make test
+```
+
+To see test coverage, you can run the following command:
+
+```shell
+make test-coverage
+```
+
+This will run all the tests, output coverage in the terminal and generate an HTML report.
+You can view the HTML report by running:
+
+```shell
+open htmlcov/index.html
+```
+
+## Linting
+
+This project uses the following linting tools:
+
+- [Black](https://black.readthedocs.io/) for code style formatting.
+- [isort](https://pycqa.github.io/isort/) for sorting imports.
+
+To lint the entire projects, you can use the following command:
+
+```shell
+make lint
 ```
 
 There is an [internal recording](https://youtu.be/SXfLOYm4zS4) for GitLab members that provides an overview of this project.
@@ -71,75 +88,80 @@ Below described the configuration per component
 
 ### API
 
-All parameters for the API are available from `api/config/config.py` which heavily relies on environment variables. An
-overview of all environment variables used and their default value, if you want to deviate you should make them
-available in a `.env`:
+All parameters for the API are available from `api/config/config.py` which heavily relies on environment
+variables. All supported environment variables with default values for development are specified in
+`example.env`.
 
-```shell
-API_EXTERNAL_PORT=5001  # External port for the API used in docker-compose
-METRICS_EXTERNAL_PORT=8082  # External port for the /metrics endpoint used in docker-compose
-AIGW_VERTEX_TEXT_MODEL__PROJECT=ai-enablement-dev-69497ba7
-AIGW_FASTAPI__API_HOST=0.0.0.0
-AIGW_FASTAPI__API_PORT=5000
-AIGW_FASTAPI__METRICS_HOST=0.0.0.0
-AIGW_FASTAPI__METRICS_PORT=8082
-# AIGW_FASTAPI__DOCS_URL=None  # To disable docs on the API endpoint
-# AIGW_FASTAPI__OPENAPI_URL=None  # To disable docs on the API endpoint
-# AIGW_FASTAPI__REDOC_URL=None  # To disable docs on the API endpoint
-# ANTHROPIC_API_KEY="SECRET_KEY_HERE" # To authenticate requests to the Anthropic models API
-AIGW_AUTH__BYPASS_EXTERNAL=False  # Can be used for local development to bypass the GitLab server side check
-AIGW_GITLAB_URL=https://gitlab.com/  # Can be changed to GDK: http://127.0.0.1:3000/
-AIGW_GITLAB_API_URL=https://gitlab.com/api/v4/  # Can be changed to GDK: http://127.0.0.1:3000/api/v4/
-```
-
-Note that the `AIGW_FASTAPI__xxx_URL` values must either be commented out or
-prefaced with a valid route that begins with `/`. `python-dotenv` will
-treat any value as a string, so specifying `None` maps to the Python
-value `'None'`.
+`python-dotenv` will treat any value as a string, so specifying `None` maps to the Python value `'None'`.
 
 ## How to run the server locally
 
-1. Create virtualenv and init shell: `poetry shell`
-1. Install dependencies: `poetry install`
+1. Clone project and change to project directory.
+1. Run `mise install` (recommended) or `asdf install`.
+   - To install `mise`, see [instruction](https://mise.jdx.dev/getting-started.html).
+1. Create virtualenv and init shell: `poetry shell`.
+1. Install dependencies: `poetry install`.
 1. Copy the `example.env` file to `.env`: `cp example.env .env`
 1. Update the `.env` file in the root folder with the following variables:
 
    ```shell
-   AIGW_AUTH__BYPASS_EXTERNAL=true
-   AIGW_VERTEX_TEXT_MODEL__PROJECT=ai-enablement-dev-69497ba7
-   AIGW_FASTAPI__DOCS_URL=/docs
-   AIGW_FASTAPI__OPENAPI_URL=/openapi.json
-   AIGW_FASTAPI__API_PORT=5052
+   ANTHROPIC_API_KEY=<API_KEY>
    ```
 
-1. Ensure you're authenticated with the `gcloud` CLI by running `gcloud auth application-default login`
-1. Start the model-gateway server locally: `poetry run ai_gateway`
-1. Open `http://0.0.0.0:5052/docs` in your browser and run any requests to the model
+1. You can enable hot reload by setting the `AIGW_FASTAPI__RELOAD` environment variable to `true` in the `.env` file.
+1. Ensure you're authenticated with the `gcloud` CLI by running `gcloud auth application-default login`.
+1. Start the model-gateway server locally: `poetry run ai_gateway`.
+1. Open `http://localhost:5052/docs` in your browser and run any requests to the model.
 
-### Faking out AI models
+### Mocking AI model responses
 
-If you do not require real models to run and evaluate inputs, you can fake out these dependencies
-by setting the `USE_FAKE_MODELS` environment variable. This will return a canned response for
-code suggestions, while allowing you to run an otherwise fully functional model gateway.
+If you do not require real models to run and evaluate the input data, you can mock the model responses
+by setting the environment variable `AIGW_MOCK_MODEL_RESPONSES=true`.
+The models will start echoing the given prompts, while allowing you to run a fully functional AI gateway.
 
 This can be useful for testing middleware, request/response interface contracts, logging, and other
 uses cases that do not require an AI model to execute.
 
 ### Logging requests and responses during development
 
-AI Gateway workflow includes additional pre- and post-processing steps.
-If you want to log data between different steps for development purposes,
-please update the `.env` file by setting the following variables:
+AI Gateway workflow includes additional pre and post-processing steps. By default, the log level is `INFO` and
+application writes log to `stdout`. If you want to log data between different steps for development purposes
+and to a file, please update the `.env` file by setting the following variables:
 
 ```shell
 AIGW_LOGGING__LEVEL=debug
 AIGW_LOGGING__TO_FILE=../modelgateway_debug.log
 ```
 
+### Set OIDC providers
+
+When `AIGW_AUTH__BYPASS_EXTERNAL` is true, OIDC provider discovery is skipped.
+
+To test OIDC, set the following in `.env`:
+
+```shell
+AIGW_AUTH__BYPASS_EXTERNAL=false
+
+# To test GitLab SaaS instance as OIDC provider
+AIGW_GITLAB_URL=http://127.0.0.1:3000/
+AIGW_GITLAB_API_URL=http://127.0.0.1:3000/api/v4/
+
+# To test CustomersDot as OIDC provider
+AIGW_CUSTOMER_PORTAL_URL=http://127.0.0.1:5000
+```
+
 ## Local development using GDK
 
-You can either run `make develop-local` or `docker-compose -f docker-compose.dev.yaml up --build --remove-orphans` this
-will run the API. If you need to change configuration for a Docker Compose service and add it to `docker-compose.override.yaml`.
+### Prerequisites
+
+Make sure you have credentials for a Google Cloud project (with the Vertex API enabled) located at `~/.config/gcloud/application_default_credentials.json`.
+This should happen automatically when you run `gcloud auth application-default login`. If for any reason this JSON file is at a
+different path, you will need to override the `volumes` configuration by creating or updating a `docker-compose.override.yaml` file.
+
+### Running the API
+
+You can either run `make develop-local` or `docker-compose -f docker-compose.dev.yaml up --build --remove-orphans`.
+If you need to change configuration for a Docker Compose service, you can add it to `docker-compose.override.yaml`.
 Any changes made to services in this file will be merged into the default settings.
 
 Next open the VS Code extension project, and run the development version of the GitLab Workflow extension locally. See [Configuring Development Environment](https://gitlab.com/gitlab-org/gitlab-vscode-extension/-/blob/main/CONTRIBUTING.md#configuring-development-environment) for more information.
@@ -153,20 +175,10 @@ export GITLAB_SIMULATE_SAAS=1
 gdk restart
 ```
 
-Then go to `admin/settings/general/account_and_limit` and enable `Allow use of licensed EE features`.
+Then go to `/admin/application_settings/general`, expand `Account and limit`, and enable `Allow use of licensed EE features`.
 
 You also need to make sure that the group you are allowing, is actually `ultimate` as it's an `ultimate` only feature,
-go to `admin/overview/groups` select `edit` on the group, set `plan` to `ultimate`.
-
-In GDK you need to enable the feature flags:
-
-```ruby
-rails console
-
-g = Group.find(22)  # id of your root group
-Feature.enable(:ai_assist_api)
-Feature.enable(:ai_assist_flag, g)
-```
+go to `/admin/groups` select `Edit` on the group you are using, set `Plan` to `Ultimate`.
 
 ## Authentication
 
@@ -243,7 +255,9 @@ the authenticity of the suggestion requests.
 
 Code suggestions is continuously deployed to [Runway](https://about.gitlab.com/handbook/engineering/infrastructure/platforms/tools/runway/).
 
-This deployment is serving 100% of production traffic from `codesuggestions.gitlab.com`.
+This deployment is currently available at `https://ai-gateway.runway.gitlab.net`.
+Note, however, that clients should not connect to this host directly, but use `cloud.gitlab.com/ai` instead,
+which is managed by Cloudflare and is the entry point GitLab instances use instead.
 
 When an MR gets merged, CI will build a new Docker image, and trigger a Runway downstream pipeline that will deploy this image to staging, and then production. Downstream pipelines run against the [deployment project](https://gitlab.com/gitlab-com/gl-infra/platform/runway/deployments/ai-gateway).
 
@@ -256,6 +270,10 @@ For more information and assistance, please check out:
 - [Runway - Docs](https://gitlab.com/gitlab-com/gl-infra/platform/runway/docs)
 - [Runway - Issue Tracker](https://gitlab.com/groups/gitlab-com/gl-infra/platform/runway/-/issues)
 - `#f_runway` in Slack.
+
+## Rate limiting
+
+Access to AI Gateway is subjected to rate limiting defined as part of https://gitlab.com/gitlab-com/gl-infra/scalability/-/issues/2719#note_1780449328.
 
 ## How to become a project maintainer
 

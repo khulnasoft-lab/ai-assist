@@ -12,7 +12,7 @@ You can use an Code Suggestions access token to authenticate with the API by pas
 
 ```shell
 curl --header "Authorization: Bearer <access_token>" --header "X-Gitlab-Authentication-Type: oidc" \
-  "https://codesuggestions.gitlab.com/v2/completions"
+  "http://localhost:5052/v2/code/completions"
 ```
 
 ## Code Suggestions
@@ -23,7 +23,6 @@ The v3 endpoint is aligned to the [architectural blueprint](https://docs.gitlab.
 
 ```plaintext
 POST /v3/code/completions
-POST /ai/v3/code/completions
 ```
 
 #### Completion
@@ -42,7 +41,7 @@ POST /ai/v3/code/completions
 
 ```shell
 curl --request POST \
-  --url 'https://codesuggestions.gitlab.com/v3/code/completions' \
+  --url 'http://localhost:5052/v3/code/completions' \
   --header 'Authorization: Bearer <access_token>' \
   --header 'X-Gitlab-Authentication-Type: oidc' \
   --header 'Content-Type: application/json' \
@@ -99,7 +98,7 @@ Example response:
 
 ```shell
 curl --request POST \
-  --url 'https://codesuggestions.gitlab.com/v3/code/completions' \
+  --url 'http://localhost:5052/v3/code/completions' \
   --header 'Authorization: Bearer <access_token>' \
   --header 'X-Gitlab-Authentication-Type: oidc' \
   --header 'Content-Type: application/json' \
@@ -158,9 +157,7 @@ two versions of payloads.
 
 ```plaintext
 POST /v2/completions
-POST /ai/v2/completions
 POST /v2/code/completions
-POST /ai/v2/code/completions
 ```
 
 ##### V1 Prompt
@@ -192,7 +189,7 @@ third-party model provider.
 
 ```shell
 curl --request POST \
-  --url 'https://codesuggestions.gitlab.com/v2/code/completions' \
+  --url 'http://localhost:5052/v2/code/completions' \
   --header 'Authorization: Bearer <access_token>' \
   --header 'X-Gitlab-Authentication-Type: oidc' \
   --header 'Content-Type: application/json' \
@@ -281,7 +278,7 @@ This only supports `anthropic` model provider.
 
 ```shell
 curl --request POST \
-  --url 'https://codesuggestions.gitlab.com/v2/code/completions' \
+  --url 'http://localhost:5052/v2/code/completions' \
   --header 'Authorization: Bearer <access_token>' \
   --header 'X-Gitlab-Authentication-Type: oidc' \
   --header 'Content-Type: application/json' \
@@ -359,7 +356,6 @@ two versions of payloads.
 
 ```plaintext
 POST /v2/code/generations
-POST /ai/v2/code/generations
 ```
 
 ##### V1 Prompt
@@ -391,7 +387,7 @@ third-party model provider.
 
 ```shell
 curl --request POST \
-  --url 'https://codesuggestions.gitlab.com/v2/code/generations' \
+  --url 'http://localhost:5052/v2/code/generations' \
   --header 'Authorization: Bearer <access_token>' \
   --header 'X-Gitlab-Authentication-Type: oidc' \
   --header 'Content-Type: application/json' \
@@ -480,7 +476,7 @@ This accepts prebuilt `prompt` and forwards it directly to third-party provider.
 
 ```shell
 curl --request POST \
-  --url 'https://codesuggestions.gitlab.com/v2/code/generations' \
+  --url 'http://localhost:5052/v2/code/generations' \
   --header 'Authorization: Bearer <access_token>' \
   --header 'X-Gitlab-Authentication-Type: oidc' \
   --header 'Content-Type: application/json' \
@@ -556,7 +552,6 @@ Given a prompt, the service will return response received from an AI provider as
 
 ```plaintext
 POST /v1/agent/chat
-POST /ai/v1/agent/chat
 ```
 
 | Attribute                                      | Type   | Required | Description                                                                                                                                     | Example                                               |
@@ -573,7 +568,7 @@ POST /ai/v1/agent/chat
 
 ```shell
 curl --request POST \
-  --url 'https://codesuggestions.gitlab.com/v1/chat/agent \
+  --url 'http://localhost:5052/v1/chat/agent \
   --header 'Authorization: Bearer <access_token>' \
   --header 'X-Gitlab-Authentication-Type: oidc' \
   --header 'Content-Type: application/json' \
@@ -622,7 +617,6 @@ Given a prompt template, the service will return response received from an AI pr
 
 ```plaintext
 POST /v1/x-ray/libraries
-POST /ai/v1/x-ray/libraries
 ```
 
 | Attribute                            | Type   | Required | Description                                                                                                                                     | Example                               |
@@ -637,7 +631,7 @@ POST /ai/v1/x-ray/libraries
 
 ````shell
 curl --request POST \
-  --url 'https://codesuggestions.gitlab.com/v1/x-ray/libraries' \
+  --url 'http://localhost:5052/v1/x-ray/libraries' \
   --header 'Authorization: Bearer <access_token>' \
   --header 'X-Gitlab-Authentication-Type: oidc' \
   --header 'Content-Type: application/json' \
