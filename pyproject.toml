@@ -40,6 +40,7 @@ starlette = "^0.32.0"
 httpx = "^0.27.0"
 prometheus-client = "^0.20.0"
 tree-sitter-languages = "^1.10.2"
+pytest-watch = "^4.2.0"
 
 [tool.poetry.group.test]
 optional = true
@@ -76,15 +77,11 @@ profile = "black"
 [tool.pylint.main]
 py-version = "3.10"
 jobs = 0
-load-plugins = [
-    "lints.unsafe_dependency_resolution"
-]
+load-plugins = ["lints.unsafe_dependency_resolution"]
 
 [tool.pylint.messages_control]
 disable = "all"
-enable = [
-  "unsafe-dependency-resolution"
-]
+enable = ["unsafe-dependency-resolution"]
 
 [tool.pylint.reports]
 score = "no"

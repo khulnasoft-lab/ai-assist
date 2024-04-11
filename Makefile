@@ -82,6 +82,11 @@ test: install-test-deps
 	@echo "Running tests..."
 	@poetry run pytest
 
+.PHONY: test-watch
+test-watch: install-test-deps
+	@echo "Running tests..."
+	@poetry run pytest-watch
+
 .PHONY: test-coverage
 test-coverage: install-test-deps
 	@echo "Running tests with coverage..."
