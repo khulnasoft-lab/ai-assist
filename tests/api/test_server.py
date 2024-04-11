@@ -1,4 +1,7 @@
+import asyncio
+import socket
 from typing import Iterator, cast
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi import FastAPI
@@ -8,9 +11,6 @@ from fastapi.testclient import TestClient
 from ai_gateway.api import create_fast_api_server, server
 from ai_gateway.config import Config, ConfigAuth
 from ai_gateway.container import ContainerApplication
-import socket
-from unittest.mock import MagicMock
-import asyncio
 
 _ROUTES_V1 = [
     ("/v1/chat/agent", ["POST"]),
@@ -34,14 +34,17 @@ def unused_port():
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
     return port
-  
+
+
 @pytest.fixture
 def config():
     return Config()
 
+
 @pytest.fixture
 def app():
     return FastAPI()
+
 
 @pytest.fixture
 def container_application():
@@ -99,7 +102,8 @@ class TestServerRoutes:
                 assert res.status_code == 422
             else:
                 assert False
-                
+
+
 def test_setup_router():
     app = FastAPI()
     server.setup_router(app)
@@ -109,11 +113,15 @@ def test_setup_router():
     assert any(route.path == "/v3/code/completions" for route in app.routes)
     assert any(route.path == "/monitoring/healthz" for route in app.routes)
 
+
 def test_setup_prometheus_fastapi_instrumentator():
     app = FastAPI()
     server.setup_prometheus_fastapi_instrumentator(app)
 
-    assert any("Prometheus" in middleware.cls.__name__ for middleware in app.user_middleware)
+    assert any(
+        "Prometheus" in middleware.cls.__name__ for middleware in app.user_middleware
+    )
+
 
 @pytest.mark.asyncio
 async def test_lifespan(config, app, unused_port, monkeypatch):
@@ -122,32 +130,39 @@ async def test_lifespan(config, app, unused_port, monkeypatch):
 
     def mock_default(*args, **kwargs):
         return (mock_credentials, "mocked_project_id")
+
     monkeypatch.setattr("google.auth.default", mock_default)
 
     mock_container_app = MagicMock(spec=ContainerApplication)
-    monkeypatch.setattr("ai_gateway.api.server.ContainerApplication", mock_container_app)
+    monkeypatch.setattr(
+        "ai_gateway.api.server.ContainerApplication", mock_container_app
+    )
     monkeypatch.setattr(asyncio, "get_running_loop", MagicMock())
 
     config.fastapi.metrics_port = unused_port
 
     async with server.lifespan(app, config):
         mock_container_app.assert_called_once()
-        assert mock_container_app.return_value.config.from_dict.called_once_with(config.model_dump())
+        assert mock_container_app.return_value.config.from_dict.called_once_with(
+            config.model_dump()
+        )
         assert mock_container_app.return_value.init_resources.called_once()
 
         if config.instrumentator.thread_monitoring_enabled:
             asyncio.get_running_loop.assert_called_once()
 
     assert mock_container_app.return_value.shutdown_resources.called_once()
-    
+
+
 def test_middleware_authentication(fastapi_server_app: FastAPI):
     client = TestClient(fastapi_server_app)
 
     response = client.post("/v1/chat/agent")
     assert response.status_code == 422
 
-    response = client.get("/monitoring/healthz") 
-    assert response.status_code == 200 
+    response = client.get("/monitoring/healthz")
+    assert response.status_code == 200
+
 
 def test_middleware_log_request(fastapi_server_app: FastAPI, caplog):
     client = TestClient(fastapi_server_app)

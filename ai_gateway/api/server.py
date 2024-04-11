@@ -61,6 +61,7 @@ async def lifespan(app: FastAPI, config: Config):
 
     container_application.shutdown_resources()
 
+
 def create_fast_api_server(config: Config):
 
     @asynccontextmanager
