@@ -32,35 +32,41 @@ __all__ = [
 _PROBS_ENDPOINTS = ["/monitoring/healthz", "/metrics"]
 
 
-def create_fast_api_server(config: Config):
-    @asynccontextmanager
-    async def lifespan(app: FastAPI):
-        container_application = ContainerApplication()
-        container_application.config.from_dict(config.model_dump())
-        container_application.init_resources()
+@asynccontextmanager
+async def lifespan(app: FastAPI, config: Config):
+    container_application = ContainerApplication()
+    container_application.config.from_dict(config.model_dump())
+    container_application.init_resources()
 
-        if config.instrumentator.thread_monitoring_enabled:
-            loop = asyncio.get_running_loop()
-            loop.create_task(
-                monitor_threads(
-                    loop, interval=config.instrumentator.thread_monitoring_interval
-                )
+    if config.instrumentator.thread_monitoring_enabled:
+        loop = asyncio.get_running_loop()
+        loop.create_task(
+            monitor_threads(
+                loop, interval=config.instrumentator.thread_monitoring_interval
             )
-
-        # https://github.com/trallnag/prometheus-fastapi-instrumentator/issues/10
-        log = logging.getLogger("uvicorn.error")
-        log.info(
-            "Metrics HTTP server running on http://%s:%d",
-            config.fastapi.metrics_host,
-            config.fastapi.metrics_port,
-        )
-        start_http_server(
-            addr=config.fastapi.metrics_host, port=config.fastapi.metrics_port
         )
 
-        yield
+    # https://github.com/trallnag/prometheus-fastapi-instrumentator/issues/10
+    log = logging.getLogger("uvicorn.error")
+    log.info(
+        "Metrics HTTP server running on http://%s:%d",
+        config.fastapi.metrics_host,
+        config.fastapi.metrics_port,
+    )
+    start_http_server(
+        addr=config.fastapi.metrics_host, port=config.fastapi.metrics_port
+    )
 
-        container_application.shutdown_resources()
+    yield
+
+    container_application.shutdown_resources()
+
+def create_fast_api_server(config: Config):
+
+    @asynccontextmanager
+    async def start_lifespan(app: FastAPI):
+        async with lifespan(app, config):
+            yield
 
     fastapi_app = FastAPI(
         title="GitLab Code Suggestions",
@@ -69,7 +75,7 @@ def create_fast_api_server(config: Config):
         docs_url=config.fastapi.docs_url,
         redoc_url=config.fastapi.redoc_url,
         swagger_ui_parameters={"defaultModelsExpandDepth": -1},
-        lifespan=lifespan,
+        lifespan=start_lifespan,
         middleware=[
             Middleware(RawContextMiddleware),
             Middleware(
