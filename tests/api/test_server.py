@@ -16,7 +16,6 @@ _ROUTES_V1 = [
 
 _ROUTES_V2 = [
     ("/v2/code/completions", ["POST"]),
-    ("/v2/completions", ["POST"]),  # legacy path
     ("/v2/code/generations", ["POST"]),
 ]
 

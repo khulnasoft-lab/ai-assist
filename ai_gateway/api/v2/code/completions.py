@@ -68,7 +68,6 @@ GenerationsRequestWithVersion = Annotated[
 ]
 
 
-@router.post("/completions")
 @router.post("/code/completions")
 @requires("code_suggestions")
 @feature_category("code_suggestions")
