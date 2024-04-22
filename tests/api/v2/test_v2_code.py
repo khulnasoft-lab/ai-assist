@@ -11,7 +11,6 @@ from ai_gateway.api.v2 import api_router
 from ai_gateway.auth import User, UserClaims
 from ai_gateway.code_suggestions import (
     CodeCompletions,
-    CodeCompletionsLegacy,
     CodeGenerations,
     CodeSuggestionsChunk,
     CodeSuggestionsOutput,
@@ -182,7 +181,7 @@ class TestCodeCompletions:
             code_completions_mock
         ):
             response = mock_client.post(
-                "/completions",
+                "code/completions",
                 headers={
                     "Authorization": "Bearer 12345",
                     "X-Gitlab-Authentication-Type": "oidc",
@@ -256,7 +255,7 @@ class TestCodeCompletions:
             code_completions_mock
         ):
             response = mock_client.post(
-                "/completions",
+                "code/completions",
                 headers={
                     "Authorization": "Bearer 12345",
                     "X-Gitlab-Authentication-Type": "oidc",
@@ -365,7 +364,7 @@ class TestCodeCompletions:
             ),
         )
 
-        code_completions_mock = mock.Mock(spec=CodeCompletionsLegacy)
+        code_completions_mock = mock.Mock(spec=CodeCompletions)
         code_completions_mock.execute = mock.AsyncMock(return_value=model_output)
 
         snowplow_instrumentator_mock = mock.Mock(spec=SnowplowInstrumentator)
@@ -375,11 +374,11 @@ class TestCodeCompletions:
             return_value=snowplow_instrumentator_mock
         )
 
-        with mock_container.code_suggestions.completions.vertex_legacy.override(
+        with mock_container.code_suggestions.completions.vertex.override(
             code_completions_mock
         ), mock.patch.object(mock_container, "snowplow", snowplow_container_mock):
             mock_client.post(
-                "/completions",
+                "code/completions",
                 headers={
                     "Authorization": "Bearer 12345",
                     "X-Gitlab-Authentication-Type": "oidc",
@@ -874,7 +873,7 @@ class TestUnauthorizedScopes:
             claims=UserClaims(scopes=["unauthorized_scope"]),
         )
 
-    @pytest.mark.parametrize("path", ["/completions", "/code/generations"])
+    @pytest.mark.parametrize("path", ["code/completions", "/code/generations"])
     def test_failed_authorization_scope(self, mock_client, path):
         response = mock_client.post(
             path,

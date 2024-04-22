@@ -156,7 +156,6 @@ two versions of payloads.
 - If `anthropic` model provider is selected, we uses `claude-instant-1.2`.
 
 ```plaintext
-POST /v2/completions
 POST /v2/code/completions
 ```
 
