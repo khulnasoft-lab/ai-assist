@@ -8,6 +8,7 @@ from google.cloud.aiplatform.gapic import PredictionServiceAsyncClient
 from ai_gateway.models import mock
 from ai_gateway.models.anthropic import AnthropicChatModel, AnthropicModel
 from ai_gateway.models.base import connect_anthropic, grpc_connect_vertex
+from ai_gateway.models.litellm import LiteLLMChatModel, LiteLlmModel
 from ai_gateway.models.vertex_text import (
     PalmCodeBisonModel,
     PalmCodeGeckoModel,
@@ -104,19 +105,35 @@ class ContainerModels(containers.DeclarativeContainer):
         mocked=providers.Factory(mock.LLM),
     )
 
+    # anthropic_claude = providers.Selector(
+    #     _mock_selector,
+    #     original=providers.Factory(
+    #         AnthropicModel.from_model_name, client=http_client_anthropic
+    #     ),
+    #     mocked=providers.Factory(mock.LLM),
+    # )
+
     anthropic_claude = providers.Selector(
         _mock_selector,
         original=providers.Factory(
-            AnthropicModel.from_model_name, client=http_client_anthropic
+            LiteLlmModel.create
         ),
         mocked=providers.Factory(mock.LLM),
     )
 
+    # anthropic_claude_chat = providers.Selector(
+    #     _mock_selector,
+    #     original=providers.Factory(
+    #         AnthropicChatModel.from_model_name,
+    #         client=http_client_anthropic,
+    #     ),
+    #     mocked=providers.Factory(mock.ChatModel),
+    # )
+
     anthropic_claude_chat = providers.Selector(
         _mock_selector,
         original=providers.Factory(
-            AnthropicChatModel.from_model_name,
-            client=http_client_anthropic,
+            LiteLLMChatModel.create,
         ),
         mocked=providers.Factory(mock.ChatModel),
     )
