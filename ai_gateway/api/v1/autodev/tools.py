@@ -41,33 +41,31 @@ def fetch_issue(
         log_exception(e)
         raise e
 
-
-# generate method that clones git repository using gitpython
-# it should take base_url and full_path as arguments to build https clone path
-# it should tak temp_dir argument as output directory
-
-
+class RepositoryWrapper:
 def clone_repo(
     base_url: Annotated[str, "Gitlab instance http URL"],
     project_full_path: Annotated[str, "Issue's project full path"],
     working_directory: Annotated[
         str, "Url of current working directory to clone repo into"
     ],
-):  # -> Annotated[Repo, "An instance of Git repository wrapper"]:
+)->Annotated[
+    str,
+    "Url of the clonned git repository",
+]:
     repo_url = f"{base_url}/{project_full_path}.git"
     try:
         repo = Repo.clone_from(repo_url, working_directory, allow_unsafe_protocols=True)
         repo.git.fetch("origin", "master")
         repo.git.checkout("master")
+        return repo.working_dir
     except git.exc.GitCommandError as e:
         log_exception(e)
-        raise e
+        return f"Failed to clone repository with error message: {e}"
 
 
-# generate function that reads file from Repo
 def read_file(
     working_directory: Annotated[
-        str, "Url of current working directory with git reposito"
+        str, "Url of current working directory with git repository"
     ],
     file_path: Annotated[str, "A file ulr relative to working directory with git repository"],
 ) -> Annotated[str, "File content as string"]:
@@ -76,13 +74,29 @@ def read_file(
         with open(full_name, 'r') as f:
             return f.read()
     except FileNotFoundError as e:
-        return "File {file_path} not found in {working_directory}"
-     
-    # try:
-        # with Repo(path=working_directory) as repo:
-        #     with repo.git.rev_parse("HEAD", with_exceptions=True):
-        #         blob = repo.tree(repo.head.target)[file_path]
-        #         return blob.data_stream.read().decode("utf-8")
-    # except git.exc.GitCommandError as e:
-    #     log_exception(e)
-    #     raise e
+        return f"File: {file_path} does not exist in the reposity {working_directory}"
+
+def write_file(    
+    working_directory: Annotated[
+        str, "Url of current working directory with git repository"
+    ],
+    file_path: Annotated[str, "A file ulr relative to working directory with git repository"],
+    content: Annotated[str, "File content as string"]
+) -> Annotated[str, "File content as string"]:
+    full_name = os.path.join(working_directory, file_path)
+    with open(full_name, 'w') as f:
+        return f.write(content) 
+
+def commit_and_push(
+    working_directory: Annotated[
+        str, "Url of current working directory with git repository"
+    ],
+    commit_message: Annotated[str, "Commit message"],
+    target_branch: Annotated[str, "Target branch name"],
+) -> Annotated[str, "Commit and push status message"]:
+        repo = Repo(working_directory)
+        repo.git.checkout(target_branch)
+        repo.git.add(".")
+        repo.git.commit("-m", commit_message)
+        repo.git.push("origin", target_branch)
+        return f"Commited and pushed to {target_branch} branch"
