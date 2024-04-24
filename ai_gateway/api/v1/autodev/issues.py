@@ -1,3 +1,4 @@
+import inspect
 import os
 from typing import Annotated
 import structlog
@@ -7,7 +8,7 @@ from starlette.authentication import requires
 from ai_gateway.api.feature_category import feature_category
 from ai_gateway.api.v1.autodev.typing import AutodevRequest, AutodevResponse
 from ai_gateway.api.v1.autodev.anthropic_client import AnthropicClient
-from ai_gateway.api.v1.autodev.tools import commit_and_push, fetch_issue, clone_repo, read_file, write_file
+from ai_gateway.api.v1.autodev.tools import commit_and_push, create_merge_request, fetch_issue, clone_repo, read_file, write_file
 
 from ai_gateway.models import AnthropicAPIConnectionError, AnthropicAPIStatusError
 from ai_gateway.tracking.errors import log_exception
@@ -17,6 +18,7 @@ from autogen import AssistantAgent, UserProxyAgent, ConversableAgent, register_f
 
 import tempfile
 import os
+import functools
 
 __all__ = [
     "router",
@@ -39,7 +41,8 @@ Next you write {lang} code according to the implementation plan
 Next you rewrite files with the created code according to the plan.
 Next after all actions listed in the implementation plan are completed and the source code 
 has been written to correct files you commit and push changes to a new branch. 
-When you commit and push changes you write 'TERMINATE'
+Next you create Merge Request from the branch that you pushed code to.
+When you created Merge Request you write 'TERMINATE'
 """
 
 # Then you commit changes
@@ -83,16 +86,17 @@ async def issues(
 
     completion: str
     with tempfile.TemporaryDirectory() as work_dir:
+        def set_workdir(func):
+            @functools.wraps(func)
+            def wrapped(*args, **kwargs):
+                kwargs["working_directory"] = work_dir
+                return func(*args, **kwargs)
 
-        def workdir() -> (
-            Annotated[str, "A workdir's path to clone git repositories into"]
-        ):
-            return work_dir
+            return wrapped
+
+
 
         # Register the tool signature with the assistant agent.
-        assistant.register_for_llm(
-            name="get_workdir", description="An url of current working directory to use"
-        )(workdir)
         assistant.register_for_llm(
             name="gitlab_issue_fetch",
             description="An GitLab API wrapper that fetches issue details",
@@ -104,19 +108,18 @@ async def issues(
             Once cloned it returns path to the repository. The repository is checked out to the main branch.
             You can then use repository url to read and write files to it.
             """,
-        )(clone_repo)
+        )(set_workdir(clone_repo))
         assistant.register_for_llm(
             name="read_file", description="A tool that reads file from git repository"
-        )(read_file)
+        )(set_workdir(read_file))
 
         # Register the tool function with the user proxy agent.
-        user_proxy.register_for_execution(name="get_workdir")(workdir)
         user_proxy.register_for_execution(name="gitlab_issue_fetch")(fetch_issue)
-        user_proxy.register_for_execution(name="gitlab_clone_repo")(clone_repo)
-        user_proxy.register_for_execution(name="read_file")(read_file)
+        user_proxy.register_for_execution(name="gitlab_clone_repo")(set_workdir(clone_repo))
+        user_proxy.register_for_execution(name="read_file")(set_workdir(read_file))
 
         register_function(
-            write_file,
+            set_workdir(write_file),
             caller=assistant,
             executor=user_proxy,
             name="write_file",
@@ -129,14 +132,25 @@ async def issues(
         )
 
         register_function(
-            commit_and_push,
+            set_workdir(commit_and_push),
             caller=assistant,
             executor=user_proxy,
             name="commit_and_push",
             description="""
             Create a branch with specified name, add files, commit and push the changes to the repository.
             The branch name and commit_message should be descriptive and should contain information about
-            the fix as well as the issue number. Please run this as the last step after all code has already been written.
+            the fix as well as the issue number. Please run this after all code has already been written.
+            """,
+        )
+
+        register_function(
+            create_merge_request,
+            caller=assistant,
+            executor=user_proxy,
+            name="create_merge_request",
+            description="""
+            Create GitLab Merge Request from branch with specified name.
+            Please run this as the last step after all code has been pushed to the branch
             """,
         )
 

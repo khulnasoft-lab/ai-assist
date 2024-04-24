@@ -26,7 +26,7 @@ def fetch_issue(
     "GitLab issue details including title, descrption and issue's project full path",
 ]:
     url = f"{base_url}/api/v4/projects/{project_id}/issues/{issue_id}"
-    headers = {"Private-Token": os.getenv("GITLAB_PRIVATE_TOKEN", "")}
+    headers = {"Private-Token": os.getenv("GDK_SERVICE_ACCOUNT_PAT", "")}
     try:
         response = requests.get(url, headers=headers)
         response.raise_for_status()
@@ -41,7 +41,32 @@ def fetch_issue(
         log_exception(e)
         raise e
 
-class RepositoryWrapper:
+# generate method that creates GitLab merge request using API call
+
+def create_merge_request(
+    base_url: Annotated[str, "Gitlab instance http URL"],
+    project_id: Annotated[int, "Id of the GitLab project"],
+    source_branch: Annotated[str, "The name of GitLab branch to use as source for Merge Request"],
+    title: Annotated[str, "Title for a Merge Request"],
+    description: Annotated[str, "Merge Request description"],
+):
+    url = f"{base_url}/api/v4/projects/{project_id}/merge_requests"
+    headers = {"Private-Token": os.getenv("GDK_SERVICE_ACCOUNT_PAT", "")}
+    data = {
+        "source_branch": source_branch,
+        "target_branch": "master",
+        "title": title,
+        "description": description,
+    }
+    try:
+        response = requests.post(url, headers=headers, data=data)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        log_exception(e)
+        raise e
+
+
 def clone_repo(
     base_url: Annotated[str, "Gitlab instance http URL"],
     project_full_path: Annotated[str, "Issue's project full path"],
@@ -75,6 +100,8 @@ def read_file(
             return f.read()
     except FileNotFoundError as e:
         return f"File: {file_path} does not exist in the reposity {working_directory}"
+    except IsADirectoryError:
+        return f"File: {file_path} is a directory in the reposity {working_directory} it contains {os.listdir(full_name)}"
 
 def write_file(    
     working_directory: Annotated[
@@ -95,7 +122,7 @@ def commit_and_push(
     target_branch: Annotated[str, "Target branch name"],
 ) -> Annotated[str, "Commit and push status message"]:
         repo = Repo(working_directory)
-        repo.git.checkout(target_branch)
+        repo.git.checkout("-b", target_branch)
         repo.git.add(".")
         repo.git.commit("-m", commit_message)
         repo.git.push("origin", target_branch)
