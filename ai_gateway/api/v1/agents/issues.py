@@ -52,7 +52,7 @@ def issue_fixer(input: IssueFixerInput):
             Please write code in only the language that is specified in the repository.
             Make a plan on what needs to be done. The plan should include
             1. Understand the issue
-            2. Clone the repository
+            2. Clone the repository (please use SSH to clone)
             3. Read code files to verify the issue
             5. Fix issue by writing files
             6. Write tests to confirm that your program works

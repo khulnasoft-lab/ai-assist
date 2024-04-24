@@ -4,17 +4,17 @@ from typing import Type
 import git
 
 class CloneInput(BaseModel):
-    repository_url: str = Field(description="the url for the repository to clone")
+    repository_ssh_url: str = Field(description="the ssh url for the repository to clone")
 
 class Clone(BaseTool):
     name = "clone_repository"
     description = "Clone a Git repository. Once the repository is cloned you will automatically be in the repository working directory and the main branch will already be checked out."
     args_schema: Type[BaseModel] = CloneInput
 
-    def _run(self, repository_url: str) -> str:
+    def _run(self, repository_ssh_url: str) -> str:
         """Use the tool."""
         workspace_name = self.metadata['workspace_name']
-        git.Repo.clone_from(repository_url, workspace_name)
+        git.Repo.clone_from(repository_ssh_url, workspace_name)
         return "Repository cloned successfully"
 
 class CreateBranchCommitPushInput(BaseModel):
