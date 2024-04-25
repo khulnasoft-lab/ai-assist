@@ -8,7 +8,14 @@ from starlette.authentication import requires
 from ai_gateway.api.feature_category import feature_category
 from ai_gateway.api.v1.autodev.typing import AutodevRequest, AutodevResponse
 from ai_gateway.api.v1.autodev.anthropic_client import AnthropicClient
-from ai_gateway.api.v1.autodev.tools import commit_and_push, create_merge_request, fetch_issue, clone_repo, read_file, write_file
+from ai_gateway.api.v1.autodev.tools import (
+    commit_and_push,
+    create_merge_request,
+    fetch_issue,
+    clone_repo,
+    read_file,
+    write_file,
+)
 
 from ai_gateway.models import AnthropicAPIConnectionError, AnthropicAPIStatusError
 from ai_gateway.tracking.errors import log_exception
@@ -57,20 +64,21 @@ async def issues(
     request: Request,
     payload: AutodevRequest,
 ):
-    anthropic_llm_config = {
-        # Choose your model name.
-        "model": "claude-3-sonnet-20240229",
-        # You need to provide your API key here.
-        "api_key": os.getenv("ANTHROPIC_API_KEY"),
-        "base_url": "https://api.anthropic.com",
-        "api_type": "anthropic",
-        "model_client_cls": "AnthropicClient",
+    local_llm_config = {
+        "config_list": [
+            {
+                "model": "NotRequired",  # Loaded with LiteLLM command
+                "api_key": "NotRequired",  # Not needed
+                "base_url": "http://0.0.0.0:4000",  # Your LiteLLM URL
+            }
+        ],
+        "cache_seed": None,  # Turns off caching, useful for testing different models
     }
 
     assistant = ConversableAgent(
         name="assistant",
         system_message=CODE_ASSISTANT_SYSTEM_PROMPT.format(lang="ruby"),
-        llm_config=anthropic_llm_config,
+        llm_config=local_llm_config,
         max_consecutive_auto_reply=150,
         human_input_mode="NEVER",
     )
@@ -86,6 +94,7 @@ async def issues(
 
     completion: str
     with tempfile.TemporaryDirectory() as work_dir:
+
         def set_workdir(func):
             @functools.wraps(func)
             def wrapped(*args, **kwargs):
@@ -93,8 +102,6 @@ async def issues(
                 return func(*args, **kwargs)
 
             return wrapped
-
-
 
         # Register the tool signature with the assistant agent.
         assistant.register_for_llm(
@@ -115,7 +122,9 @@ async def issues(
 
         # Register the tool function with the user proxy agent.
         user_proxy.register_for_execution(name="gitlab_issue_fetch")(fetch_issue)
-        user_proxy.register_for_execution(name="gitlab_clone_repo")(set_workdir(clone_repo))
+        user_proxy.register_for_execution(name="gitlab_clone_repo")(
+            set_workdir(clone_repo)
+        )
         user_proxy.register_for_execution(name="read_file")(set_workdir(read_file))
 
         register_function(
@@ -154,7 +163,7 @@ async def issues(
             """,
         )
 
-        assistant.register_model_client(model_client_cls=AnthropicClient)
+        # assistant.register_model_client(model_client_cls=AnthropicClient)
 
         result = user_proxy.initiate_chat(
             assistant,
