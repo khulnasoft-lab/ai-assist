@@ -45,10 +45,15 @@ Your job is to follow implementation plan provided by software architect.
 You write {lang} code according to the implementation plan
 """
 
-GITLAB_OPERATOR_SYSTEM_PROMPT = """
+GITLAB_READER_SYSTEM_PROMPT = """
 You are a GitLab expert. 
 Your task is to use GitLab API
 in order to get necessary information from it.
+Your task is to use GitLab API to make changes on GitLab instance
+"""
+
+GITLAB_WRITER_SYSTEM_PROMPT = """
+You are a GitLab expert. 
 Your task is to use GitLab API to make changes on GitLab instance
 """
 
@@ -96,30 +101,56 @@ async def issues(
         max_consecutive_auto_reply=150,
     )
 
-    gl_operator_agent = ConversableAgent(
-        name="gl_operator_agent",
-        system_message=GITLAB_OPERATOR_SYSTEM_PROMPT + TERMINATE_COMMAND,
+    gl_reader_agent = ConversableAgent(
+        name="gl_reader_agent",
+        system_message=GITLAB_READER_SYSTEM_PROMPT + TERMINATE_COMMAND,
         llm_config=anthropic_llm_config,
         max_consecutive_auto_reply=150,
         human_input_mode="NEVER",
     )
 
-    gl_tool_exec = ConversableAgent(
-        name="GitLab_Agent_Tool_Executor",
+    gl_reader_tool_exec = ConversableAgent(
+        name="GitLab_Reader_Agent_Tool_Executor",
         human_input_mode="NEVER",
         llm_config=False,
         is_termination_msg=is_terminating
     )
     
-    gl_tool_exec.register_nested_chats(
+    gl_reader_tool_exec.register_nested_chats(
         [
             {
-                "recipient":  gl_operator_agent,
+                "recipient":  gl_reader_agent,
                 "summary_method": "last_msg",
             }
         ],
         trigger=human_admin
     )
+
+    gl_writer_agent = ConversableAgent(
+        name="gl_writer_agent",
+        system_message=GITLAB_WRITER_SYSTEM_PROMPT + TERMINATE_COMMAND,
+        llm_config=anthropic_llm_config,
+        max_consecutive_auto_reply=150,
+        human_input_mode="NEVER",
+    )
+
+    gl_writer_tool_exec = ConversableAgent(
+        name="GitLab_Writer_Agent_Tool_Executor",
+        human_input_mode="NEVER",
+        llm_config=False,
+        is_termination_msg=is_terminating
+    )
+    
+    gl_writer_tool_exec.register_nested_chats(
+        [
+            {
+                "recipient":  gl_writer_agent,
+                "summary_method": "last_msg",
+            }
+        ],
+        trigger=human_admin
+    )
+
 
     architect_agent = ConversableAgent(
         name="architect_agent",
@@ -183,11 +214,11 @@ async def issues(
 
 
         # Register the tool signature with the assistant agent.
-        gl_operator_agent.register_for_llm(
+        gl_reader_agent.register_for_llm(
             name="gitlab_issue_fetch",
             description="An GitLab API wrapper that fetches issue details",
         )(fetch_issue)
-        gl_operator_agent.register_for_llm(
+        gl_reader_agent.register_for_llm(
             name="gitlab_clone_repo",
             description="""
             A Git source conteroll version wrapper that clone repository to working directory. 
@@ -202,8 +233,8 @@ async def issues(
             )(set_workdir(read_file))
 
         # Register the tool function with the user proxy agent.
-        gl_tool_exec.register_for_execution(name="gitlab_issue_fetch")(fetch_issue)
-        gl_tool_exec.register_for_execution(name="gitlab_clone_repo")(set_workdir(clone_repo))
+        gl_reader_tool_exec.register_for_execution(name="gitlab_issue_fetch")(fetch_issue)
+        gl_reader_tool_exec.register_for_execution(name="gitlab_clone_repo")(set_workdir(clone_repo))
         architec_tool_exec.register_for_execution(name="read_file")(set_workdir(read_file))
         developer_agent_tool_exec.register_for_execution(name="read_file")(set_workdir(read_file))
     
@@ -220,17 +251,17 @@ async def issues(
             """,
         )
 
-        # register_function(
-        #     set_workdir(commit_and_push),
-        #     caller=gl_operator_agent,
-        #     executor=gl_tool_exec,
-        #     name="commit_and_push",
-        #     description="""
-        #     Create a branch with specified name, add files, commit and push the changes to the repository.
-        #     The branch name and commit_message should be descriptive and should contain information about
-        #     the fix as well as the issue number. Please run this after all code has already been written.
-        #     """,
-        # )
+        register_function(
+            set_workdir(commit_and_push),
+            caller=gl_writer_agent,
+            executor=gl_writer_tool_exec,
+            name="commit_and_push",
+            description="""
+            Create a branch with specified name, add files, commit and push the changes to the repository.
+            The branch name and commit_message should be descriptive and should contain information about
+            the fix as well as the issue number. Please run this after all code has already been written.
+            """,
+        )
 
         # register_function(
         #     create_merge_request,
@@ -246,7 +277,7 @@ async def issues(
         result = human_admin.initiate_chats(
             [
                 {
-                    "recipient": gl_tool_exec, #gl_tool_exec,
+                    "recipient": gl_reader_tool_exec, #gl_reader_tool_exec,
                     "summary_method": "last_msg",
                     "max_turns": 1,    
                     "message": f"""
@@ -270,20 +301,20 @@ async def issues(
                     "max_turns": 1,    
                     "message": f"""
                     With provided information follow directly the implementation plan for issue with id  {payload.issue_id}
-                    Once you completed following implemetation plan write 'TERMINATE'
+                    Once you completed following implemetation plan write 'Implementation is completed. TERMINATE'
                     """
                 }
-                # ,{
-                #     "recipient": gl_tool_exec, #gl_tool_exec,
-                #     "summary_method": "last_msg",
-                #     "max_turns": 1,    
-                #     "message": f"""
-                #     Implementation of the issue with id  {payload.issue_id} 
-                #     in project with id {payload.project_id} from gitlab instance with url {payload.instance_url} 
-                #     is completed now. Please create new branch and push it onto GitLab instance.
-                #     Once changes are pushed to GitLab write 'TERMINATE'    
-                #     """
-                # }
+                ,{
+                    "recipient": gl_writer_tool_exec, #gl_tool_exec,
+                    "summary_method": "last_msg",
+                    "max_turns": 1,    
+                    "message": f"""
+                    Implementation of the issue with id  {payload.issue_id} 
+                    in project with id {payload.project_id} from gitlab instance with url {payload.instance_url} 
+                    is completed now. Please create new branch and push it onto GitLab instance.
+                    Once changes are pushed to GitLab write 'TERMINATE'    
+                    """
+                }
             ]
         )
         # result = human_admin.initiate_chat(
