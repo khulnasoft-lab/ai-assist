@@ -7,7 +7,6 @@ from starlette.authentication import requires
 
 from ai_gateway.api.feature_category import feature_category
 from ai_gateway.api.v1.autodev.typing import AutodevRequest, AutodevResponse
-from ai_gateway.api.v1.autodev.anthropic_client import AnthropicClient
 from ai_gateway.api.v1.autodev.tools import (
     commit_and_push,
     create_merge_request,
