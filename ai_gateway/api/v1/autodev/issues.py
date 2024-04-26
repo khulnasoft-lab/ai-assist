@@ -263,16 +263,16 @@ async def issues(
             """,
         )
 
-        # register_function(
-        #     create_merge_request,
-        #     caller=gl_operator_agent,
-        #     executor=tool_executor,
-        #     name="create_merge_request",
-        #     description="""
-        #     Create GitLab Merge Request from branch with specified name.
-        #     Please run this as the last step after all code has been pushed to the branch
-        #     """,
-        # )
+        register_function(
+            create_merge_request,
+            caller=gl_writer_agent,
+            executor=gl_writer_tool_exec,
+            name="create_merge_request",
+            description="""
+            Create GitLab Merge Request from branch with specified name.
+            Please run this as the last step after all code has been pushed to the branch
+            """,
+        )
 
         result = human_admin.initiate_chats(
             [
@@ -311,66 +311,15 @@ async def issues(
                     "message": f"""
                     Implementation of the issue with id  {payload.issue_id} 
                     in project with id {payload.project_id} from gitlab instance with url {payload.instance_url} 
-                    is completed now. Please create new branch and push it onto GitLab instance.
-                    Once changes are pushed to GitLab write 'TERMINATE'    
+                    is completed now. Please follow steps listed below:
+                    1. Create new branch and push it onto GitLab instance.
+                    2. Create Merge Request from the branch.
+                    3. Write: changes has been pushed and MR has been created thuss 'TERMINATE'    
                     """
                 }
             ]
         )
-        # result = human_admin.initiate_chat(
-        #     recipient=gl_tool_exec,
-        #     max_turns=1, 
-        #     summary_method="last_msg",
-        #     message=f"""
-        #              Please fetch all issue information issue with id  {payload.issue_id} 
-        #              in project with id {payload.project_id} from gitlab instance with url {payload.instance_url} and clone project repository.
-        #              Once you fetched issue details and cloned repository summarise all information into a single message titled with 'Assignement details:'
-        #              """
-        # )
-        # result = gl_tool_exec.initiate_chat(
-        #     gl_operator_agent,
-        #     summary_method="last_msg",
-        #     # summary_prompt="Summarize all collected information and write 'TERMINATE'",
-        #     message=f"""
-        #              Please fetch all issue information issue with id  {payload.issue_id} 
-        #              in project with id {payload.project_id} from gitlab instance with url {payload.instance_url} and clone project repository.
-        #              Once you fetched issue details and cloned repository summarise all information into a single message titled with 'Assignement details:'
-        #              """
-        # )
-        breakpoint()
+
         completion = result.summary
 
     return AutodevResponse(response=completion)
-
-
-        # for agent in [architect_agent, assistant, gl_operator_agent, group_chat_manager]:
-        #     agent.register_model_client(model_client_cls=AnthropicClient)
-
-        # nested_chats = [
-        #     {
-        #         "recipient": group_chat_manager,
-        #         "summary_method": "reflection_with_llm",
-        #     },
-        #     {
-        #         "recipient": code_writer_agent,
-        #         "message": "Write a Python script to verify the arithmetic operations is correct.",
-        #         "summary_method": "reflection_with_llm",
-        #     },
-        #     {
-        #         "recipient": poetry_agent,
-        #         "message": "Write a poem about it.",
-        #         "max_turns": 1,
-        #         "summary_method": "last_msg",
-        #     },
-        # ]
-        # result = gl_operator_agent.initiate_chat(
-        #     group_chat_manager,
-        #     message = f"""
-        #     Please implement issue with id {payload.issue_id} in project with id {payload.project_id} from gitlab instance with url {payload.instance_url}
-        #     Once source code changes are ready commit them to a new branch and create Merge Request
-        #     """,
-        #     summary_method="reflection_with_llm"
-        # )
-        # completion = result.summary
-
-
