@@ -96,34 +96,6 @@ async def issues(
         max_consecutive_auto_reply=150,
     )
 
-    assistant = ConversableAgent(
-        name="assistant",
-        system_message=CODE_ASSISTANT_SYSTEM_PROMPT.format(lang="ruby") + TERMINATE_COMMAND,
-        llm_config=local_llm_config,
-        max_consecutive_auto_reply=150,
-        human_input_mode="NEVER",
-    )
-
-    # group_chat = GroupChat(
-    #     agents=group_chat_participants,
-    #     messages=[],
-    #     max_round=60
-    # )
-    # group_chat_manager = GroupChatManager(
-    #     groupchat=group_chat,
-    #     llm_config=anthropic_llm_config,
-    #     system_message=group_chat.introductions_msg()
-    # )
-
-    # gl_operator_agent.register_nested_chats(
-    #     trigger=[group_chat_manager, *group_chat_participants],
-    #     chat_queue=[
-    #         {
-                    
-    #         }
-    #     ]
-    # )
-
     gl_operator_agent = ConversableAgent(
         name="gl_operator_agent",
         system_message=GITLAB_OPERATOR_SYSTEM_PROMPT + TERMINATE_COMMAND,
@@ -163,16 +135,34 @@ async def issues(
         is_termination_msg=is_terminating,
     )
 
-    # def reflection_message_architect(recipient, messages, sender, config):
-    #     print("Architect Reflecting...", "yellow")
-    #     return f". \n\n {recipient.chat_messages_for_summary(sender)[-1]['content']}"
-
-
-
     architec_tool_exec.register_nested_chats(
         [
             {
                 "recipient": architect_agent,
+                "summary_method": "last_msg",
+            }
+        ],
+        trigger=human_admin
+    )
+
+    developer_agent = ConversableAgent(
+        name="Developer Agent",
+        system_message=CODE_ASSISTANT_SYSTEM_PROMPT.format(lang="ruby") + TERMINATE_COMMAND,
+        llm_config=local_llm_config,
+        max_consecutive_auto_reply=150,
+        human_input_mode="NEVER",
+    )
+
+    developer_agent_tool_exec = UserProxyAgent(
+        name="Developer_Tool_Executor",
+        human_input_mode="NEVER",
+        is_termination_msg=is_terminating,
+    )
+
+    developer_agent_tool_exec.register_nested_chats(
+        [
+            {
+                "recipient": developer_agent,
                 "summary_method": "last_msg",
             }
         ],
@@ -206,7 +196,7 @@ async def issues(
             """,
         )(set_workdir(clone_repo))
 
-        for agent in [architect_agent, assistant]:
+        for agent in [architect_agent, developer_agent]:
             agent.register_for_llm(
                 name="read_file", description="A tool that reads file from git repository"
             )(set_workdir(read_file))
@@ -215,7 +205,44 @@ async def issues(
         gl_tool_exec.register_for_execution(name="gitlab_issue_fetch")(fetch_issue)
         gl_tool_exec.register_for_execution(name="gitlab_clone_repo")(set_workdir(clone_repo))
         architec_tool_exec.register_for_execution(name="read_file")(set_workdir(read_file))
+        developer_agent_tool_exec.register_for_execution(name="read_file")(set_workdir(read_file))
     
+        register_function(
+            set_workdir(write_file),
+            caller=developer_agent,
+            executor=developer_agent_tool_exec,
+            name="write_file",
+            description="""
+            A tool that writes file to git repository in working directory. 
+            Supplied content is going to overwrite existing file fully. 
+            If you use this tool to update file, you neeed to pass complete file content to
+            rewrite.
+            """,
+        )
+
+        # register_function(
+        #     set_workdir(commit_and_push),
+        #     caller=gl_operator_agent,
+        #     executor=gl_tool_exec,
+        #     name="commit_and_push",
+        #     description="""
+        #     Create a branch with specified name, add files, commit and push the changes to the repository.
+        #     The branch name and commit_message should be descriptive and should contain information about
+        #     the fix as well as the issue number. Please run this after all code has already been written.
+        #     """,
+        # )
+
+        # register_function(
+        #     create_merge_request,
+        #     caller=gl_operator_agent,
+        #     executor=tool_executor,
+        #     name="create_merge_request",
+        #     description="""
+        #     Create GitLab Merge Request from branch with specified name.
+        #     Please run this as the last step after all code has been pushed to the branch
+        #     """,
+        # )
+
         result = human_admin.initiate_chats(
             [
                 {
@@ -237,6 +264,26 @@ async def issues(
                     Once you formluated the implemetation plan repeat it with title 'Implementation Plan:' and write 'TERMINATE'
                     """
                 }
+                ,{
+                    "recipient": developer_agent_tool_exec,
+                    "summary_method": "last_msg",
+                    "max_turns": 1,    
+                    "message": f"""
+                    With provided information follow directly the implementation plan for issue with id  {payload.issue_id}
+                    Once you completed following implemetation plan write 'TERMINATE'
+                    """
+                }
+                # ,{
+                #     "recipient": gl_tool_exec, #gl_tool_exec,
+                #     "summary_method": "last_msg",
+                #     "max_turns": 1,    
+                #     "message": f"""
+                #     Implementation of the issue with id  {payload.issue_id} 
+                #     in project with id {payload.project_id} from gitlab instance with url {payload.instance_url} 
+                #     is completed now. Please create new branch and push it onto GitLab instance.
+                #     Once changes are pushed to GitLab write 'TERMINATE'    
+                #     """
+                # }
             ]
         )
         # result = human_admin.initiate_chat(
@@ -263,41 +310,7 @@ async def issues(
         completion = result.summary
 
     return AutodevResponse(response=completion)
-        # register_function(
-        #     set_workdir(write_file),
-        #     caller=assistant,
-        #     executor=tool_executor,
-        #     name="write_file",
-        #     description="""
-        #     A tool that writes file to git repository in working directory. 
-        #     Supplied content is going to overwrite existing file fully. 
-        #     If you use this tool to update file, you neeed to pass complete file content to
-        #     rewrite.
-        #     """,
-        # )
 
-        # register_function(
-        #     set_workdir(commit_and_push),
-        #     caller=gl_operator_agent,
-        #     executor=tool_executor,
-        #     name="commit_and_push",
-        #     description="""
-        #     Create a branch with specified name, add files, commit and push the changes to the repository.
-        #     The branch name and commit_message should be descriptive and should contain information about
-        #     the fix as well as the issue number. Please run this after all code has already been written.
-        #     """,
-        # )
-
-        # register_function(
-        #     create_merge_request,
-        #     caller=gl_operator_agent,
-        #     executor=tool_executor,
-        #     name="create_merge_request",
-        #     description="""
-        #     Create GitLab Merge Request from branch with specified name.
-        #     Please run this as the last step after all code has been pushed to the branch
-        #     """,
-        # )
 
         # for agent in [architect_agent, assistant, gl_operator_agent, group_chat_manager]:
         #     agent.register_model_client(model_client_cls=AnthropicClient)
