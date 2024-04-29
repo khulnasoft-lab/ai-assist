@@ -91,6 +91,7 @@ def create_fast_api_server(config: Config):
                     oidc_providers={
                         "Gitlab": config.gitlab_url,
                         "CustomersDot": config.customer_portal_url,
+                         "AiGateway": config.ai_gateway_url, #TODO ADD openid jwks and private key
                     }
                 ),
                 bypass_auth=config.auth.bypass_external,

@@ -7,6 +7,7 @@ from starlette_context import context
 _FEATURE_CATEGORIES = [
     "code_suggestions",
     "duo_chat",
+    "user_jwt",
 ]
 
 

@@ -49,6 +49,7 @@ class GitLabOidcProvider(AuthProvider):
         scopes = []
 
         try:
+            # TODO: Add openid-config for ai gw
             jwt_claims = jwt.decode(
                 token, jwks, audience=self.AUDIENCE, algorithms=[self.ALGORITHM]
             )
