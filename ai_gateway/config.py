@@ -117,7 +117,7 @@ class Config(BaseSettings):
     gitlab_url: str = "https://gitlab.com"
     gitlab_api_url: str = "https://gitlab.com/api/v4/"
     customer_portal_url: str = "https://customers.gitlab.com"
-    ai_gateway_url: str = "https://codesuggestions.gitlab.com"
+    ai_gateway_url: str = "https://cloud.gitlab.com/ai"
 
     jwt_private_key: str = """
 -----BEGIN PRIVATE KEY-----

@@ -25,14 +25,14 @@ from ai_gateway.config import (
                 "AIGW_GITLAB_URL": "http://gitlab.test",
                 "AIGW_GITLAB_API_URL": "http://api.gitlab.test",
                 "AIGW_CUSTOMER_PORTAL_URL": "http://customer.gitlab.test",
-                "AIGW_AI_GATEWAY_URL": "http://codesuggestions.gitlab.test",
+                "AIGW_AI_GATEWAY_URL": "https://cloud.gitlab.test/ai",
                 "AIGW_MOCK_MODEL_RESPONSES": "true",
             },
             Config(
                 gitlab_url="http://gitlab.test",
                 gitlab_api_url="http://api.gitlab.test",
                 customer_portal_url="http://customer.gitlab.test",
-                ai_gateway_url="http://codesuggestions.gitlab.test",
+                ai_gateway_url="http://cloud.gitlab.test/ai",
                 # pydantic-settings does not allow omitting the prefix if validation_alias is set for the field
                 aigw_mock_model_responses=True,  # type: ignore[call-arg]
             ),
