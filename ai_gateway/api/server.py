@@ -19,6 +19,7 @@ from ai_gateway.api.middleware import (
     MiddlewareModelTelemetry,
 )
 from ai_gateway.api.monitoring import router as http_monitoring_router
+from ai_gateway.api.oidc import router as oidc_router
 from ai_gateway.api.v1 import api_router as http_api_router_v1
 from ai_gateway.api.v2 import api_router as http_api_router_v2
 from ai_gateway.api.v3 import api_router as http_api_router_v3
@@ -33,7 +34,7 @@ __all__ = [
     "create_fast_api_server",
 ]
 
-_SKIP_ENDPOINTS = ["/monitoring/healthz", "/metrics"]
+_SKIP_ENDPOINTS = ["/monitoring/healthz", "/metrics", "/.well-known/openid-configuration", "/oauth/discovery/keys"]
 
 
 @asynccontextmanager
@@ -126,6 +127,7 @@ def setup_router(app: FastAPI):
     sub_router.include_router(http_api_router_v2, prefix="/v2")
     sub_router.include_router(http_api_router_v3, prefix="/v3")
     sub_router.include_router(http_monitoring_router)
+    sub_router.include_router(oidc_router)
 
     app.include_router(sub_router)
 
