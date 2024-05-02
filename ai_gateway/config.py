@@ -116,6 +116,7 @@ class Config(BaseSettings):
 
     gitlab_url: str = "https://gitlab.com"
     gitlab_api_url: str = "https://gitlab.com/api/v4/"
+    gitlab_experimental_token: Optional[str] = None
     customer_portal_url: str = "https://customers.gitlab.com"
 
     mock_model_responses: bool = Field(

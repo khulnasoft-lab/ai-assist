@@ -2,6 +2,7 @@ import urllib.parse
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from datetime import datetime, timedelta
+from typing import Optional
 
 import requests
 from jose import JWTError, jwt
@@ -22,6 +23,27 @@ class AuthProvider(ABC):
     @abstractmethod
     def authenticate(self, *args, **kwargs) -> User:
         pass
+
+
+class ExperimentalEndpointsProvider(AuthProvider):
+    def __init__(self, gl_token: Optional[str]):
+        self.gl_token = gl_token
+
+    def authenticate(self, token: str) -> User:
+        gitlab_realm = ("",)
+        scopes = ["experiments"]
+        authenticated = False
+
+        if self.gl_token and token and self.gl_token == token:
+            authenticated = True
+
+        return User(
+            authenticated=authenticated,
+            claims=UserClaims(
+                gitlab_realm=gitlab_realm,
+                scopes=scopes,
+            ),
+        )
 
 
 class GitLabOidcProvider(AuthProvider):

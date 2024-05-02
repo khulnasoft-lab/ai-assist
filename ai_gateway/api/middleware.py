@@ -186,14 +186,17 @@ class MiddlewareAuthentication(Middleware):
         AUTH_HEADER = "Authorization"
         AUTH_TYPE_HEADER = "X-Gitlab-Authentication-Type"
         OIDC_AUTH = "oidc"
+        PAT_AUTH = "pat"
 
         def __init__(
             self,
             oidc_auth_provider: AuthProvider,
+            pat_auth_provider: AuthProvider,
             bypass_auth: bool,
             path_resolver: _PathResolver,
         ):
             self.oidc_auth_provider = oidc_auth_provider
+            self.pat_auth_provider = pat_auth_provider
             self.bypass_auth = bypass_auth
             self.path_resolver = path_resolver
 
@@ -248,6 +251,11 @@ class MiddlewareAuthentication(Middleware):
             if auth_type == self.OIDC_AUTH:
                 return self.oidc_auth_provider
 
+            if auth_type == self.PAT_AUTH:
+                return self.pat_auth_provider
+
+            # PAT AUTH only allowed for experimental endpoints do not expose as
+            # API error
             raise AuthenticationError(
                 "Invalid authentication token type - only OIDC is supported"
             )
@@ -261,6 +269,7 @@ class MiddlewareAuthentication(Middleware):
     def __init__(
         self,
         oidc_auth_provider: AuthProvider,
+        pat_auth_provider: AuthProvider,
         bypass_auth: bool = False,
         skip_endpoints: Optional[list] = None,
     ):
@@ -269,7 +278,7 @@ class MiddlewareAuthentication(Middleware):
         super().__init__(
             AuthenticationMiddleware,
             backend=MiddlewareAuthentication.AuthBackend(
-                oidc_auth_provider, bypass_auth, path_resolver
+                oidc_auth_provider, pat_auth_provider, bypass_auth, path_resolver
             ),
             on_error=MiddlewareAuthentication.on_auth_error,
         )

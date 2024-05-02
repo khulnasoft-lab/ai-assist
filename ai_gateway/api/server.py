@@ -13,6 +13,7 @@ from starlette.requests import Request
 from starlette_context import context
 from starlette_context.middleware import RawContextMiddleware
 
+from ai_gateway.api.experimental import api_router as http_api_router_experimental
 from ai_gateway.api.middleware import (
     MiddlewareAuthentication,
     MiddlewareLogRequest,
@@ -23,6 +24,7 @@ from ai_gateway.api.v1 import api_router as http_api_router_v1
 from ai_gateway.api.v2 import api_router as http_api_router_v2
 from ai_gateway.api.v3 import api_router as http_api_router_v3
 from ai_gateway.auth import GitLabOidcProvider
+from ai_gateway.auth.providers import ExperimentalEndpointsProvider
 from ai_gateway.config import Config
 from ai_gateway.container import ContainerApplication
 from ai_gateway.instrumentators.threads import monitor_threads
@@ -88,11 +90,14 @@ def create_fast_api_server(config: Config):
             ),
             MiddlewareLogRequest(skip_endpoints=_SKIP_ENDPOINTS),
             MiddlewareAuthentication(
-                GitLabOidcProvider(
+                oidc_auth_provider=GitLabOidcProvider(
                     oidc_providers={
                         "Gitlab": config.gitlab_url,
                         "CustomersDot": config.customer_portal_url,
                     }
+                ),
+                pat_auth_provider=ExperimentalEndpointsProvider(
+                    config.gitlab_experimental_token
                 ),
                 bypass_auth=config.auth.bypass_external,
                 skip_endpoints=_SKIP_ENDPOINTS,
@@ -134,6 +139,7 @@ def setup_router(app: FastAPI):
     sub_router.include_router(http_api_router_v1, prefix="/v1")
     sub_router.include_router(http_api_router_v2, prefix="/v2")
     sub_router.include_router(http_api_router_v3, prefix="/v3")
+    sub_router.include_router(http_api_router_experimental, prefix="/experimental")
     sub_router.include_router(http_monitoring_router)
 
     app.include_router(sub_router)
