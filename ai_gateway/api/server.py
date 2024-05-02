@@ -34,7 +34,12 @@ __all__ = [
     "create_fast_api_server",
 ]
 
-_SKIP_ENDPOINTS = ["/monitoring/healthz", "/metrics", "/.well-known/openid-configuration", "/oauth/discovery/keys"]
+_SKIP_ENDPOINTS = [
+    "/monitoring/healthz",
+    "/metrics",
+    "/.well-known/openid-configuration",
+    "/oauth/discovery/keys",
+]
 
 
 @asynccontextmanager

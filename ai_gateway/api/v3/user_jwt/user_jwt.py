@@ -1,11 +1,11 @@
-import structlog
-
-from fastapi import APIRouter, Request
 from datetime import datetime, timedelta
+
+import structlog
+from fastapi import APIRouter, Request
+from jose import JWTError, jwt
 
 from ai_gateway.api.feature_category import feature_category
 from ai_gateway.auth.authentication import requires
-from jose import JWTError, jwt
 from ai_gateway.tracking.errors import log_exception
 
 __all__ = [
@@ -67,7 +67,7 @@ def request_user_jwt(
             "uuid": "request.user.id",
         }
 
-        token = jwt.encode(claims, private_key_test, algorithm='RS256')
+        token = jwt.encode(claims, private_key_test, algorithm="RS256")
 
         return token
     except JWTError as err:

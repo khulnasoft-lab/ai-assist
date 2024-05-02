@@ -13,9 +13,9 @@ router = APIRouter(
 
 @router.get("/.well-known/openid-configuration")
 async def provider():
-    return JSONResponse({'test': True}, status_code=200)
+    return JSONResponse({"test": True}, status_code=200)
 
 
 @router.get("/oauth/discovery/keys")
 async def keys():
-    return JSONResponse({'test': False}, status_code=200)
+    return JSONResponse({"test": False}, status_code=200)
