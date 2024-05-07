@@ -10,8 +10,10 @@ _FEATURE_CATEGORIES = [
 ]
 
 
-def feature_category(name: str):
-    if name not in _FEATURE_CATEGORIES:
+def feature_category(
+    name: str | list[dict[str, str]] = "", bypass_validation: bool = False
+):
+    if type(name) == "str" and name not in _FEATURE_CATEGORIES:
         raise ValueError(f"Invalid feature category: {name}")
 
     def decorator(func: typing.Callable) -> typing.Callable:

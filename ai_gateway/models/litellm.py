@@ -3,6 +3,7 @@ from typing import AsyncIterator, Callable, Optional, Union
 
 from litellm import CustomStreamWrapper, acompletion
 
+from ai_gateway.models.anthropic import KindAnthropicModel
 from ai_gateway.models.base import (
     KindModelProvider,
     ModelMetadata,
@@ -14,13 +15,13 @@ from ai_gateway.models.base_chat import ChatModelBase, Message
 
 __all__ = [
     "LiteLlmChatModel",
-    "KindLiteLlmModel",
+    "KindSelfHostedModel",
 ]
 
 STUBBED_API_KEY = "stubbed-api-key"
 
 
-class KindLiteLlmModel(str, Enum):
+class KindSelfHostedModel(str, Enum):
     MISTRAL = "mistral"
     MIXTRAL = "mixtral"
 
@@ -30,16 +31,43 @@ class KindLiteLlmModel(str, Enum):
         return "openai/" + self.value
 
 
+class AllModels(Enum):
+    pass
+
+
+for e in KindSelfHostedModel:
+    setattr(AllModels, e.name, e.value)
+
+for e in KindAnthropicModel:
+    setattr(AllModels, e.name, e.value)
+
+
 class LiteLlmChatModel(ChatModelBase):
     def __init__(
         self,
-        model_name: KindLiteLlmModel = KindLiteLlmModel.MISTRAL,
+        model_name: KindSelfHostedModel = KindSelfHostedModel.MISTRAL,
+        model_engine: str = None,
         endpoint: Optional[str] = None,
     ):
         self.endpoint = endpoint
+
+        if type(model_name) is KindSelfHostedModel:
+            model_name = model_name.chat_model()
+            model_engine = KindModelProvider.LITELLM.value
+            self.options = {
+                "api_key": self.api_key,
+                "api_base": self.endpoint,
+                "timeout": 30.0,
+                "stop": ["</new_code>"],
+            }
+        elif type(model_name) is KindAnthropicModel:
+            model_name = model_name.value
+            model_engine = KindModelProvider.ANTHROPIC.value
+            self.options = {}
+
         self._metadata = ModelMetadata(
-            name=model_name.chat_model(),
-            engine=KindModelProvider.LITELLM.value,
+            name=model_name,
+            engine=model_engine,
         )
 
     @property
@@ -66,10 +94,7 @@ class LiteLlmChatModel(ChatModelBase):
                 top_p=top_p,
                 top_k=top_k,
                 max_tokens=max_output_tokens,
-                api_key=STUBBED_API_KEY,
-                api_base=self.endpoint,
-                timeout=30.0,
-                stop=["</new_code>"],
+                **self.options,
             )
 
             if stream:
@@ -104,12 +129,20 @@ class LiteLlmChatModel(ChatModelBase):
     @classmethod
     def from_model_name(
         cls,
-        name: Union[str, KindLiteLlmModel],
+        name: Union[str, KindSelfHostedModel, KindAnthropicModel],
         endpoint: Optional[str] = None,
     ):
         try:
-            kind_model = KindLiteLlmModel(name)
+            model_name = KindSelfHostedModel(name)
         except ValueError:
+            pass
+
+        try:
+            model_name = KindAnthropicModel(name)
+        except ValueError:
+            pass
+
+        if model_name is None:
             raise ValueError(f"no model found by the name '{name}'")
 
-        return cls(model_name=kind_model, endpoint=endpoint)
+        return cls(model_name=model_name, endpoint=endpoint)
