@@ -1,4 +1,4 @@
-from typing import Annotated, List, Literal, Optional
+from typing import Annotated, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, StringConstraints, field_validator
 from pydantic.types import Json
@@ -11,13 +11,16 @@ __all__ = [
 ]
 
 
-class PackageFilePromptPayload(BaseModel):
-    prompt: Annotated[str, StringConstraints(max_length=400000)]
+class BasePayload(BaseModel):
     provider: Literal[KindModelProvider.ANTHROPIC]
     model: Literal[KindAnthropicModel.CLAUDE_INSTANT_1_2, KindAnthropicModel.CLAUDE_2_0]
 
 
-class AnyPromptComponent(BaseModel):
+class PackageFilePromptPayload(BasePayload):
+    prompt: Annotated[str, StringConstraints(max_length=400000)]
+
+
+class BaseRequestComponent(BaseModel):
     type: Annotated[str, StringConstraints(strip_whitespace=True, max_length=255)]
     payload: Json
     metadata: Optional[
@@ -36,14 +39,30 @@ class AnyPromptComponent(BaseModel):
         return dictionary
 
 
-class PackageFilePromptComponent(AnyPromptComponent):
+class PackageFilePromptComponent(BaseRequestComponent):
     type: Literal["x_ray_package_file_prompt"] = "x_ray_package_file_prompt"
     payload: PackageFilePromptPayload
 
 
+class PackageLibraryComponent(BaseModel):
+    name: str
+    version: str
+
+
+class PackageFileLibrariesPayload(BasePayload):
+    type_description: str
+    libraries: List[PackageLibraryComponent]
+
+
+class PackageFileLibrariesComponent(BaseRequestComponent):
+    type: Literal["x_ray_package_libraries_list"] = "x_ray_package_libraries_list"
+    payload: PackageFileLibrariesPayload
+
+
 class XRayRequest(BaseModel):
     prompt_components: Annotated[
-        List[PackageFilePromptComponent], Field(min_length=1, max_length=1)
+        List[Union[PackageFilePromptComponent, PackageFileLibrariesComponent]],
+        Field(min_length=1, max_length=1),
     ]
 
 

@@ -619,15 +619,19 @@ Given a prompt template, the service will return response received from an AI pr
 POST /v1/x-ray/libraries
 ```
 
-| Attribute                            | Type   | Required | Description                                                                                                                                     | Example                               |
-| ------------------------------------ | ------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| `prompt_components`                  | array  | yes      | The list of prompt components comliant with https://docs.gitlab.com/ee/architecture/blueprints/ai_gateway/index.html#protocol (max_len: **1**). |                                       |
-| `prompt_components.type`             | string | yes      | The type of the prompt component (max_len: **255**).                                                                                            | `x_ray_package_file_prompt`           |
-| `prompt_components.payload`          | hash   | yes      | The data of the prompt component.                                                                                                               |                                       |
-| `prompt_components.payload.prompt`   | string | yes      | The complete AI prompt.                                                                                                                         | `Human: Tell me fun fact about ducks` |
-| `prompt_components.payload.provider` | string | yes      | The AI provider for which the prompt is designed for.                                                                                           | `anthropic`                           |
-| `prompt_components.payload.model`    | string | yes      | The AI model for which the prompt is designed for.                                                                                              | `claude-2.0`                          |
-| `prompt_components.metadata`         | hash   | no       | The metadata of the prompt component. Only string - string key value pairs are accepted (max_len: **10**).                                      |                                       |
+| Attribute                                       | Type   | Required | Description                                                                                                                                     | Example                        |
+|-------------------------------------------------|--------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------|
+| `prompt_components`                             | array  | yes      | The list of prompt components comliant with https://docs.gitlab.com/ee/architecture/blueprints/ai_gateway/index.html#protocol (max_len: **1**). |                                |
+| `prompt_components.type`                        | string | yes      | The type of the prompt component (max_len: **255**).                                                                                            | `x_ray_package_libraries_list` |
+| `prompt_components.payload`                     | hash   | yes      | The data of the prompt component.                                                                                                               |                                |
+| `prompt_components.payload.prompt`              | string | no       | DEPRECATED: An optional pre-built prompt to be passed directly to the model (to be removed in upcoming release).                                | `Human: Tell me fun fact about ducks` |
+| `prompt_components.payload.libraries`           | array  | yes      | An array of objects representing the libraries used in the prompt component.                                                                    |                                |
+| `prompt_components.payload.libraries[].name`    | string | yes      | The name of the library.                                                                                                                        | `kaminari`                     |
+| `prompt_components.payload.libraries[].version` | string | yes      | The version of the library.                                                                                                                     | `1.2.2`                        |
+| `prompt.components.payload.description`         | string | yes      | What kind of libraries they are (i.e. how they should be referenced in the prompt).                                                             | `Ruby gems`                    |
+| `prompt_components.payload.provider`            | string | yes      | The AI provider for which the prompt is designed for.                                                                                           | `anthropic`                    |
+| `prompt_components.payload.model`               | string | yes      | The AI model for which the prompt is designed for.                                                                                              | `claude-2.0`                   |
+| `prompt_components.metadata`                    | hash   | no       | The metadata of the prompt component. Only string - string key value pairs are accepted (max_len: **10**).                                      |                                |
 
 ````shell
 curl --request POST \
@@ -638,11 +642,15 @@ curl --request POST \
   --data-raw '{
   "prompt_components": [
     {
-      "type":"x_ray_package_file_prompt",
+      "type":"x_ray_package_libraries_list",
       "payload":{
-        "prompt": "Human: Parse following content of Gemfile. Respond using only valid JSON with list of libraries available to use and their short description\n\nGemfile content:\n\n```\n gem kaminari\n```\n\n Assistant: {{\n\"libraries\":[{{\"name\": \"",
         "provider": "anthropic",
-        "model": "claude-2.0"
+        "model": "claude-2.0",
+        "description": "Ruby gems",
+        "libraries": [
+          "name": "kaminari",
+          "version": "1.2.2"
+        ]
       },
       "metadata": {
         "scannerVersion": "0.0.1"

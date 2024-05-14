@@ -1,0 +1,24 @@
+name: Libraries
+model: claude-2.0
+prompt_templates:
+  describe: |
+    Human: I have the following list of {{ type_description }}. Could you provide a description for each of them?
+  
+    The response should be in the text format with every description on a separate line.
+    For example:
+  
+    <NAME1> {{ separator }} <DESCRIPTION1>
+    <NAME2> {{ separator }} <DESCRIPTION2>
+    ...
+  
+    Response should be enclosed in <description></description> XML tags.
+    Here is the list of {{ type_description }} in <libs></libs> XML tags:
+    
+    <libs>
+    {%- for lib in libs %}
+    {{ lib.name }} {{ lib.version }}
+    {%- endfor %}
+    </libs>
+  
+  
+    Assistant: <description>
