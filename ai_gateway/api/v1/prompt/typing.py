@@ -12,16 +12,6 @@ class PromptRequest(Request):
     prompt_version: str
 
 
-class PromptRequestBody(BaseModel):
-    variables: dict
-
-
-class PromptResponse(BaseModel):
-    prompt_name: str
-    prompt_version: str
-    response: str
-
-
 class RawResponse(BaseModel):
     response: str
 

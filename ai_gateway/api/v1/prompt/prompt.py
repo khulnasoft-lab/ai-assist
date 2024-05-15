@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from starlette.authentication import requires
 
 from ai_gateway.api.feature_category import feature_category
-from ai_gateway.api.v1.prompt.typing import PromptRequestBody, PromptResponse, RawRequestBody, RawResponse
+from ai_gateway.api.v1.prompt.typing import RawRequestBody, RawResponse
 from ai_gateway.async_dependency_resolver import (
     get_chat_anthropic_claude_factory_provider,
 )
@@ -32,23 +32,25 @@ log = structlog.stdlib.get_logger("prompt")
 router = APIRouter()
 
 
-@router.post("/{prompt_name}/{prompt_version}", response_model=PromptResponse, status_code=status.HTTP_200_OK)
+@router.post("/{prompt_name}/{prompt_version}", response_model=RawResponse, status_code=status.HTTP_200_OK)
 @requires("duo_chat")
 @feature_category("duo_chat")
 async def prompt(
     prompt_name,
     prompt_version,
     request: Request,
-    prompt_options: PromptRequestBody,
+    prompt_options: RawRequestBody,
     anthropic_claude_factory: FactoryAggregate = Depends(
         get_chat_anthropic_claude_factory_provider
     ),
 ):
-    template = await _fetch_prompt(prompt_name, prompt_version, prompt_options.variables)
+    json_variables = prompt_options.prompt_components[0].payload.variables
+
+    template = await _fetch_prompt(prompt_name, prompt_version, json_variables)
 
     completion = await _generate_completion(anthropic_claude_factory, template)
 
-    return PromptResponse(prompt_name=prompt_name, prompt_version=prompt_version, response=completion.text)
+    return RawResponse(response=completion.text)
 
 
 @router.post("/raw", response_model=RawResponse, status_code=status.HTTP_200_OK)
