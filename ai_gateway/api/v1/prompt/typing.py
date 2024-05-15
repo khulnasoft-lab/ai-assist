@@ -1,5 +1,5 @@
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, Json
 from fastapi import Request
 __all__ = [
     "PromptRequestBody",
@@ -28,7 +28,7 @@ class RawResponse(BaseModel):
 
 class PromptPayload(BaseModel):
     content: str
-    variables: Optional[dict] = {}
+    variables: Optional[Json] = {}
 
 
 class PromptMetadata(BaseModel):

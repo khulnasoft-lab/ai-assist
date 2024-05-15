@@ -1,3 +1,4 @@
+import json
 from time import time
 from typing import AsyncIterator, Union
 
@@ -61,9 +62,9 @@ async def raw(
     ),
 ):
     template = raw_prompt_request.prompt_components[0].payload.content
-    variables = raw_prompt_request.prompt_components[0].payload.variables
-
-    template = template.format(**variables)
+    json_variables = raw_prompt_request.prompt_components[0].payload.variables
+    # variables = json.loads(json_variables)
+    template = template.format(**json_variables)
 
     completion = await _generate_completion(anthropic_claude_factory, template)
 
