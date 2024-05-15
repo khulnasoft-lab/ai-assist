@@ -55,12 +55,15 @@ async def prompt(
 @feature_category("duo_chat")
 async def raw(
     request: Request,
-    prompt_options: RawRequestBody,
+    raw_prompt_request: RawRequestBody,
     anthropic_claude_factory: FactoryAggregate = Depends(
         get_chat_anthropic_claude_factory_provider
     ),
 ):
-    template = prompt_options.prompt.format(**prompt_options.variables)
+    template = raw_prompt_request.prompt_components[0].payload.content
+    variables = raw_prompt_request.prompt_components[0].payload.variables
+
+    template = template.format(**variables)
 
     completion = await _generate_completion(anthropic_claude_factory, template)
 
@@ -95,6 +98,7 @@ async def _generate_completion(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Anthropic API Connection Error.",
         )
+
 
 async def _fetch_prompt(prompt_name: str, prompt_version: str, variables: dict) -> str:
     base_url = f'http://localhost:3000/api/v4/projects/19/ai/prompts/compat/langchain/commits/_/{prompt_name}/{prompt_version}'
