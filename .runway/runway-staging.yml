@@ -11,6 +11,10 @@ spec:
   image: "$CI_REGISTRY_IMAGE/model-gateway:${CI_COMMIT_SHORT_SHA}"
   regions:
     - us-east4
+    # Note: `us-west2` does not support Generative AI.
+    # We are working on removing it cleanly.
+    # See https://gitlab.com/gitlab-org/gitlab/-/issues/462147#note_1920036909
+    - us-west2
     - asia-northeast3
     - europe-west2
     - europe-west3
