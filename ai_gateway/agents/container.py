@@ -9,6 +9,4 @@ __all__ = [
 
 class ContainerAgents(containers.DeclarativeContainer):
     models = providers.DependenciesContainer()
-    agent_registry = providers.Singleton(
-        LocalAgentRegistry, client=models.http_client_anthropic
-    )
+    agent_registry = providers.Singleton(LocalAgentRegistry)

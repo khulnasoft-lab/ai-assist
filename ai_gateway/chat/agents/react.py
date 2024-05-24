@@ -1,6 +1,8 @@
 import re
-from typing import Any, AsyncIterator, Callable, Optional, Sequence, TypedDict
+from typing import AsyncIterator, Callable, Optional, Sequence, TypedDict
 
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables.base import Runnable
 from pydantic import BaseModel, ConfigDict, Field
 
 from ai_gateway.agents.base import Agent
@@ -14,7 +16,6 @@ from ai_gateway.chat.agents.base import (
 from ai_gateway.chat.agents.utils import convert_prompt_to_messages
 from ai_gateway.chat.tools import BaseTool
 from ai_gateway.chat.typing import Context
-from ai_gateway.models import Message, TextGenModelChunk
 
 __all__ = [
     "TypeReActAgentAction",
@@ -151,30 +152,19 @@ class ReActAgent(BaseSingleActionAgent):
     render_agent_scratchpad: Callable[[list[AgentStep]], str] = (
         agent_scratchpad_plain_text_renderer
     )
-    model_kwargs: dict[str, Any] = {"stop_sequences": ["Observation:"]}
+    stop: list[str] = ["Observation:"]
 
-    async def invoke(
-        self, *, inputs: ReActAgentInputs, **kwargs: Any
-    ) -> TypeReActAgentAction:
-        messages = self._convert_prompt_to_messages(inputs)
+    async def invoke(self, *, inputs: ReActAgentInputs) -> TypeReActAgentAction:
+        response = self._chain(inputs).invoke({})
 
-        model_kwargs = {**self.model_kwargs, **kwargs}
-        response = await self.agent.model.generate(
-            messages, stream=False, **model_kwargs
-        )
-        parsed_action = self.parser.parse(response.text)
+        parsed_action = self.parser.parse(response.content)
 
         return parsed_action
 
     async def stream(
-        self, *, inputs: ReActAgentInputs, **kwargs
+        self, *, inputs: ReActAgentInputs
     ) -> AsyncIterator[TypeReActAgentAction]:
-        messages = self._convert_prompt_to_messages(inputs)
-
-        model_kwargs = {**self.model_kwargs, **kwargs}
-        actions_stream = await self.agent.model.generate(
-            messages, stream=True, **model_kwargs
-        )
+        chain = self._chain(inputs)
 
         state = _StreamState(
             tool_action=None,
@@ -183,7 +173,7 @@ class ReActAgent(BaseSingleActionAgent):
             len_thought=0,
         )
 
-        async for action in self._parse_stream(actions_stream):
+        async for action in self._stream_chain(chain):
             if isinstance(action, AgentToolAction):
                 state["tool_action"] = action
             elif isinstance(action, ReActAgentFinalAnswer) and len(action.text) > 0:
@@ -200,19 +190,19 @@ class ReActAgent(BaseSingleActionAgent):
         if tool_action := state.get("tool_action", None):
             yield tool_action
 
-    async def _parse_stream(
-        self, stream: AsyncIterator[TextGenModelChunk]
+    async def _stream_chain(
+        self, chain: Runnable
     ) -> AsyncIterator[TypeReActAgentAction]:
-        text = ""
-        async for chunk in stream:
+        content = ""
+        async for chunk in chain.astream({}):
             try:
-                text += chunk.text
-                yield self.parser.parse(text)
+                content += chunk.content
+                yield self.parser.parse(content)
             except ValueError:
                 pass
 
-    def _convert_prompt_to_messages(self, inputs: ReActAgentInputs) -> list[Message]:
-        return convert_prompt_to_messages(
+    def _chain(self, inputs: ReActAgentInputs) -> Runnable:
+        messages = convert_prompt_to_messages(
             self.agent,
             tools=self.tools,
             context_type=self.inputs.context.type if self.inputs.context else None,
@@ -221,3 +211,7 @@ class ReActAgent(BaseSingleActionAgent):
             agent_scratchpad=self.render_agent_scratchpad(self.agent_scratchpad),
             context_content=inputs.context.content if inputs.context else "",
         )
+
+        prompt = ChatPromptTemplate.from_messages(messages)
+
+        return prompt | self.agent.model.bind(stop=self.stop)

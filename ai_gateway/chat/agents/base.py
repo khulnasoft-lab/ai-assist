@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, AsyncIterator, Generic, Optional, TypeVar
+from typing import AsyncIterator, Generic, Optional, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -50,13 +50,11 @@ class BaseSingleActionAgent(ABC, BaseModel, Generic[TypeAgentInputs, TypeAgentAc
     )
 
     @abstractmethod
-    async def invoke(
-        self, *, inputs: TypeAgentInputs, **kwargs: Any
-    ) -> TypeAgentAction:
+    async def invoke(self, *, inputs: TypeAgentInputs) -> TypeAgentAction:
         pass
 
     @abstractmethod
     async def stream(
-        self, *, inputs: TypeAgentInputs, **kwargs: Any
+        self, *, inputs: TypeAgentInputs
     ) -> AsyncIterator[TypeAgentAction]:
         pass

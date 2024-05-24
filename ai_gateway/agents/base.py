@@ -1,15 +1,14 @@
 from typing import Any, Dict
 
 from jinja2 import BaseLoader, Environment
-
-from ai_gateway.models.base_chat import ChatModelBase
+from langchain_core.language_models.chat_models import BaseChatModel
 
 __all__ = ["Agent"]
 
 
 class Agent:
     def __init__(
-        self, name: str, model: ChatModelBase, prompt_templates: Dict[str, str]
+        self, name: str, model: BaseChatModel, prompt_templates: Dict[str, str]
     ):
         self.name = name
         self.model = model

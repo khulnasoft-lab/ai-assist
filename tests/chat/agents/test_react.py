@@ -1,7 +1,9 @@
 from typing import Dict
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from langchain_anthropic import ChatAnthropic
+from langchain_core.messages import AIMessage
 
 from ai_gateway.agents.base import Agent
 from ai_gateway.chat.agents import AgentStep
@@ -19,7 +21,7 @@ from ai_gateway.chat.agents.utils import convert_prompt_to_messages
 from ai_gateway.chat.tools import BaseTool
 from ai_gateway.chat.tools.gitlab import GitLabToolkit
 from ai_gateway.chat.typing import Context
-from ai_gateway.models import ChatModelBase, Role, SafetyAttributes, TextGenModelOutput
+from ai_gateway.models import Role
 
 
 @pytest.fixture
@@ -137,6 +139,7 @@ class TestReActPlainTextParser:
 
 class TestReActAgent:
     @pytest.mark.asyncio
+    @patch("langchain_core.language_models.chat_models.BaseChatModel.invoke")
     @pytest.mark.parametrize(
         (
             "question",
@@ -206,6 +209,7 @@ class TestReActAgent:
     )
     async def test_invoke(
         self,
+        mock_invoke: Mock,
         prompt_templates: Dict[str, str],
         question: str,
         chat_history: list[str] | str,
@@ -213,16 +217,15 @@ class TestReActAgent:
         context: Context | None,
         expected_action: ReActAgentToolAction | ReActAgentFinalAnswer,
     ):
-        def _model_generate(*args, **kwargs):
+        def _model_invoke(*args, **kwargs):
             text = expected_action.log[
                 len("Thought: ") :
             ]  # our default Assistant prompt template already contains "Thought: "
-            return TextGenModelOutput(
-                text=text, score=0, safety_attributes=SafetyAttributes()
-            )
+            return AIMessage(text)
 
-        model = Mock(spec=ChatModelBase)
-        model.generate = AsyncMock(side_effect=_model_generate)
+        mock_invoke.side_effect = _model_invoke
+
+        model = ChatAnthropic(model="claude-3-sonnet-20240229")
 
         inputs = ReActAgentInputs(
             question=question, chat_history=chat_history, context=context
@@ -247,6 +250,7 @@ class TestReActAgent:
         )
 
     @pytest.mark.asyncio
+    @patch("langchain_core.language_models.chat_models.BaseChatModel.astream")
     @pytest.mark.parametrize(
         (
             "question",
@@ -300,6 +304,7 @@ class TestReActAgent:
     )
     async def test_stream(
         self,
+        mock_astream: AsyncMock,
         prompt_templates: Dict[str, str],
         question: str,
         chat_history: list[str] | str,
@@ -308,20 +313,17 @@ class TestReActAgent:
         model_response: str,
         expected_actions: list[ReActAgentToolAction | ReActAgentFinalAnswer],
     ):
-        async def _model_generate(*args, **kwargs):
+        async def _model_astream(*args, **kwargs):
             text = model_response[
                 len("Thought: ") :
             ]  # our default Assistant prompt template already contains "Thought: "
 
             for i in range(0, len(text), 5):
-                yield TextGenModelOutput(
-                    text=text[i : i + 5],
-                    score=0,
-                    safety_attributes=SafetyAttributes(),
-                )
+                yield AIMessage(text[i : i + 5])
 
-        model = Mock(spec=ChatModelBase)
-        model.generate = AsyncMock(side_effect=_model_generate)
+        mock_astream.side_effect = _model_astream
+
+        model = ChatAnthropic(model="claude-3-sonnet-20240229")
 
         inputs = ReActAgentInputs(
             question=question, chat_history=chat_history, context=context
@@ -369,18 +371,19 @@ class TestReActAgent:
             agent_scratchpad=agent_scratchpad_formatted,
             context_content=context.content if context else "",
         )
-        messages = {message.role: message for message in messages}
+        messages = dict(messages)
 
-        base_agent.model.generate.assert_called_once_with(
-            list(messages.values()), stream=stream, stop_sequences=["Observation:"]
-        )
+        if stream:
+            mock = base_agent.model.astream
+        else:
+            mock = base_agent.model.invoke
 
-        assert chat_history_formatted in messages[Role.SYSTEM].content
-        assert context.content in messages[Role.SYSTEM].content if context else True
-        assert (
-            "{context_content}" not in messages[Role.SYSTEM].content
-            if context
-            else True
-        )
-        assert question in messages[Role.USER].content
-        assert agent_scratchpad_formatted in messages[Role.ASSISTANT].content
+        mock.assert_called_once()
+        actual_messages = map(lambda x: x.content, mock.call_args.args[0].to_messages())
+        assert list(actual_messages) == list(messages.values())
+
+        assert chat_history_formatted in messages[Role.SYSTEM]
+        assert context.content in messages[Role.SYSTEM] if context else True
+        assert "{context_content}" not in messages[Role.SYSTEM] if context else True
+        assert question in messages[Role.USER]
+        assert agent_scratchpad_formatted in messages[Role.ASSISTANT]

@@ -11,7 +11,7 @@ from ai_gateway.models import Message, Role
         (
             Agent(name="Test", model=None, prompt_templates={"user": "user prompt"}),
             {},
-            [Message(role=Role.USER, content="user prompt")],
+            [(Role.USER, "user prompt")],
         ),
         (
             Agent(
@@ -20,7 +20,7 @@ from ai_gateway.models import Message, Role
                 prompt_templates={"user": "user prompt {{text}}"},
             ),
             {"text": "!"},
-            [Message(role=Role.USER, content="user prompt !")],
+            [(Role.USER, "user prompt !")],
         ),
         (
             Agent(
@@ -30,8 +30,8 @@ from ai_gateway.models import Message, Role
             ),
             {},
             [
-                Message(role=Role.SYSTEM, content="system prompt"),
-                Message(role=Role.USER, content="user prompt"),
+                (Role.SYSTEM, "system prompt"),
+                (Role.USER, "user prompt"),
             ],
         ),
         (
@@ -46,9 +46,9 @@ from ai_gateway.models import Message, Role
             ),
             {},
             [
-                Message(role=Role.SYSTEM, content="system prompt"),
-                Message(role=Role.USER, content="user prompt"),
-                Message(role=Role.ASSISTANT, content="assistant prompt"),
+                (Role.SYSTEM, "system prompt"),
+                (Role.USER, "user prompt"),
+                (Role.ASSISTANT, "assistant prompt"),
             ],
         ),
         (
@@ -63,9 +63,9 @@ from ai_gateway.models import Message, Role
             ),
             {"text": "!"},
             [
-                Message(role=Role.SYSTEM, content="system prompt"),
-                Message(role=Role.USER, content="user prompt !"),
-                Message(role=Role.ASSISTANT, content="assistant prompt"),
+                (Role.SYSTEM, "system prompt"),
+                (Role.USER, "user prompt !"),
+                (Role.ASSISTANT, "assistant prompt"),
             ],
         ),
         (
@@ -80,9 +80,9 @@ from ai_gateway.models import Message, Role
             ),
             {"text": "!"},
             [
-                Message(role=Role.SYSTEM, content="system prompt !"),
-                Message(role=Role.USER, content="user prompt !"),
-                Message(role=Role.ASSISTANT, content="assistant prompt !"),
+                (Role.SYSTEM, "system prompt !"),
+                (Role.USER, "user prompt !"),
+                (Role.ASSISTANT, "assistant prompt !"),
             ],
         ),
     ],
