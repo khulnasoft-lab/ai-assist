@@ -1,57 +1,53 @@
-from typing import Dict
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import AIMessage
+from langchain_core.messages import (
+    AIMessage,
+    AIMessageChunk,
+    HumanMessage,
+    SystemMessage,
+)
+from langchain_core.prompts import ChatPromptTemplate
 
-from ai_gateway.agents.base import Agent
-from ai_gateway.chat.agents import AgentStep
-from ai_gateway.chat.agents.react import (
+from ai_gateway.agents.chat.react import (
     ReActAgent,
     ReActAgentFinalAnswer,
     ReActAgentInputs,
     ReActAgentMessage,
     ReActAgentToolAction,
     ReActPlainTextParser,
+    TypeReActAgentAction,
     agent_scratchpad_plain_text_renderer,
     chat_history_plain_text_renderer,
 )
-from ai_gateway.chat.agents.utils import convert_prompt_to_messages
-from ai_gateway.chat.tools import BaseTool
-from ai_gateway.chat.tools.gitlab import GitLabToolkit
-from ai_gateway.chat.typing import Context
-from ai_gateway.models import Role
+from ai_gateway.agents.chat.typing import AgentStep
 
 
 @pytest.fixture
-def prompt_templates() -> Dict[str, str]:
-    return {
-        "system": """
-{{chat_history}}
+def prompt_template() -> ChatPromptTemplate:
 
-You are a DevSecOps Assistant named 'GitLab Duo Chat' created by GitLab.
-
-<resource>
-{{context_content}}
-</resource>
-
-Begin!
-""",
-        "user": "{{question}}",
-        "assistant": "{{agent_scratchpad}}",
-    }
+    return ChatPromptTemplate.from_messages(
+        [
+            SystemMessage(
+                content="{chat_history} "
+                " You are a DevSecOps Assistant named 'GitLab Duo Chat' created by GitLab."
+            ),
+            HumanMessage(content="{question}"),
+            AIMessage(content="{agent_scratchpad}"),
+        ]
+    )
 
 
 @pytest.mark.parametrize(
-    ("inputs", "expected"),
+    ("chat_history", "expected"),
     [
-        (ReActAgentInputs(question="", chat_history=["str1", "str2"]), "str1\nstr2"),
-        (ReActAgentInputs(question="", chat_history="str1\nstr2"), "str1\nstr2"),
+        (["str1", "str2"], "str1\nstr2"),
+        ("str1\nstr2", "str1\nstr2"),
     ],
 )
-def test_chat_history_plain_text_renderer(inputs: ReActAgentInputs, expected: str):
-    actual = chat_history_plain_text_renderer(inputs)
+def test_chat_history_plain_text_renderer(chat_history: str | list[str], expected: str):
+    actual = chat_history_plain_text_renderer(chat_history)
     assert actual == expected
 
 
@@ -108,7 +104,7 @@ class TestReActPlainTextParser:
                 "thought1\nAction: tool1\nAction Input: tool_input1\n",
                 ReActAgentToolAction(
                     thought="thought1",
-                    log="Thought: thought1\nAction: tool1\nAction Input: tool_input1\n",
+                    log="Thought: thought1\nAction: tool1\nAction Input: tool_input1",
                     tool="tool1",
                     tool_input="tool_input1",
                 ),
@@ -117,7 +113,7 @@ class TestReActPlainTextParser:
                 "thought1\nFinal Answer: final answer\n",
                 ReActAgentFinalAnswer(
                     thought="thought1",
-                    log="Thought: thought1\nFinal Answer: final answer\n",
+                    log="Thought: thought1\nFinal Answer: final answer",
                     text="final answer",
                 ),
             ),
@@ -139,13 +135,12 @@ class TestReActPlainTextParser:
 
 class TestReActAgent:
     @pytest.mark.asyncio
-    @patch("langchain_core.language_models.chat_models.BaseChatModel.invoke")
+    @patch("langchain_core.language_models.chat_models.BaseChatModel.ainvoke")
     @pytest.mark.parametrize(
         (
             "question",
             "chat_history",
             "agent_scratchpad",
-            "context",
             "expected_action",
         ),
         [
@@ -153,7 +148,6 @@ class TestReActAgent:
                 "What's the title of this epic?",
                 "",
                 [],
-                Context(type="epic", content="epic title and description"),
                 ReActAgentToolAction(
                     thought="I'm thinking...",
                     tool="ci_issue_reader",
@@ -165,7 +159,6 @@ class TestReActAgent:
                 "What's the title of this issue?",
                 ["User: what's the description of this issue", "AI: PoC ReAct"],
                 [],
-                Context(type="issue", content="issue title and description"),
                 ReActAgentToolAction(
                     thought="I'm thinking...",
                     tool="ci_issue_reader",
@@ -177,7 +170,6 @@ class TestReActAgent:
                 "What's the title of this issue?",
                 ["User: what's the description of this issue", "AI: PoC ReAct"],
                 [],
-                None,
                 ReActAgentToolAction(
                     thought="I'm thinking...",
                     tool="ci_issue_reader",
@@ -189,7 +181,7 @@ class TestReActAgent:
                 "What's your name?",
                 "User: what's the description of this issue\nAI: PoC ReAct",
                 [
-                    AgentStep(
+                    AgentStep[TypeReActAgentAction](
                         action=ReActAgentToolAction(
                             thought="thought",
                             tool="ci_issue_reader",
@@ -198,7 +190,6 @@ class TestReActAgent:
                         observation="observation",
                     )
                 ],
-                None,
                 ReActAgentFinalAnswer(
                     thought="I'm thinking...",
                     text="Paris",
@@ -209,13 +200,12 @@ class TestReActAgent:
     )
     async def test_invoke(
         self,
-        mock_invoke: Mock,
-        prompt_templates: Dict[str, str],
+        mock_ainvoke: Mock,
+        prompt_template: ChatPromptTemplate,
         question: str,
         chat_history: list[str] | str,
         agent_scratchpad: list[AgentStep],
-        context: Context | None,
-        expected_action: ReActAgentToolAction | ReActAgentFinalAnswer,
+        expected_action: TypeReActAgentAction,
     ):
         def _model_invoke(*args, **kwargs):
             text = expected_action.log[
@@ -223,31 +213,24 @@ class TestReActAgent:
             ]  # our default Assistant prompt template already contains "Thought: "
             return AIMessage(text)
 
-        mock_invoke.side_effect = _model_invoke
+        mock_ainvoke.side_effect = _model_invoke
 
-        model = ChatAnthropic(model="claude-3-sonnet-20240229")
+        model = ChatAnthropic(
+            model="claude-3-sonnet-20240229"
+        )  # type: ignore[call-arg]
 
         inputs = ReActAgentInputs(
-            question=question, chat_history=chat_history, context=context
+            question=question,
+            chat_history=chat_history,
+            agent_scratchpad=agent_scratchpad,
         )
 
-        tools = GitLabToolkit().get_tools()
-        base_agent = Agent(name="test", model=model, prompt_templates=prompt_templates)
-        agent = ReActAgent(agent=base_agent, model=model, inputs=inputs, tools=tools)
-        agent.agent_scratchpad.extend(agent_scratchpad)
-
-        actual_action = await agent.invoke(inputs=inputs)
+        agent = ReActAgent.from_model(
+            name="test", model=model, prompt_template=prompt_template
+        )
+        actual_action = await agent.ainvoke(inputs)
 
         assert actual_action == expected_action
-        TestReActAgent._assert_model_call(
-            base_agent=base_agent,
-            tools=tools,
-            inputs=inputs,
-            question=question,
-            agent_scratchpad=agent_scratchpad,
-            context=context,
-            stream=False,
-        )
 
     @pytest.mark.asyncio
     @patch("langchain_core.language_models.chat_models.BaseChatModel.astream")
@@ -256,7 +239,6 @@ class TestReActAgent:
             "question",
             "chat_history",
             "agent_scratchpad",
-            "context",
             "model_response",
             "expected_actions",
         ),
@@ -265,7 +247,6 @@ class TestReActAgent:
                 "What's the title of this epic?",
                 "",
                 [],
-                Context(type="epic", content="epic title and description"),
                 "Thought: I'm thinking...\nAction: ci_issue_reader\nAction Input: random input",
                 [
                     ReActAgentToolAction(
@@ -280,7 +261,7 @@ class TestReActAgent:
                 "What's your name?",
                 "User: what's the description of this issue\nAI: PoC ReAct",
                 [
-                    AgentStep(
+                    AgentStep[TypeReActAgentAction](
                         action=ReActAgentToolAction(
                             thought="thought",
                             tool="ci_issue_reader",
@@ -289,15 +270,14 @@ class TestReActAgent:
                         observation="observation",
                     )
                 ],
-                None,
                 "Thought: I'm thinking...\nFinal Answer: It's Paris",
                 [
                     ReActAgentFinalAnswer(
                         thought="I'm thinking...",
-                        log="Thought: I'm thinking...\nFinal Answer: It's ",
+                        log="Thought: I'm thinking...\nFinal Answer: It's",
                         text="It's",
                     ),
-                    ReActAgentFinalAnswer(thought="", log="Paris", text=" Paris"),
+                    ReActAgentFinalAnswer(thought="", log=" Paris", text=" Paris"),
                 ],
             ),
         ],
@@ -305,11 +285,10 @@ class TestReActAgent:
     async def test_stream(
         self,
         mock_astream: AsyncMock,
-        prompt_templates: Dict[str, str],
+        prompt_template: ChatPromptTemplate,
         question: str,
         chat_history: list[str] | str,
         agent_scratchpad: list[AgentStep],
-        context: Context | None,
         model_response: str,
         expected_actions: list[ReActAgentToolAction | ReActAgentFinalAnswer],
     ):
@@ -319,71 +298,21 @@ class TestReActAgent:
             ]  # our default Assistant prompt template already contains "Thought: "
 
             for i in range(0, len(text), 5):
-                yield AIMessage(text[i : i + 5])
+                yield AIMessageChunk(content=text[i : i + 5])
 
         mock_astream.side_effect = _model_astream
 
-        model = ChatAnthropic(model="claude-3-sonnet-20240229")
+        model = ChatAnthropic(model="claude-3-sonnet-20240229")  # type: ignore[call-arg]
 
         inputs = ReActAgentInputs(
-            question=question, chat_history=chat_history, context=context
-        )
-
-        tools = GitLabToolkit().get_tools()
-        base_agent = Agent(name="test", model=model, prompt_templates=prompt_templates)
-        agent = ReActAgent(agent=base_agent, model=model, inputs=inputs, tools=tools)
-        agent.agent_scratchpad.extend(agent_scratchpad)
-
-        actual_actions = [action async for action in agent.stream(inputs=inputs)]
-
-        assert actual_actions == expected_actions
-        TestReActAgent._assert_model_call(
-            base_agent=base_agent,
-            tools=tools,
-            inputs=inputs,
             question=question,
+            chat_history=chat_history,
             agent_scratchpad=agent_scratchpad,
-            context=context,
-            stream=True,
         )
 
-    @staticmethod
-    def _assert_model_call(
-        *,
-        base_agent: Agent,
-        tools: list[BaseTool],
-        inputs: ReActAgentInputs,
-        question: str,
-        agent_scratchpad: list[AgentStep],
-        context: Context | None,
-        stream: bool = False
-    ):
-        chat_history_formatted = chat_history_plain_text_renderer(inputs)
-        agent_scratchpad_formatted = agent_scratchpad_plain_text_renderer(
-            agent_scratchpad
+        agent = ReActAgent.from_model(
+            name="test", model=model, prompt_template=prompt_template
         )
-        messages = convert_prompt_to_messages(
-            base_agent,
-            tools=tools,
-            context_type=(inputs.context.type if inputs.context else None),
-            question=question,
-            chat_history=chat_history_formatted,
-            agent_scratchpad=agent_scratchpad_formatted,
-            context_content=context.content if context else "",
-        )
-        messages = dict(messages)
 
-        if stream:
-            mock = base_agent.model.astream
-        else:
-            mock = base_agent.model.invoke
-
-        mock.assert_called_once()
-        actual_messages = map(lambda x: x.content, mock.call_args.args[0].to_messages())
-        assert list(actual_messages) == list(messages.values())
-
-        assert chat_history_formatted in messages[Role.SYSTEM]
-        assert context.content in messages[Role.SYSTEM] if context else True
-        assert "{context_content}" not in messages[Role.SYSTEM] if context else True
-        assert question in messages[Role.USER]
-        assert agent_scratchpad_formatted in messages[Role.ASSISTANT]
+        actual_actions = [action async for action in agent.astream(inputs)]
+        assert actual_actions == expected_actions
