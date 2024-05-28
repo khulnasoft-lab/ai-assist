@@ -35,6 +35,6 @@ class AgentStep(BaseModel, Generic[TypeAgentAction]):
     observation: str
 
 
-class Context(BaseModel, frozen=True):
+class Context(BaseModel, frozen=True):  # type: ignore[call-arg]
     type: Literal["issue", "epic"]
     content: str
