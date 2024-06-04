@@ -34,7 +34,7 @@ __all__ = [
     "KindAnthropicModel",
 ]
 
-log = structlog.stdlib.get_logger("codesuggestions")
+log = structlog.stdlib.get_logger("models")
 
 
 class AnthropicAPIConnectionError(ModelAPIError):
@@ -259,7 +259,7 @@ class AnthropicChatModel(ChatModelBase):
         **kwargs: Any,
     ) -> Union[TextGenModelOutput, AsyncIterator[TextGenModelChunk]]:
         opts = _obtain_opts(self.model_opts, **kwargs)
-        log.debug("codegen anthropic call:", **opts)
+        log.debug("anthropic call:", messages=messages, stream=stream, **opts)
 
         model_messages = _build_model_messages(messages)
 
