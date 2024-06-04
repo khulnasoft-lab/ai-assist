@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Sequence, Tuple, TypeVar
+from typing import Any, Callable, Optional, Sequence, Tuple, Type, TypeVar
 
 from jinja2 import BaseLoader, Environment
+from langchain_core.messages import AIMessage
 from langchain_core.prompts.chat import MessageLikeRepresentation
 from langchain_core.runnables import Runnable, RunnableBinding
+from pydantic import BaseModel
 
 __all__ = ["Agent", "BaseAgentRegistry"]
 
@@ -15,6 +17,27 @@ jinja_env = Environment(loader=BaseLoader())
 
 def _format_str(content: str, options: dict[str, Any]) -> str:
     return jinja_env.from_string(content).render(options)
+
+
+def input_parser(input: BaseModel) -> dict:
+    """Basic input parser that transforms a `BaseModel` to a `dict`. Agents may create
+    their own input parsers to implement more complex logic.
+    """
+    return input.model_dump()
+
+
+def output_parser(
+    klass: Type[BaseModel], field: str
+) -> Callable[[AIMessage], BaseModel]:
+    """Basic output parser that transforms the LLM response into the specified model.
+    It assumes the model has a single field. Agents may create their own output parsers
+    to implement more complex logic.
+    """
+
+    def parser(message: AIMessage) -> BaseModel:
+        return klass(**{field: message.content})
+
+    return parser
 
 
 class Agent(RunnableBinding[Input, Output]):
