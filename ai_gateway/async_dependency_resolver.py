@@ -72,6 +72,10 @@ async def get_chat_litellm_factory_provider():
     yield get_container_application().chat.litellm_factory
 
 
+async def get_agent_registry():
+    yield get_container_application().pkg_agents.agent_registry()
+
+
 @inject
 async def get_anthropic_proxy_client(
     anthropic_proxy_client=Provide[
