@@ -1,0 +1,35 @@
+---
+name: Claude 3 Generate Description agent
+provider: anthropic
+model: claude-3-sonnet-20240229
+prompt_template:
+  with_template: |
+        You are a helpful assistant
+        Your job is to rewrite a text to follow the given template.
+
+        Here's the text:
+
+        <text>
+        {content}
+        </text>
+
+        Here's the template:
+
+        <template>
+        {template}
+        </template>
+
+        Only respond with the rewritten text.
+  without_template: |
+        You are a helpful assistant.
+        Your job is to write an issue description based off a text.
+
+        Try to format the issue description appropriately.
+
+        Here is the text:
+
+        <text>
+        {content}
+        </text>
+
+        Only respond with your issue description.
