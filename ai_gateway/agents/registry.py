@@ -6,6 +6,7 @@ import yaml
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import Runnable
 
 from ai_gateway.agents.base import Agent, BaseAgentRegistry
 
@@ -34,10 +35,13 @@ class LocalAgentRegistry(BaseAgentRegistry):
     ) -> Any:
         klass, config = self.agent_definitions[Key(use_case=use_case, type=agent_type)]
 
-        model = self._get_model(
+        model: Runnable = self._get_model(
             provider=config["provider"],
             name=config["model"],
-        ).bind(stop=config["stop"])
+        )
+
+        if "stop" in config:
+            model = model.bind(stop=config["stop"])
 
         messages = klass.build_messages(config["prompt_template"], options or {})
         prompt = ChatPromptTemplate.from_messages(messages)
