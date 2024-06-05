@@ -8,7 +8,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from ai_gateway.agents.base import Agent, BaseAgentRegistry
 
-__all__ = ["LocalAgentRegistry", "ModelProvider"]
+__all__ = ["Key", "LocalAgentRegistry", "ModelProvider", "ModelFactoryType"]
 
 
 class ModelProvider(str, Enum):
