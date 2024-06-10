@@ -51,7 +51,7 @@ async def docs(
         "gl_version": search_request.metadata.version,
     }
 
-    searcher = search_factory()
+    searcher = await search_factory()
 
     response = await searcher.search_with_retry(**search_params)
 

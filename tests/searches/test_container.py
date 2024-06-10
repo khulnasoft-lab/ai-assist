@@ -16,15 +16,16 @@ def mock_config(custom_models_enabled: bool):
     yield config
 
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("custom_models_enabled", "search_provider_class"),
     [(True, SqliteSearch), (False, VertexAISearch)],
 )
-def test_container(
+async def test_container(
     mock_container: containers.DeclarativeContainer,
     custom_models_enabled: bool,
     search_provider_class: Type[Searcher],
 ):
     searches = cast(providers.Container, mock_container.searches)
 
-    assert isinstance(searches.search_provider(), search_provider_class)
+    assert isinstance(await searches.search_provider(), search_provider_class)

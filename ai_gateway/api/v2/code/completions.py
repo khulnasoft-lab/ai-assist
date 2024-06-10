@@ -116,7 +116,7 @@ async def completions(
 
     kwargs = {}
     if payload.model_provider == KindModelProvider.ANTHROPIC:
-        code_completions = completions_anthropic_factory()
+        code_completions = await completions_anthropic_factory()
 
         # We support the prompt version 2 only with the Anthropic models
         if payload.prompt_version == 2:
@@ -127,7 +127,7 @@ async def completions(
             model__endpoint=payload.model_endpoint,
         )
     else:
-        code_completions = completions_legacy_factory()
+        code_completions = await completions_legacy_factory()
         if payload.choices_count > 0:
             kwargs.update({"candidate_count": payload.choices_count})
 
@@ -202,12 +202,12 @@ async def generations(
 
     if payload.model_provider == KindModelProvider.ANTHROPIC:
         if payload.prompt_version == 3:
-            code_generations = _resolve_code_generations_anthropic_chat(
+            code_generations = await _resolve_code_generations_anthropic_chat(
                 payload,
                 generations_anthropic_chat_factory,
             )
         else:
-            code_generations = _resolve_code_generations_anthropic(
+            code_generations = await _resolve_code_generations_anthropic(
                 payload,
                 generations_anthropic_factory,
             )
@@ -218,7 +218,7 @@ async def generations(
             model__api_key=payload.model_api_key,
         )
     else:
-        code_generations = generations_vertex_factory()
+        code_generations = await generations_vertex_factory()
 
     if payload.prompt_version in {2, 3}:
         code_generations.with_prompt_prepared(payload.prompt)
@@ -254,7 +254,7 @@ async def generations(
     )
 
 
-def _resolve_code_generations_anthropic(
+async def _resolve_code_generations_anthropic(
     payload: SuggestionsRequest,
     generations_anthropic_factory: Factory[CodeGenerations],
 ) -> CodeGenerations:
@@ -262,17 +262,17 @@ def _resolve_code_generations_anthropic(
         payload.model_name if payload.model_name else KindAnthropicModel.CLAUDE_2_0
     )
 
-    return generations_anthropic_factory(
+    return await generations_anthropic_factory(
         model__name=model_name,
         model__stop_sequences=["</new_code>", anthropic.HUMAN_PROMPT],
     )
 
 
-def _resolve_code_generations_anthropic_chat(
+async def _resolve_code_generations_anthropic_chat(
     payload: SuggestionsRequest,
     generations_anthropic_chat_factory: Factory[CodeGenerations],
 ) -> CodeGenerations:
-    return generations_anthropic_chat_factory(
+    return await generations_anthropic_chat_factory(
         model__name=payload.model_name,
         model__stop_sequences=["</new_code>"],
     )

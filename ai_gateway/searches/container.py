@@ -1,4 +1,4 @@
-from typing import Iterator, Optional
+from typing import AsyncIterator, Optional
 
 from dependency_injector import containers, providers
 from google.cloud import discoveryengine
@@ -9,17 +9,23 @@ from .sqlite_search import SqliteSearch
 __all__ = ["ContainerSearches"]
 
 
-def _init_vertex_search_service_client(
+async def _init_vertex_search_service_client(
     mock_model_responses: bool,
     custom_models_enabled: bool,
-) -> Iterator[Optional[discoveryengine.SearchServiceAsyncClient]]:
+) -> AsyncIterator[Optional[discoveryengine.SearchServiceAsyncClient]]:
     if mock_model_responses or custom_models_enabled:
         yield None
         return
 
     client = discoveryengine.SearchServiceAsyncClient()
     yield client
-    client.transport.close()
+    await client.transport.close()
+
+
+# This method doesn't need to be async per se, but since the vertex search _is_ async, having a mismatch of modes would
+# mean clients have to handle both sync and async workflows.
+async def _init_sqlite_search(*args, **kwargs):
+    return SqliteSearch(*args, **kwargs)
 
 
 class ContainerSearches(containers.DeclarativeContainer):
@@ -42,7 +48,7 @@ class ContainerSearches(containers.DeclarativeContainer):
 
     search_provider = providers.Selector(
         _local_or_vertex,
-        local=providers.Factory(SqliteSearch),
+        local=providers.Factory(_init_sqlite_search),
         vertex=providers.Factory(
             VertexAISearch,
             client=grpc_client_vertex,

@@ -142,9 +142,8 @@ async def _generate_completion(
         if max_tokens := opts.pop("max_tokens_to_sample", None):
             opts["max_tokens"] = max_tokens
 
-    completion = await anthropic_claude_factory(
-        factory_type, name=prompt.model
-    ).generate(**opts)
+    model = await anthropic_claude_factory(factory_type, name=prompt.model)
+    completion = await model.generate(**opts)
 
     return completion
 

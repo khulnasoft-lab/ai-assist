@@ -56,7 +56,7 @@ async def validate_vertex_available(
         get_code_suggestions_completions_vertex_legacy_provider
     ),
 ) -> bool:
-    code_completions = completions_legacy_vertex_factory()
+    code_completions = await completions_legacy_vertex_factory()
     await code_completions.execute(
         prefix="def hello_world():",
         suffix="",
@@ -72,7 +72,7 @@ async def validate_anthropic_available(
         get_code_suggestions_generations_anthropic_factory_provider
     ),
 ) -> bool:
-    code_generations = generations_anthropic_factory(
+    code_generations = await generations_anthropic_factory(
         model__name=KindAnthropicModel.CLAUDE_INSTANT_1_2.value,
         model__stop_sequences=["</new_code>"],
     )

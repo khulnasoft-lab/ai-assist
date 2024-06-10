@@ -86,9 +86,9 @@ async def code_completion(
     code_context: list[CodeContextPayload] = None,
 ):
     if payload.model_provider == ModelProvider.ANTHROPIC:
-        engine = completions_anthropic_factory()
+        engine = await completions_anthropic_factory()
     else:
-        engine = completions_legacy_factory()
+        engine = await completions_legacy_factory()
 
     suggestion = await engine.execute(
         prefix=payload.content_above_cursor,
@@ -132,9 +132,9 @@ async def code_generation(
     code_context: list[CodeContextPayload] = None,
 ):
     if payload.model_provider == KindModelProvider.ANTHROPIC:
-        engine = generations_anthropic_factory()
+        engine = await generations_anthropic_factory()
     else:
-        engine = generations_vertex_factory()
+        engine = await generations_vertex_factory()
 
     if payload.prompt:
         engine.with_prompt_prepared(payload.prompt)

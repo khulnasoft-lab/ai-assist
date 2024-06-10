@@ -5,6 +5,7 @@ import pytest
 from ai_gateway.searches.container import _init_vertex_search_service_client
 
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("args", "expected_init"),
     [
@@ -22,11 +23,11 @@ from ai_gateway.searches.container import _init_vertex_search_service_client
         ),
     ],
 )
-def test_init_vertex_search_service_client(args, expected_init):
+async def test_init_vertex_search_service_client(args, expected_init):
     with patch(
         "google.cloud.discoveryengine.SearchServiceAsyncClient"
     ) as mock_search_client:
-        next(_init_vertex_search_service_client(**args))
+        await anext(_init_vertex_search_service_client(**args))
 
         if expected_init:
             mock_search_client.assert_called_once()

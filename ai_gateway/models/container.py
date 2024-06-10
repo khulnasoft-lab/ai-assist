@@ -1,4 +1,4 @@
-from typing import Iterator, Optional
+from typing import AsyncIterator, Optional
 
 import httpx
 from anthropic import AsyncAnthropic
@@ -22,30 +22,30 @@ __all__ = [
 ]
 
 
-def _init_vertex_grpc_client(
+async def _init_vertex_grpc_client(
     endpoint: str,
     mock_model_responses: bool,
     custom_models_enabled: bool,
-) -> Iterator[Optional[PredictionServiceAsyncClient]]:
+) -> AsyncIterator[Optional[PredictionServiceAsyncClient]]:
     if mock_model_responses or custom_models_enabled:
         yield None
         return
 
     client = grpc_connect_vertex({"api_endpoint": endpoint})
     yield client
-    client.transport.close()
+    await client.transport.close()
 
 
-def _init_anthropic_client(
+async def _init_anthropic_client(
     mock_model_responses: bool,
-) -> Iterator[Optional[AsyncAnthropic]]:
+) -> AsyncIterator[Optional[AsyncAnthropic]]:
     if mock_model_responses:
         yield None
         return
 
     client = connect_anthropic()
     yield client
-    client.close()
+    await client.close()
 
 
 async def _init_anthropic_proxy_client(
@@ -78,6 +78,12 @@ async def _init_vertex_ai_proxy_client(
     await client.aclose()
 
 
+# This method doesn't need to be async per se, but since the real models _are_ async, having a mismatch of modes would
+# mean clients have to handle both sync and async workflows.
+async def _mock_init(*args, **kwargs):
+    return mock.LLM(*args, **kwargs)
+
+
 class ContainerModels(containers.DeclarativeContainer):
     # We need to resolve the model based on the model name provided by the upstream container.
     # Hence, `VertexTextBaseModel.from_model_name` and `AnthropicModel.from_model_name` are only partially applied here.
@@ -88,6 +94,8 @@ class ContainerModels(containers.DeclarativeContainer):
         lambda mock_model_responses: "mocked" if mock_model_responses else "original",
         config.mock_model_responses,
     )
+
+    _mock_factory = providers.Factory(_mock_init)
 
     grpc_client_vertex = providers.Resource(
         _init_vertex_grpc_client,
@@ -120,7 +128,7 @@ class ContainerModels(containers.DeclarativeContainer):
             project=config.vertex_text_model.project,
             location=config.vertex_text_model.location,
         ),
-        mocked=providers.Factory(mock.LLM),
+        mocked=_mock_factory,
     )
 
     vertex_code_bison = providers.Selector(
@@ -131,7 +139,7 @@ class ContainerModels(containers.DeclarativeContainer):
             project=config.vertex_text_model.project,
             location=config.vertex_text_model.location,
         ),
-        mocked=providers.Factory(mock.LLM),
+        mocked=_mock_factory,
     )
 
     vertex_code_gecko = providers.Selector(
@@ -142,7 +150,7 @@ class ContainerModels(containers.DeclarativeContainer):
             project=config.vertex_text_model.project,
             location=config.vertex_text_model.location,
         ),
-        mocked=providers.Factory(mock.LLM),
+        mocked=_mock_factory,
     )
 
     anthropic_claude = providers.Selector(
@@ -150,7 +158,7 @@ class ContainerModels(containers.DeclarativeContainer):
         original=providers.Factory(
             AnthropicModel.from_model_name, client=http_client_anthropic
         ),
-        mocked=providers.Factory(mock.LLM),
+        mocked=_mock_factory,
     )
 
     anthropic_claude_chat = providers.Selector(
