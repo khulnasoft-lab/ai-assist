@@ -3,5 +3,5 @@ build:ingest-image:
   extends:
     - .kaniko_base
   variables:
-    KANIKO_BUILD_FILE: scripts/ingest/Dockerfile
+    KANIKO_BUILD_CONTEXT: scripts/ingest
     KANIKO_DESTINATION: "${INGEST_IMAGE}"
