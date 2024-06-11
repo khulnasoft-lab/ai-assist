@@ -44,7 +44,6 @@ COPY poetry.lock pyproject.toml /app/
 RUN python -m venv $VIRTUAL_ENV && poetry install --no-interaction --no-ansi --no-dev
 
 # Copy scripts
-COPY Makefile /app/Makefile
-COPY scripts /app/scripts
+COPY gitlab-docs/ /app
 
-CMD ["make", "ingest"]
+CMD ["./run.sh"]
