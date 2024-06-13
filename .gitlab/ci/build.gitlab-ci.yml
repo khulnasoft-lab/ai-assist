@@ -5,3 +5,5 @@ build:ingest-image:
   variables:
     KANIKO_BUILD_CONTEXT: scripts/ingest
     KANIKO_DESTINATION: "${INGEST_IMAGE}"
+    KANIKO_EXTRA_ARGS: |
+      --verbosity debug
