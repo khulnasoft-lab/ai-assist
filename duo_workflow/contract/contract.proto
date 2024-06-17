@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+option go_package = "gitlab.com/gitlab-org/ai-powered/ai-framework/duo_workflow_executor/pkg/service";
+
+service DuoWorkflow {
+    rpc ExecuteWorkflow(stream ClientEvent) returns (stream Action);
+}
+
+message ClientEvent {
+    oneof response {
+        StartWorkflowRequest startRequest = 1;
+        ActionResponse actionResponse = 2;
+    }
+}
+
+message StartWorkflowRequest {
+    string clientVersion = 1;
+    string workflowDefinition = 2;
+    string goal = 3;
+}
+
+message ActionResponse {
+    string requestID = 1;
+    string response = 2;
+}
+
+message Action {
+    string requestID = 1;
+    oneof action {
+        RunCommandAction runCommand = 2;
+        RunHTTPRequest runHTTPRequest = 3;
+        ReadFile runReadFile = 4;
+        WriteFile runWriteFile = 5;
+    };
+}
+
+message RunCommandAction {
+    string command = 1;
+}
+
+message ReadFile {
+    string filepath = 1;
+}
+
+message WriteFile {
+    string filepath = 1;
+    string contents = 2;
+}
+
+message RunHTTPRequest {
+    string method = 1;
+    string path = 2;
+    optional string body = 3;
+}

@@ -1,5 +1,6 @@
 ROOT_DIR := $(shell pwd)
 AI_GATEWAY_DIR := ${ROOT_DIR}/ai_gateway
+DUO_WORKFLOW_DIR := ${ROOT_DIR}/duo_workflow
 LINTS_DIR := ${ROOT_DIR}/lints
 SCRIPTS_DIR := ${ROOT_DIR}/scripts
 TESTS_DIR := ${ROOT_DIR}/tests
@@ -7,6 +8,7 @@ INTEGRATION_TESTS_DIR := ${ROOT_DIR}/integration_tests
 AUTOGRAPH_DIR := ${ROOT_DIR}/autograph
 
 LINT_WORKING_DIR ?= ${AI_GATEWAY_DIR} \
+	${DUO_WORKFLOW_DIR} \
 	${LINTS_DIR} \
 	${SCRIPTS_DIR} \
 	${TESTS_DIR} \
@@ -131,3 +133,12 @@ test-integration: install-test-deps
 ingest:
 	@echo "Running data ingestion and refreshing for search APIs..."
 	@$(ROOT_DIR)/scripts/ingest/gitlab-docs/run.sh
+
+.PHONY: gen-proto
+gen-proto:
+	@poetry run python -m grpc_tools.protoc \
+		-I ./ \
+		--python_out=./ \
+		--pyi_out=./ \
+		--grpc_python_out=./ \
+		./duo_workflow/contract/contract.proto
