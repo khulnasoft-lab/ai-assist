@@ -119,7 +119,31 @@ Here is a [preview app for GitLab documentations](https://console.cloud.google.c
 
 You can check usage quota in [GCP console](https://console.cloud.google.com/home).
 
-1. Visit **"Your GCP project" > API & Services > Discovery Engine API > QUOTAS & SYSTEM LIMITS** in GCP.
+1. Visit **"Your Google Cloud project" > API & Services > Discovery Engine API > QUOTAS & SYSTEM LIMITS** in Google Cloud.
 1. Check **Current usage percentage**. If the value is saturated, [search API in AI Gateway](#search-api-in-ai-gateway) or [ingestion process](#data-ingestion-and-refreshing) could fail.
 
-Here is a [quota and usage percentage for `ai-enablement-dev-69497ba7` GCP project](https://console.cloud.google.com/apis/api/discoveryengine.googleapis.com/quotas?project=ai-enablement-dev-69497ba7).
+Here is a [quota and usage percentage for `ai-enablement-dev-69497ba7` project](https://console.cloud.google.com/apis/api/discoveryengine.googleapis.com/quotas?project=ai-enablement-dev-69497ba7).
+
+## Manually create Google Cloud app
+
+The Google Cloud search apps are automatically created for each milestone, but you can manually set up your own for testing purposes:
+
+1. Visit https://console.cloud.google.com/gen-app-builder/data-stores/create?project=ai-enablement-dev-69497ba7
+  1. For "Native sources", choose "BigQuery".
+  1. For "BigQuery path", choose "chunked_markdown" (sm_gitlab_docs_structured_test)
+  1. Keep default "Structured - BigQuery table with your own schema"
+  1. Keep default "Location" as "global"
+  1. Set a data store name (e.g. "foo-gitlab-docs-structured")
+  1. Click "Create"
+1. Visit https://console.cloud.google.com/gen-app-builder/engines/create?project=ai-enablement-dev-69497ba7
+  1. For "Select app type", choose "Search"
+  1. Keep default "Generic"
+  1. Set an app name (e.g. "foo-gitlab-docs-structured")
+  1. For "Company name", set "GitLab"
+  1. Keep default "Location" as "global"
+  1. Click "Continue"
+  1. Choose the data store you created earlier
+  1. Click "Create"
+1. You can see that it is processing data. This will take around 5 minutes to complete.
+1. Temporarily update `_get_data_store_id` method to return the app name you created in order to test it.
+
