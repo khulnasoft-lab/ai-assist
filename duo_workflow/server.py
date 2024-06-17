@@ -1,7 +1,7 @@
 import grpc
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from contract_pb2 import ClientCapabilities, ServerCapabilities
+from contract_pb2 import ClientCapabilities, ServerCapabilities, ToolResponseAck
 from contract_pb2_grpc import DuoWorkflowServicer, add_DuoWorkflowServicer_to_server
 import asyncio
 
@@ -11,11 +11,18 @@ class Workflow:
         self.queue = queue
 
     async def run(self):
-        # HACK: Just an example of getting something from the queue
+        logging.info("Running workflow %s and waiting for message", self)
+        asyncio.create_task(self.wait_for_queue())
+
+    async def wait_for_queue(self):
         in_queue = await self.queue.get()
-        logging.info("Got something from the queue: %s", in_queue)
+        logging.info("Got something for workflow %s from the queue: %s", self, in_queue)
+
 
 class Service(DuoWorkflowServicer):
+    def __init__(self):
+        self.queues = {}
+
     # TODO: Why doesn't async def work here?
     async def StartWorkflow(
         self,
@@ -23,17 +30,21 @@ class Service(DuoWorkflowServicer):
         context: grpc.aio.ServicerContext,
     ) -> ServerCapabilities:
         q = asyncio.Queue()
+
+        # Track which queue is for which client
+        self.queues[context.peer()] = q
+
         w = Workflow(queue=q)
 
-        running =  w.run()
+        await w.run()
 
-        # HACK: Just an example of putting something in the queue
-        await q.put("ABC123")
-
-        await running
-
-        logging.info("Received request with request %s and context %s from peer %s", request, context, context.peer())
+        logging.info("Received request with request %s from peer %s", request, context.peer())
         return ServerCapabilities(serverVersion='0.0.1')
+
+    async def ToolResponse(self, request, context):
+        q = self.queues[context.peer()]
+        await q.put(request)
+        return ToolResponseAck()
 
 async def serve(address: str) -> None:
     server = grpc.aio.server()
