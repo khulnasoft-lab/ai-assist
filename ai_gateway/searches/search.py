@@ -1,14 +1,18 @@
+import json
 import re
+from http.client import HTTPException
 from typing import Any
 
 from google.api_core.exceptions import GoogleAPIError, NotFound
 from google.cloud import discoveryengine
 from google.protobuf.json_format import MessageToDict
+from fastapi import status
 
 from ai_gateway.models import ModelAPIError
 from ai_gateway.tracking import log_exception
+from rank_bm25 import BM25Okapi
 
-__all__ = ["VertexAISearch", "VertexAPISearchError", "DataStoreNotFound"]
+__all__ = ["VertexAISearch", 'Searcher', 'LocalBM25Search']
 
 SEARCH_APP_NAME = "gitlab-docs"
 
@@ -50,8 +54,24 @@ class DataStoreNotFound(Exception):
         super().__init__(message)
         self.input = input
 
+class Searcher:
+    async def search_with_retry(self, *args, **kwargs):
+        return await self.search(*args, **kwargs)
 
-class VertexAISearch:
+    async def search(
+            self,
+            query: str,
+            gl_version: str,
+            page_size: int = 20,
+            **kwargs: Any,
+    ) -> dict:
+        pass
+
+    def provider(self):
+        pass
+
+
+class VertexAISearch(Searcher):
     def __init__(
         self,
         client: discoveryengine.SearchServiceAsyncClient,
@@ -66,18 +86,27 @@ class VertexAISearch:
 
     async def search_with_retry(self, *args, **kwargs):
         try:
-            return await self.search(*args, **kwargs)
-        except DataStoreNotFound as ex:
-            log_exception(ex, extra={"input": ex.input})
+            try:
+                return await self.search(*args, **kwargs)
+            except DataStoreNotFound as ex:
+                log_exception(ex, extra={"input": ex.input})
 
-        # Retry with the fallback datastore version
-        kwargs["gl_version"] = self.fallback_datastore_version
+            # Retry with the fallback datastore version
+            kwargs["gl_version"] = self.fallback_datastore_version
 
-        try:
-            return await self.search(*args, **kwargs)
-        except DataStoreNotFound as ex:
-            log_exception(ex, extra={"input": ex.input})
-            raise
+            try:
+                return await self.search(*args, **kwargs)
+            except DataStoreNotFound as ex:
+                log_exception(ex, extra={"input": ex.input})
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, detail="Data store not found."
+                )
+        except VertexAPISearchError as ex:
+            log_exception(ex)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Vertex API Search Error.",
+            )
 
     async def search(
         self,
@@ -122,4 +151,49 @@ class VertexAISearch:
         except GoogleAPIError as ex:
             raise VertexAPISearchError.from_exception(ex)
 
-        return MessageToDict(response._pb)
+        return self._parse_response(MessageToDict(response._pb))
+
+    def provider(self):
+        return 'vertex-ai'
+
+    def _parse_response(self, response):
+        results = []
+
+        if "results" in response:
+            for r in response["results"]:
+                search_result = {
+                    "id": r["document"]["id"],
+                    "content": r["document"]["structData"]["content"],
+                    "metadata": r["document"]["structData"]["metadata"]
+                }
+                results.append(search_result)
+
+        return results
+
+
+class LocalBM25Search(Searcher):
+
+    def __init__(self, *args, **kwargs):
+        self.docs = json.load(open('tmp/processed_docs.json'))
+        self.indexer = self._setup_indexer()
+
+    def _setup_indexer(self):
+        # Refer to https://gitlab.com/gitlab-org/ai-powered/custom-models/pocs/gitlab-docs-indexer-poc/-/blob/main/notebooks/indexer.ipynb?ref_type=heads
+        corpus = [row['content'].split() for row in self.docs]
+        bm25 = BM25Okapi(corpus)
+        return bm25
+
+    async def search(
+            self,
+            query: str,
+            gl_version: str,
+            page_size: int = 20,
+            **kwargs: Any,
+    ) -> dict:
+        return self._parse_response(self.indexer.get_top_n(query.split(), self.docs, n=page_size))
+
+    def provider(self):
+        return 'local-bm25'
+
+    def _parse_response(self, response):
+        return [{"id": r["metadata"]["filename"], "content": r["content"], "metadata": r["metadata"]} for r in response]
