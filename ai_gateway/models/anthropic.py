@@ -94,7 +94,7 @@ class AnthropicModel(TextGenBaseModel):
 
     OPTS_MODEL = {
         "timeout": httpx.Timeout(30.0, connect=5.0),
-        "max_tokens_to_sample": 2048,
+        "max_tokens_to_sample": 8000,
         "stop_sequences": NOT_GIVEN,
         "temperature": 0.2,
         "top_k": NOT_GIVEN,
@@ -210,7 +210,7 @@ class AnthropicChatModel(ChatModelBase):
 
     OPTS_MODEL = {
         "timeout": httpx.Timeout(30.0, connect=5.0),
-        "max_tokens": 2048,
+        "max_tokens": 8000,
         "stop_sequences": NOT_GIVEN,
         "temperature": 0.2,
         "top_k": NOT_GIVEN,

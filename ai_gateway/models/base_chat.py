@@ -26,7 +26,7 @@ class Message(BaseModel):
 
 
 class ChatModelBase(ABC):
-    MAX_MODEL_LEN = 2048
+    MAX_MODEL_LEN = 8000
 
     @property
     def instrumentator(self) -> ModelRequestInstrumentator:

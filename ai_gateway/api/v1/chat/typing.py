@@ -32,7 +32,7 @@ class AnthropicParams(BaseModel):
         "Observation:",
     ]
     temperature: Annotated[float, Field(ge=0.0, le=1.0)] = 0.2
-    max_tokens_to_sample: Annotated[int, Field(ge=1, le=2_048)] = 2_048
+    max_tokens_to_sample: Annotated[int, Field(ge=1, le=8_000)] = 8_000
 
 
 class PromptPayload(BaseModel):
