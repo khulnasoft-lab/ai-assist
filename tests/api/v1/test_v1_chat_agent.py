@@ -131,7 +131,7 @@ class TestAgentSuccessfulRequest:
                             "params": {
                                 "temperature": 0.3,
                                 "stop_sequences": ["\n\nHuman", "Observation:"],
-                                "max_tokens_to_sample": 8000,
+                                "max_tokens_to_sample": 2048,
                             },
                         },
                     },
@@ -161,7 +161,7 @@ class TestAgentSuccessfulRequest:
                             "params": {
                                 "temperature": 0.3,
                                 "stop_sequences": ["\n\nHuman", "Observation:"],
-                                "max_tokens_to_sample": 8000,
+                                "max_tokens_to_sample": 2048,
                             },
                         },
                     },
@@ -191,7 +191,7 @@ class TestAgentSuccessfulRequest:
                             "params": {
                                 "temperature": 0.3,
                                 "stop_sequences": ["\n\nHuman", "Observation:"],
-                                "max_tokens_to_sample": 8000,
+                                "max_tokens_to_sample": 2048,
                             },
                         },
                     },
@@ -221,7 +221,7 @@ class TestAgentSuccessfulRequest:
                             "params": {
                                 "temperature": 0.3,
                                 "stop_sequences": ["\n\nHuman", "Observation:"],
-                                "max_tokens_to_sample": 8000,
+                                "max_tokens_to_sample": 2048,
                             },
                         },
                     },
