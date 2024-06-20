@@ -80,7 +80,7 @@ class LiteLlmChatModel(ChatModelBase):
         messages: list[Message],
         stream: bool = False,
         temperature: float = 0.2,
-        max_output_tokens: int = 8000,
+        max_output_tokens: int = 2048,
         top_p: float = 0.95,
         top_k: int = 40,
     ) -> Union[TextGenModelOutput, AsyncIterator[TextGenModelChunk]]:
