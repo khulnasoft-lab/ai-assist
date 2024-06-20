@@ -1,6 +1,6 @@
 from enum import Enum
 from pathlib import Path
-from typing import Any, NamedTuple, Optional, Protocol, Type
+from typing import Any, Optional, Protocol, Type
 
 import yaml
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -22,15 +22,10 @@ class ModelFactoryType(Protocol):
     ) -> BaseChatModel: ...
 
 
-class Key(NamedTuple):
-    use_case: str
-    type: str
-
-
 class LocalAgentRegistry(BaseAgentRegistry):
     def __init__(
         self,
-        agent_definitions: dict[Key, tuple[Type[Agent], dict]],
+        agent_definitions: dict[str, tuple[Type[Agent], dict]],
         model_factories: dict[ModelProvider, ModelFactoryType],
     ):
         self.agent_definitions = agent_definitions
@@ -44,10 +39,8 @@ class LocalAgentRegistry(BaseAgentRegistry):
 
         raise ValueError(f"unknown provider `{provider}`.")
 
-    def get(
-        self, use_case: str, agent_type: str, options: Optional[dict[str, Any]] = None
-    ) -> Any:
-        klass, config = self.agent_definitions[Key(use_case=use_case, type=agent_type)]
+    def get(self, id: str, options: Optional[dict[str, Any]] = None) -> Any:
+        klass, config = self.agent_definitions[id]
 
         # TODO: read model parameters such as `temperature`, `top_k`
         #  and pass them to the model factory via **kwargs.
@@ -65,13 +58,14 @@ class LocalAgentRegistry(BaseAgentRegistry):
         return klass(
             name=config["name"],
             chain=prompt | model,
+            unit_primitives=config["unit_primitives"],
         )
 
     @classmethod
     def from_local_yaml(
         cls,
         model_factories: dict[ModelProvider, ModelFactoryType],
-        class_overrides: dict[Key, Type[Agent]],
+        class_overrides: dict[str, Type[Agent]],
     ) -> "LocalAgentRegistry":
         """Iterate over all agent definition files matching [usecase]/[type].yml,
         and create a corresponding agent for each one. The base Agent class is
@@ -80,9 +74,8 @@ class LocalAgentRegistry(BaseAgentRegistry):
 
         agent_definitions = {}
         for path in Path(__file__).parent.glob("*/*.yml"):
-            key = Key(use_case=path.parent.name, type=path.stem)
             with open(path, "r") as fp:
-                klass = class_overrides.get(key, Agent)
-                agent_definitions[key] = (klass, yaml.safe_load(fp))
+                klass = class_overrides.get(path.stem, Agent)
+                agent_definitions[path.stem] = (klass, yaml.safe_load(fp))
 
         return cls(agent_definitions, model_factories)

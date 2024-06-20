@@ -8,7 +8,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from ai_gateway import agents
 from ai_gateway.agents.base import Agent
-from ai_gateway.agents.registry import Key, LocalAgentRegistry, ModelProvider
+from ai_gateway.agents.registry import LocalAgentRegistry, ModelProvider
 
 
 class MockAgentClass(Agent):
@@ -25,6 +25,8 @@ class TestLocalAgentRegistry:
 name: Test agent
 provider: anthropic
 model: claude-3-haiku-20240307
+unit_primitives:
+  - duo_chat
 prompt_template:
   system: Template1
   user: Template2
@@ -39,6 +41,9 @@ prompt_template:
 name: Test agent
 provider: anthropic
 model: claude-3-haiku-20240307
+unit_primitives:
+  - duo_chat
+  - explain_code
 prompt_template:
   system: Template1
   user: Template2
@@ -46,7 +51,7 @@ stop:
   - Foo
   - Bar
             """,
-                {Key(use_case="chat", type="react"): MockAgentClass},
+                {"react": MockAgentClass},
                 MockAgentClass,
                 {"stop": ["Foo", "Bar"]},
             ),
@@ -55,7 +60,7 @@ stop:
     def test_get(
         self,
         agent_yml: str,
-        class_overrides: dict[Key, Type[Agent]],
+        class_overrides: dict[str, Type[Agent]],
         expected_class: Type[Agent],
         expected_kwargs: dict,
     ):
@@ -68,7 +73,7 @@ stop:
                 },
             )
 
-            agent = registry.get("chat", "react")
+            agent = registry.get("react")
 
             chain = agent.bound
             actual_messages = chain.first.messages
@@ -79,7 +84,7 @@ stop:
             ).messages
 
             mock_file.assert_called_with(
-                Path(agents.__file__).parent / "chat" / "react.yml", "r"
+                Path(agents.__file__).parent / "definitions" / "react.yml", "r"
             )
 
             assert agent.name == "Test agent"

@@ -168,8 +168,10 @@ class ReActAgent(Agent[ReActAgentInputs, TypeReActAgentAction]):
         len_log: int
         len_thought: int
 
-    def __init__(self, *, name: str, chain: Runnable):
-        super().__init__(name, ReActInputParser() | chain | ReActPlainTextParser())
+    def __init__(self, *, name: str, unit_primitives: list[str], chain: Runnable):
+        super().__init__(
+            name, unit_primitives, ReActInputParser() | chain | ReActPlainTextParser()
+        )
 
     async def astream(
         self,
