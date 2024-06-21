@@ -51,13 +51,13 @@ class Agent(RunnableBinding[Input, Output]):
 
 class BaseAgentRegistry(ABC):
     @abstractmethod
-    def get(self, id: str, options: Optional[dict[str, Any]]) -> Agent:
+    def get(self, agent_id: str, options: Optional[dict[str, Any]] = None) -> Agent:
         pass
 
     def get_on_behalf(
-        self, user: GitLabUser, id: str, options: Optional[dict[str, Any]] = None
+        self, user: GitLabUser, agent_id: str, options: Optional[dict[str, Any]] = None
     ) -> Agent:
-        agent = self.get(id, options)
+        agent = self.get(agent_id, options)
 
         if not set(agent.unit_primitives).issubset(user.unit_primitives):
             raise WrongUnitPrimitives

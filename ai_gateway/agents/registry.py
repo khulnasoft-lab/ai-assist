@@ -1,6 +1,6 @@
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional, Protocol, Type
+from typing import Any, NamedTuple, Optional, Protocol, Type
 
 import yaml
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -22,14 +22,31 @@ class ModelFactoryType(Protocol):
     ) -> BaseChatModel: ...
 
 
+class AgentRegistered(NamedTuple):
+    klass: Type[Agent]
+    config: dict
+
+
 class LocalAgentRegistry(BaseAgentRegistry):
+
+    agents_definitions_dir: Path = Path(__file__).parent / "definitions"
+    key_agent_type_base: str = "base"
+
     def __init__(
         self,
-        agent_definitions: dict[str, tuple[Type[Agent], dict]],
+        agents_registered: dict[str, AgentRegistered],
         model_factories: dict[ModelProvider, ModelFactoryType],
     ):
-        self.agent_definitions = agent_definitions
+        self.agents_registered = agents_registered
         self.model_factories = model_factories
+
+    def _resolve_id(self, agent_id: str) -> str:
+        _, _, agent_type = agent_id.partition("/")
+        if agent_type:
+            # the `agent_id` value is already in the format of - `first/last`
+            return agent_id
+
+        return f"{agent_id}/{self.key_agent_type_base}"
 
     def _get_model(
         self, provider: str, name: str, **kwargs: Optional[Any]
@@ -39,8 +56,9 @@ class LocalAgentRegistry(BaseAgentRegistry):
 
         raise ValueError(f"unknown provider `{provider}`.")
 
-    def get(self, id: str, options: Optional[dict[str, Any]] = None) -> Any:
-        klass, config = self.agent_definitions[id]
+    def get(self, agent_id: str, options: Optional[dict[str, Any]] = None) -> Any:
+        agent_id = self._resolve_id(agent_id)
+        klass, config = self.agents_registered[agent_id]
 
         # TODO: read model parameters such as `temperature`, `top_k`
         #  and pass them to the model factory via **kwargs.
@@ -72,10 +90,17 @@ class LocalAgentRegistry(BaseAgentRegistry):
         used if no matching override is provided in `class_overrides`.
         """
 
-        agent_definitions = {}
-        for path in Path(__file__).parent.glob("*/*.yml"):
-            with open(path, "r") as fp:
-                klass = class_overrides.get(path.stem, Agent)
-                agent_definitions[path.stem] = (klass, yaml.safe_load(fp))
+        agents_registered = {}
+        for path in cls.agents_definitions_dir.glob("*/*.yml"):
+            agent_id = (
+                # E.g., "chat/react", "generate_description/base", etc.
+                path.relative_to(cls.agents_definitions_dir).with_suffix("")
+            )
 
-        return cls(agent_definitions, model_factories)
+            with open(path, "r") as fp:
+                klass = class_overrides.get(agent_id, Agent)
+                agents_registered[agent_id] = AgentRegistered(
+                    klass=klass, config=yaml.safe_load(fp)
+                )
+
+        return cls(agents_registered, model_factories)
