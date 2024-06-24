@@ -27,14 +27,28 @@ class TestAgent:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        ("previous_conversation", "messages_passed_to_model"),
+        ("state", "messages_passed_to_model"),
         [
             (
-                [SystemMessage(content="Some previous conversation.")],
+                WorkflowState(
+                    goal="Test goal",
+                    messages=[SystemMessage(content="Some previous conversation.")],
+                    previous_step_summary=None,
+                    plan=[],
+                    actions=[],
+                    costs={},
+                ),
                 [SystemMessage(content="Some previous conversation.")],
             ),
             (
-                [],
+                WorkflowState(
+                    goal="Test goal",
+                    previous_step_summary=None,
+                    messages=[],
+                    plan=[],
+                    actions=[],
+                    costs={},
+                ),
                 [
                     SystemMessage(content="You are a helpful assistant."),
                     HumanMessage(
@@ -42,11 +56,28 @@ class TestAgent:
                     ),
                 ],
             ),
+            (
+                WorkflowState(
+                    goal="Test goal",
+                    messages=[],
+                    previous_step_summary="All the previous work",
+                    plan=[],
+                    actions=[],
+                    costs={},
+                ),
+                [
+                    SystemMessage(content="You are a helpful assistant."),
+                    HumanMessage(
+                        content="Overall Goal: Test goal\nYour Goal: Provide a helpful response."
+                    ),
+                    HumanMessage(
+                        content="Summary of the work delivered so far: All the previous work"
+                    ),
+                ],
+            ),
         ],
     )
-    async def test_run(
-        self, agent_config, tools, previous_conversation, messages_passed_to_model
-    ):
+    async def test_run(self, agent_config, tools, state, messages_passed_to_model):
         agent = Agent(config=agent_config)
         model_response = AIMessage(
             content="Test response",
@@ -69,11 +100,6 @@ class TestAgent:
             datetime_mock.timezone.utc = datetime.timezone.utc
             chat_anthropic_mock.bind_tools.return_value = chat_anthropic_mock
             chat_anthropic_mock.ainvoke.return_value = model_response
-
-            state = WorkflowState(
-                goal="Test goal",
-                messages=previous_conversation,
-            )
 
             agent.setup(tools)
             result = await agent.run(state)

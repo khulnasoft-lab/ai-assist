@@ -28,16 +28,9 @@ class Agent(BaseModel):
         if not self._llm:
             raise ValueError("Agent not setup. Please call setup() first.")
 
-        messages = state["messages"]
-        if len(messages) <= 0:
-            messages.append(SystemMessage(content=self.config.system_prompt))
-            messages.append(
-                HumanMessage(
-                    content=f"Overall Goal: {state['goal']}\nYour Goal: {self.config.goal}"
-                )
-            )
+        self._initialise_conversation(state)
 
-        result = await self._llm.ainvoke(messages)
+        result = await self._llm.ainvoke(state["messages"])
         actions = [
             {
                 "actor": self.config.name,
@@ -48,7 +41,7 @@ class Agent(BaseModel):
         usage_data = result.response_metadata["usage"]
 
         return {
-            "messages": messages + [result],
+            "messages": state["messages"] + [result],
             "actions": actions,
             "costs": (
                 self.config.model,
@@ -59,3 +52,21 @@ class Agent(BaseModel):
                 ),
             ),
         }
+
+    def _initialise_conversation(self, state: WorkflowState):
+        if len(state["messages"]) > 0:
+            return
+
+        state["messages"].append(SystemMessage(content=self.config.system_prompt))
+        state["messages"].append(
+            HumanMessage(
+                content=f"Overall Goal: {state['goal']}\nYour Goal: {self.config.goal}"
+            )
+        )
+
+        if state.get("previous_step_summary"):
+            state["messages"].append(
+                HumanMessage(
+                    content=f"Summary of the work delivered so far: {state['previous_step_summary']}"
+                )
+            )

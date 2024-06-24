@@ -21,9 +21,10 @@ _DEFAULT_SYSTEM_PROMPT = """
     You are an expert manager. Your task is to ensure a smooth work handover between multiple team members.
     To achieve this, review past conversations between team members and summarize the progress that has been made towards the goal.
     Your summary should include the following information:
-    1. What has been delivered so far.
-    2. What is still missing or needs to be completed.
-    3. Any problems or challenges that have been encountered.
+    1. A summary passed into HandoverTool
+    2. What has been delivered so far.
+    3. What is still missing or needs to be completed.
+    4. Any problems or challenges that have been encountered.
 
     Your summary should be clear, concise, and provide a comprehensive overview of the project's current status to facilitate a seamless transition.
     """

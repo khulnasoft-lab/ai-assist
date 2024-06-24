@@ -1,4 +1,5 @@
 import operator
+from enum import Enum
 from typing import Annotated, Dict, List, Optional, Sequence, Tuple
 
 from langchain_core.messages import BaseMessage
@@ -26,6 +27,14 @@ class Cost(TypedDict):
     input_tokens: int
     output_tokens: int
     llm_calls: int
+
+
+class WorkflowStatus(str, Enum):
+    NOT_STARTED = "Not Started"
+    IN_PROGRESS = "In Progress"
+    RUNNING = "Running"
+    COMPLETED = "Completed"
+    FAILED = "Failed"
 
 
 def reduce_cost_state(
