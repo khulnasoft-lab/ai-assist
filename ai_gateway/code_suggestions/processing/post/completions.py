@@ -8,6 +8,7 @@ from ai_gateway.code_suggestions.processing.post.ops import (
     fix_end_block_errors,
     remove_comment_only_completion,
     trim_by_min_allowed_context,
+    sanitize_urls,
 )
 from ai_gateway.code_suggestions.processing.typing import LanguageId
 
@@ -59,6 +60,12 @@ class PostProcessor(PostProcessorBase):
                 partial(clean_model_reflection, self.code_context),
             ),
             (strip_whitespaces.__name__, strip_whitespaces),
+            (
+                sanitize_urls.__name__,
+                partial(
+                    sanitize_urls, self.code_context, lang_id=self.lang_id
+                ),
+            ),
         ]
 
     async def process(self, completion: str, **kwargs: Any) -> str:

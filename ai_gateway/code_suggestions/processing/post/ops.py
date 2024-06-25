@@ -12,6 +12,7 @@ from ai_gateway.code_suggestions.processing.ops import (
 )
 from ai_gateway.code_suggestions.processing.typing import LanguageId
 from ai_gateway.prompts.parsers import CodeParser
+from urllib.parse import urlparse, urlunparse
 
 __all__ = [
     "clean_model_reflection",
@@ -19,6 +20,7 @@ __all__ = [
     "fix_end_block_errors",
     "strip_code_block_markdown",
     "prepend_new_line",
+    "sanitize_urls",
 ]
 
 log = structlog.stdlib.get_logger("codesuggestions")
@@ -28,6 +30,10 @@ _COMMENT_IDENTIFIERS = ["/*", "//", "#"]
 _SPECIAL_CHARS = "()[];.,$%&^*@#!{}/"
 _RE_MARKDOWN_CODE_BLOCK_BEGIN = re.compile(r"^`{3}\S*\n", flags=re.MULTILINE)
 
+_ALLOWED_JSON_SCHEMA_URL_PATTERNS = [
+    re.compile(r"\"?(?P<url>(?:https?\:)?//json-schema.org(?:/draft/\d{4}-\d{2})?/schema)#?"),
+    re.compile(r"\"?(?P<url>(?:http\:)//iglucentral.com/schemas/com.snowplowanalytics.self-desc/schema/jsonschema/\d{1,3}-\d{1,3}-\d{1,3})#?"),
+]
 
 async def clean_model_reflection(context: str, completion: str, **kwargs: Any) -> str:
     def _is_single_line_comment(lines: list[str]):
@@ -222,6 +228,40 @@ async def remove_comment_only_completion(
         if parser.comments_only():
             log.info("removing comments-only completion")
             return ""
+    except ValueError as e:
+        log.warning(f"Failed to parse code: {e}")
+
+    return completion
+
+async def sanitize_urls(
+    code_context: str,
+    completion: str,
+    lang_id: Optional[LanguageId] = None,
+) -> str:
+    if not completion:
+        return completion
+    try:
+        parser = await CodeParser.from_language_id(
+            code_context + completion,
+            lang_id,
+        )
+        jsonschema_urls = parser.jsonschema_urls()
+        for jsonschema_url in jsonschema_urls:
+            sanitized = None
+            for pattern in _ALLOWED_JSON_SCHEMA_URL_PATTERNS:
+                match = pattern.match(jsonschema_url)
+                if match:
+                    url = match.group("url")
+                    url_without_query = urlparse(url)._replace(query=None)
+                    sanitized = jsonschema_url.replace(url, urlunparse(url_without_query))
+                    break
+
+            if sanitized:
+                completion = completion.replace(jsonschema_url, sanitized)
+            else:
+                completion = completion.replace(jsonschema_url, "YOUR_SCHEMA_URL")
+
+
     except ValueError as e:
         log.warning(f"Failed to parse code: {e}")
 

@@ -26,6 +26,26 @@ from ai_gateway.prompts.parsers.function_signatures import (
 from ai_gateway.prompts.parsers.imports import ImportVisitorFactory
 from ai_gateway.prompts.parsers.treetraversal import tree_dfs
 
+class BaseJSONVisitor(BaseVisitor):
+    def __init__(self) -> None:
+        self._urls = []
+
+    def _visit_node(self, node: Node):
+        key = node.children[0]
+        if key.text == b'"$schema"':
+            value = node.children[2]
+            if value.type == "string":
+                url = self._bytes_to_str(value.text)
+                self._urls = self._urls + [url]
+
+    def visit(self, node: Node):
+        # Visit key-value pairs:
+        if node.type == "pair":
+            # Always visit nodes for now.
+            self._visit_node(node)
+
+    def urls(self) -> list[str]:
+        return self._urls
 
 class CodeParser(BaseCodeParser):
     def __init__(self, tree: Tree, lang_id: LanguageId):
@@ -116,6 +136,17 @@ class CodeParser(BaseCodeParser):
         self._visit_nodes(visitor)
 
         return visitor.comments_only
+
+    def jsonschema_urls(self) -> list[str]:
+        # TODO: Create a visitor factory.
+        # visitor = FunctionSignatureVisitorFactory.from_language_id(self.lang_id)
+        visitor = BaseJSONVisitor()
+        if visitor is None:
+            return []
+
+        self._visit_nodes(visitor)
+
+        return visitor.urls()
 
     @classmethod
     async def from_language_id(

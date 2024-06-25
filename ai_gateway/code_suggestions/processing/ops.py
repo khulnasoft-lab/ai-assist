@@ -92,6 +92,13 @@ _ALL_LANGS = {
         frozenset({"kts", "kt"}),
         frozenset({"kotlin"}),
     ),
+    _LanguageDef(
+        LanguageId.JSON,
+        "json",
+        "JSON",
+        frozenset({"json", "jsonp"}),
+        frozenset({"json"}),
+    ),
 }
 
 _LANG_ID_TO_LANG_DEF = {value.lang_id: value for value in _ALL_LANGS}
