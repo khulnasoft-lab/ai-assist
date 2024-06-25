@@ -99,6 +99,13 @@ _ALL_LANGS = {
         frozenset({"json", "jsonp"}),
         frozenset({"json"}),
     ),
+    _LanguageDef(
+        LanguageId.YAML,
+        "yaml",
+        "YAML",
+        frozenset({"yaml"}),
+        frozenset({"yaml"}),
+    ),
 }
 
 _LANG_ID_TO_LANG_DEF = {value.lang_id: value for value in _ALL_LANGS}

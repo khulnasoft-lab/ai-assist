@@ -30,6 +30,7 @@ class LanguageId(Enum):
     TS = 12
     KOTLIN = 13
     JSON = 14
+    YAML = 15
 
 
 class MetadataCodeContent(NamedTuple):
