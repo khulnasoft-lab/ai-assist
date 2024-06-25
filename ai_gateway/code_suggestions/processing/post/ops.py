@@ -245,7 +245,7 @@ async def sanitize_urls(
             code_context + completion,
             lang_id,
         )
-        jsonschema_urls = parser.jsonschema_urls()
+        jsonschema_urls = parser.dynamically_loaded_urls()
         for jsonschema_url in jsonschema_urls:
             sanitized = None
             for pattern in _ALLOWED_JSON_SCHEMA_URL_PATTERNS:
