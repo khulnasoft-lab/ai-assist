@@ -418,6 +418,7 @@ class TestAnthropicChatModel:
             "claude-3-opus-20240229",
             "claude-3-sonnet-20240229",
             "claude-3-haiku-20240307",
+            "claude-3-5-sonnet-20240620",
         ],
     )
     def test_anthropic_model_from_name(self, model_name_version: str):

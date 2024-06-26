@@ -62,6 +62,7 @@ USE_CASES_MODELS_MAP = {
         KindAnthropicModel.CLAUDE_3_SONNET,
         KindAnthropicModel.CLAUDE_3_5_SONNET,
         KindAnthropicModel.CLAUDE_3_HAIKU,
+        KindAnthropicModel.CLAUDE_3_5_SONNET,
         KindLiteLlmModel.MISTRAL,
         KindLiteLlmModel.MIXTRAL,
         KindLiteLlmModel.CODE_GEMMA,
