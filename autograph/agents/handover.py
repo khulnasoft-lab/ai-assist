@@ -5,6 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
 from pydantic import BaseModel, Field, PrivateAttr
 
+from ai_gateway.app import Config
 from autograph.entities import AgentConfig, WorkflowState
 
 __all__ = ["HandoverTool", "HandoverAgent"]
@@ -37,6 +38,7 @@ class HandoverAgent(BaseModel):
     _prompt_template: ChatPromptTemplate = PrivateAttr()
 
     def __init__(self, config: AgentConfig):
+        app_config = Config()
         config_override = AgentConfig(
             goal=config.goal,
             name="Handover Agent",
@@ -46,7 +48,11 @@ class HandoverAgent(BaseModel):
             tools=config.tools,
         )
         super().__init__(config=config_override)
-        self._llm = ChatAnthropic(model_name=config.model, temperature=config.temperature)  # type: ignore
+        self._llm = ChatAnthropic(
+            model_name=self.config.model,
+            temperature=self.config.temperature,
+            api_key=app_config.duo_workflow.anthropic_api_key,  # type: ignore
+        )
         self._prompt_template = ChatPromptTemplate.from_messages(
             [
                 ("system", _DEFAULT_SYSTEM_PROMPT),

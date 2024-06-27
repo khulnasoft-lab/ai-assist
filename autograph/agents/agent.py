@@ -7,6 +7,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import Runnable
 from pydantic import BaseModel, PrivateAttr
 
+from ai_gateway.app import Config
 from autograph.entities import AgentConfig, Cost, WorkflowState
 
 __all__ = [
@@ -19,9 +20,12 @@ class Agent(BaseModel):
     _llm: Union[Runnable, None] = PrivateAttr(default=None)
 
     def setup(self, tools: List[Tool]):
+        app_config = Config()
         llm = ChatAnthropic(
-            model_name=self.config.model, temperature=self.config.temperature
-        )  # type: ignore
+            model_name=self.config.model,
+            temperature=self.config.temperature,
+            api_key=app_config.duo_workflow.anthropic_api_key,  # type: ignore
+        )
         self._llm = llm.bind_tools(tools)
 
     async def run(self, state: WorkflowState) -> Dict[str, Any]:

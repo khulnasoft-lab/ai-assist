@@ -4,7 +4,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from pydantic import SecretStr
 
+# from ai_gateway.config import Config
 from autograph.agents import Agent
 from autograph.entities import Cost, WorkflowState
 
@@ -15,11 +17,16 @@ class TestAgent:
         chat_anthropic_mock = AsyncMock(ChatAnthropic)
         chat_anthropic_class_mock = MagicMock(return_value=chat_anthropic_mock)
         chat_anthropic_mock.bind_tools.return_value = "Set up model"
-        with patch("autograph.agents.agent.ChatAnthropic", chat_anthropic_class_mock):
+        app_config = MagicMock()
+        with patch(
+            "autograph.agents.agent.ChatAnthropic", chat_anthropic_class_mock
+        ), patch("autograph.agents.agent.Config", MagicMock(return_value=app_config)):
             agent.setup(tools)
 
             chat_anthropic_class_mock.assert_called_once_with(
-                model_name=agent_config.model, temperature=agent_config.temperature
+                model_name=agent_config.model,
+                temperature=agent_config.temperature,
+                api_key=app_config.duo_workflow.anthropic_api_key,
             )
             chat_anthropic_mock.bind_tools.assert_called_once_with(tools)
 

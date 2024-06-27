@@ -4,6 +4,7 @@ import pytest
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
+from pydantic import SecretStr
 
 from autograph.agents import HandoverAgent
 from autograph.entities import WorkflowState
@@ -14,6 +15,7 @@ class TestHandoverAgent:
         chat_anthropic_mock = MagicMock(ChatAnthropic)
         chat_anthropic_class_mock = MagicMock(return_value=chat_anthropic_mock)
         prompt_template_mock = MagicMock(ChatPromptTemplate)
+        app_config = MagicMock()
 
         with patch(
             "autograph.agents.handover.ChatAnthropic", chat_anthropic_class_mock
@@ -22,6 +24,8 @@ class TestHandoverAgent:
         ), patch(
             "autograph.agents.handover._DEFAULT_SYSTEM_PROMPT",
             "Handover Agent system prompt",
+        ), patch(
+            "autograph.agents.handover.Config", MagicMock(return_value=app_config)
         ):
             prompt_template_mock.from_messages.return_value = "prompt template"
 
@@ -31,7 +35,9 @@ class TestHandoverAgent:
             assert handover_agent._prompt_template == "prompt template"
 
             chat_anthropic_class_mock.assert_called_once_with(
-                model_name=agent_config.model, temperature=agent_config.temperature
+                model_name=agent_config.model,
+                temperature=agent_config.temperature,
+                api_key=app_config.duo_workflow.anthropic_api_key,
             )
             prompt_template_mock.from_messages.assert_called_once_with(
                 [

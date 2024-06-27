@@ -2,7 +2,7 @@ import os
 from typing import Annotated, Optional
 
 from dotenv import find_dotenv
-from pydantic import AliasChoices, BaseModel, Field, RootModel
+from pydantic import AliasChoices, BaseModel, Field, RootModel, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = [
@@ -81,6 +81,10 @@ class ConfigSnowplow(BaseModel):
 
 class ConfigCustomModels(BaseModel):
     enabled: bool = False
+
+
+class ConfigDuoWorkflow(BaseModel):
+    anthropic_api_key: SecretStr = SecretStr("")
 
 
 def _build_location(default: str = "us-central1") -> str:
@@ -172,6 +176,9 @@ class Config(BaseSettings):
     custom_models: Annotated[
         ConfigCustomModels, Field(default_factory=ConfigCustomModels)
     ] = ConfigCustomModels()
+    duo_workflow: Annotated[
+        ConfigDuoWorkflow, Field(default_factory=ConfigDuoWorkflow)
+    ] = ConfigDuoWorkflow()
     vertex_text_model: Annotated[
         ConfigVertexTextModel, Field(default_factory=ConfigVertexTextModel)
     ] = ConfigVertexTextModel()
