@@ -1,5 +1,5 @@
 from asyncio import gather
-from typing import List
+from typing import Any
 
 from langchain.tools import Tool
 from langchain_anthropic import ChatAnthropic
@@ -41,9 +41,9 @@ class PlannerAgent(BaseModel):
 
     config: AgentConfig
     _llm: Runnable = PrivateAttr()
-    _input_messages: List[BaseMessage] = PrivateAttr()
+    _input_messages: list[BaseMessage] = PrivateAttr()
 
-    def __init__(self, config: AgentConfig, team: List[AgentConfig], tools: List[Tool]):
+    def __init__(self, config: AgentConfig, team: list[AgentConfig], tools: list[Tool]):
         super().__init__(
             config=AgentConfig(
                 goal=config.goal,
@@ -71,7 +71,7 @@ class PlannerAgent(BaseModel):
             ),
         ]
 
-    async def run(self, state: WorkflowState):
+    async def run(self, state: WorkflowState) -> dict[str, Any]:
         resp = await self._llm.ainvoke(
             self._input_messages
             + [HumanMessage(content=f"The goal is: {state['goal']}")]
@@ -137,7 +137,7 @@ class PlanSupervisorAgent(BaseModel):
         )
         self._llm = llm.with_structured_output(TaskStatusInput, include_raw=True)  # type: ignore[arg-type]
 
-    async def run(self, state: WorkflowState):
+    async def run(self, state: WorkflowState) -> dict[str, Any]:
         revised_plan = await gather(
             *[
                 self._revise_task(task, state["goal"], state["messages"])
@@ -171,7 +171,7 @@ class PlanSupervisorAgent(BaseModel):
         return {"plan": revised_plan, "messages": messages}
 
     async def _revise_task(
-        self, task: Task, goal: str, messages: List[BaseMessage]
+        self, task: Task, goal: str, messages: list[BaseMessage]
     ) -> Task:
         if task.status in (TaskStatusEnum.CANCELLED, TaskStatusEnum.COMPLETED):
             return task
