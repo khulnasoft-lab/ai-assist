@@ -2,7 +2,8 @@
 
 set -eu
 
-STEPS_DIR="$(pwd)/scripts/ingest/gitlab-docs/steps"
+SCRIPT_DIR=$(dirname $(readlink -f "$0"))
+STEPS_DIR="${SCRIPT_DIR}/steps"
 
 echo "STEPS_DIR: ${STEPS_DIR}"
 

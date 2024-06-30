@@ -1,0 +1,30 @@
+{
+  "content": "# GitLab Admin Area\n\nDETAILS:\n**Tier:** Free, Premium, Ultimate\n**Offering:** Self-managed\n\nThe Admin Area provides a web UI to manage and configure features of GitLab\nself-managed instances. If you are an administrator, to access the Admin Area:\n\n- In GitLab 16.7 and later: on the left sidebar, at the bottom, select **Admin Area**.\n- In GitLab 16.1 and later: on the left sidebar, select **Search or go to**, then select **Admin Area**.\n- In GitLab 16.0 and earlier: on the top bar, select **Main menu > Admin**.\n\nIf the GitLab instance uses Admin Mode, you must [enable Admin Mode for your session](settings/sign_in_restrictions.md#turn-on-admin-mode-for-your-session) before\nthe **Admin Area** button is visible.\n\nNOTE:\nOnly administrators can access the Admin Area.\n\n## Administering organizations\n\n> - [Introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/419540) in GitLab 16.10 [with a flag](feature_flags.md) named `ui_for_organizations`. Disabled by default.\n\nFLAG:\nOn self-managed GitLab, by default this feature is not available. To make it available, an administrator can [enable the feature flag](feature_flags.md) named `ui_for_organizations`.\nOn GitLab.com and GitLab Dedicated, this feature is not available.\nThis feature is not ready for production use.\n\nYou can administer all organizations in the GitLab instance from the Admin Area's Organizations page.\n\nTo access the Organizations page:\n\n1. On the left sidebar, at the bottom, select **Admin Area**.",
+  "metadata": {
+    "title": "GitLab Admin Area",
+    "md5sum": "ddb5dd4bd61aa5fbb32eb98ce288b828c296069cbd8c24894e5054ad3ff7978b",
+    "source": "administration/admin_area.md",
+    "source_type": "doc",
+    "source_url": "https://gitlab.com/help/administration/admin_area"
+  }
+}
+{
+  "content": "1. Select **Overview > Organizations**.\n\n## Administering projects\n\nYou can administer all projects in the GitLab instance from the Admin Area's Projects page.\n\nTo access the Projects page:\n\n1. On the left sidebar, at the bottom, select **Admin Area**.\n1. Select **Overview > Projects**.\n1. Select the **All**, **Private**, **Internal**, or **Public** tab to list only\n   projects of that criteria.\n\nBy default, all projects are listed, in reverse order of when they were last updated. For each\nproject, the following information is listed:\n\n- Name\n- Namespace\n- Description\n- Size, updated every 15 minutes at most\n\nProjects can be edited or deleted.\n\nTo edit a project's name or description:\n\n1. In the Projects overview, next to the project you want to edit, select **Edit**.\n1. Edit the **Project name** or **Project description**.\n1. Select **Save Changes**.\n\nTo delete a project:\n\n1. In the Projects overview, next to the project you want to delete, select **Delete**.\n\nThe list of projects can be sorted by:\n\n- Updated date\n- Last created\n- Name\n- Most stars\n- Oldest created\n- Oldest updated\n- Largest repository\n\nA user can choose to hide or show archived projects in the list.\n\nIn the **Filter by name** field, type the project name you want to find, and GitLab filters\nthem as you type.\n\nTo filter only projects in that namespace, select from the **Namespace** dropdown list.\n\nYou can combine the filter options. For example, to list only public projects with `score` in their name:\n",
+  "metadata": {
+    "title": "GitLab Admin Area",
+    "md5sum": "ddb5dd4bd61aa5fbb32eb98ce288b828c296069cbd8c24894e5054ad3ff7978b",
+    "source": "administration/admin_area.md",
+    "source_type": "doc",
+    "source_url": "https://gitlab.com/help/administration/admin_area"
+  }
+}
+{
+  "content": "1. Select the **Public** tab.\n1. Enter `score` in the **Filter by name** text box.\n\n## Administering users\n\n> - Filtering users [introduced](https://gitlab.com/gitlab-org/gitlab/-/issues/238183) in GitLab 17.0.\n\nYou can administer all users in the GitLab instance from the Admin Area's Users page:\n\n1. On the left sidebar, at the bottom, select **Admin Area**.\n1. Select **Overview > Users**.\n\nYou can use the user search box to search and filter users by:\n\n- User **access level**.\n- Whether **two-factor authentication** is enabled or disabled.\n- User **state**.\n\nYou can also type text into the search box. For example, the name of a specific user.\nThis text search is case insensitive, and applies partial matching to name and username.\nTo search for an email address, you must provide the complete email address.\n\nFor each user, the following are listed:\n\n- Username\n- Email address\n- Project membership count\n- Group membership count\n- Date of account creation\n- Date of last activity\n\nTo edit a user, in the user's row, select **Edit**. To delete the user, or delete\nthe user and their contributions, select the cog dropdown list in that user's row,\nand select the desired option.\n\nTo change the sort order:\n\n1. Select the sort dropdown list.\n1. Select the desired order.\n\nBy default the sort dropdown list shows **Name**.\n\n### User impersonation\n\nAn administrator can \"impersonate\" any other user, including other administrators.",
+  "metadata": {
+    "title": "GitLab Admin Area",
+    "md5sum": "ddb5dd4bd61aa5fbb32eb98ce288b828c296069cbd8c24894e5054ad3ff7978b",
+    "source": "administration/admin_area.md",
+    "source_type": "doc",
+    "source_url": "https://gitlab.com/help/administration/admin_area"
+  }
+}
