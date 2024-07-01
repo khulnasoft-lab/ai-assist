@@ -43,7 +43,7 @@ class LocalAgentRegistry(BaseAgentRegistry):
     def _get_model(
         self, provider: str, name: str, **kwargs: Optional[Any]
     ) -> BaseChatModel:
-        return ChatLiteLLM(model=name, custom_llm_provider=provider)
+        return ChatLiteLLM(model=name, custom_llm_provider=provider)  # type: ignore
 
     def get(self, agent_id: str, options: Optional[dict[str, Any]] = None) -> Any:
         agent_id = self._resolve_id(agent_id)

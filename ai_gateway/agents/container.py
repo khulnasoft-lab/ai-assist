@@ -11,8 +11,6 @@ __all__ = [
 class ContainerAgents(containers.DeclarativeContainer):
     models = providers.DependenciesContainer()
 
-    _anthropic_claude_fn = providers.Factory(models.anthropic_claude_chat_fn)
-
     agent_registry = providers.Singleton(
         LocalAgentRegistry.from_local_yaml,
         class_overrides={"chat/react": chat.ReActAgent},
