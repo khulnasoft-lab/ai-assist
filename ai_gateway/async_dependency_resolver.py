@@ -52,6 +52,10 @@ async def get_code_suggestions_completions_litellm_factory_provider():
     yield get_container_application().code_suggestions.completions.litellm_factory
 
 
+async def get_code_suggestions_completions_mistral_factory_provider():
+    yield get_container_application().code_suggestions.completions.mistral_factory
+
+
 async def get_snowplow_instrumentator():
     yield get_container_application().snowplow.instrumentator()
 
@@ -70,6 +74,10 @@ async def get_code_suggestions_generations_anthropic_chat_factory_provider():
 
 async def get_code_suggestions_generations_litellm_factory_provider():
     yield get_container_application().code_suggestions.generations.litellm_factory
+
+
+async def get_code_suggestions_generations_mistral_factory_provider():
+    yield get_container_application().code_suggestions.generations.mistral_factory
 
 
 async def get_chat_litellm_factory_provider():

@@ -1,15 +1,18 @@
+import os
 from typing import Iterator, Optional
 
 import httpx
 from anthropic import AsyncAnthropic
 from dependency_injector import containers, providers
 from google.cloud.aiplatform.gapic import PredictionServiceAsyncClient
+from mistralai.client import MistralClient
 
 from ai_gateway.config import ConfigModelConcurrency
 from ai_gateway.models import mock
 from ai_gateway.models.anthropic import AnthropicChatModel, AnthropicModel
 from ai_gateway.models.base import connect_anthropic, grpc_connect_vertex
 from ai_gateway.models.litellm import LiteLlmChatModel, LiteLlmTextGenModel
+from ai_gateway.models.mistral import MistralChatModel, MistralTextGenModel
 from ai_gateway.models.vertex_text import (
     PalmCodeBisonModel,
     PalmCodeGeckoModel,
@@ -76,6 +79,22 @@ async def _init_vertex_ai_proxy_client(
     await client.aclose()
 
 
+def _init_mistral_client(
+    mock_model_responses: bool,
+) -> Iterator[Optional[MistralClient]]:
+    if mock_model_responses:
+        yield None
+        return
+
+    # pylint: disable=direct-environment-variable-reference
+    api_key = os.getenv("MISTRAL_API_KEY", None)
+    # pylint: enable=direct-environment-variable-reference
+
+    client = MistralClient(api_key=api_key)
+    yield client
+    client.close()
+
+
 class ContainerModels(containers.DeclarativeContainer):
     # We need to resolve the model based on the model name provided by the upstream container.
     # Hence, `VertexTextBaseModel.from_model_name` and `AnthropicModel.from_model_name` are only partially applied here.
@@ -100,6 +119,11 @@ class ContainerModels(containers.DeclarativeContainer):
 
     http_client_anthropic_proxy = providers.Resource(
         _init_anthropic_proxy_client,
+        mock_model_responses=config.mock_model_responses,
+    )
+
+    http_client_mistral = providers.Resource(
+        _init_mistral_client,
         mock_model_responses=config.mock_model_responses,
     )
 
@@ -173,6 +197,24 @@ class ContainerModels(containers.DeclarativeContainer):
         original=providers.Factory(
             LiteLlmChatModel.from_model_name,
             custom_models_enabled=config.custom_models.enabled,
+        ),
+        mocked=providers.Factory(mock.ChatModel),
+    )
+
+    mistral = providers.Selector(
+        _mock_selector,
+        original=providers.Factory(
+            MistralTextGenModel.from_model_name,
+            client=http_client_mistral,
+        ),
+        mocked=providers.Factory(mock.ChatModel),
+    )
+
+    mistral_chat = providers.Selector(
+        _mock_selector,
+        original=providers.Factory(
+            MistralChatModel.from_model_name,
+            client=http_client_mistral,
         ),
         mocked=providers.Factory(mock.ChatModel),
     )

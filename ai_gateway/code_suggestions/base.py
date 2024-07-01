@@ -16,6 +16,7 @@ from ai_gateway.models import (
     KindVertexTextModel,
     ModelMetadata,
 )
+from ai_gateway.models.mistral import KindMistralModel
 
 __all__ = [
     "KindUseCase",
@@ -42,6 +43,7 @@ PROVIDERS_MODELS_MAP = {
     KindModelProvider.ANTHROPIC: KindAnthropicModel,
     KindModelProvider.VERTEX_AI: KindVertexTextModel,
     KindModelProvider.LITELLM: KindLiteLlmModel,
+    KindModelProvider.MISTRAL: KindMistralModel,
 }
 
 USE_CASES_MODELS_MAP = {
@@ -53,6 +55,7 @@ USE_CASES_MODELS_MAP = {
         KindLiteLlmModel.MIXTRAL,
         KindLiteLlmModel.CODE_GEMMA,
         KindLiteLlmModel.CODESTRAL,
+        KindMistralModel.CODESTRAL,
     },
     KindUseCase.CODE_GENERATIONS: {
         KindAnthropicModel.CLAUDE_2_0,
@@ -66,6 +69,7 @@ USE_CASES_MODELS_MAP = {
         KindLiteLlmModel.MIXTRAL,
         KindLiteLlmModel.CODE_GEMMA,
         KindLiteLlmModel.CODESTRAL,
+        KindMistralModel.CODESTRAL,
     },
 }
 

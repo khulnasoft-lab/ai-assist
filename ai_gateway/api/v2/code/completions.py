@@ -29,10 +29,12 @@ from ai_gateway.api.v2.code.typing import (
 from ai_gateway.async_dependency_resolver import (
     get_code_suggestions_completions_anthropic_provider,
     get_code_suggestions_completions_litellm_factory_provider,
+    get_code_suggestions_completions_mistral_factory_provider,
     get_code_suggestions_completions_vertex_legacy_provider,
     get_code_suggestions_generations_anthropic_chat_factory_provider,
     get_code_suggestions_generations_anthropic_factory_provider,
     get_code_suggestions_generations_litellm_factory_provider,
+    get_code_suggestions_generations_mistral_factory_provider,
     get_code_suggestions_generations_vertex_provider,
     get_snowplow_instrumentator,
 )
@@ -88,6 +90,9 @@ async def completions(
     completions_litellm_factory: Factory[CodeCompletions] = Depends(
         get_code_suggestions_completions_litellm_factory_provider
     ),
+    completions_mistral_factory: Factory[CodeCompletions] = Depends(
+        get_code_suggestions_completions_mistral_factory_provider
+    ),
     snowplow_instrumentator: SnowplowInstrumentator = Depends(
         get_snowplow_instrumentator
     ),
@@ -121,6 +126,11 @@ async def completions(
         # We support the prompt version 2 only with the Anthropic models
         if payload.prompt_version == 2:
             kwargs.update({"raw_prompt": payload.prompt})
+    elif payload.model_provider == KindModelProvider.MISTRAL:
+        code_completions = completions_mistral_factory(
+            model__name=payload.model_name,
+            model__api_key=payload.model_api_key,
+        )
     elif payload.model_provider == KindModelProvider.LITELLM:
         code_completions = completions_litellm_factory(
             model__name=payload.model_name,
@@ -170,6 +180,9 @@ async def generations(
     generations_litellm_factory: Factory[CodeGenerations] = Depends(
         get_code_suggestions_generations_litellm_factory_provider
     ),
+    generations_mistral_factory: Factory[CodeGenerations] = Depends(
+        get_code_suggestions_generations_mistral_factory_provider
+    ),
     snowplow_instrumentator: SnowplowInstrumentator = Depends(
         get_snowplow_instrumentator
     ),
@@ -211,6 +224,11 @@ async def generations(
                 payload,
                 generations_anthropic_factory,
             )
+    elif payload.model_provider == KindModelProvider.MISTRAL:
+        code_generations = generations_mistral_factory(
+            model__name=payload.model_name,
+            model__api_key=payload.model_api_key,
+        )
     elif payload.model_provider == KindModelProvider.LITELLM:
         code_generations = generations_litellm_factory(
             model__name=payload.model_name,

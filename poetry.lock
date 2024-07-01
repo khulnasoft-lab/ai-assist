@@ -2306,6 +2306,22 @@ files = [
 ]
 
 [[package]]
+name = "mistralai"
+version = "0.4.1"
+description = ""
+optional = false
+python-versions = "<4.0,>=3.9"
+files = [
+    {file = "mistralai-0.4.1-py3-none-any.whl", hash = "sha256:c11d636093c9eec923f00ac9dff13e4619eb751d44d7a3fea5b665a0e8f99f93"},
+    {file = "mistralai-0.4.1.tar.gz", hash = "sha256:22a88c24b9e3176021b466c1d78e6582eef700688803460fd449254fb7647979"},
+]
+
+[package.dependencies]
+httpx = ">=0.25,<1"
+orjson = ">=3.9.10,<3.11"
+pydantic = ">=2.5.2,<3"
+
+[[package]]
 name = "multidict"
 version = "6.0.5"
 description = "multidict implementation"
@@ -4944,4 +4960,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10.0"
-content-hash = "8bd273626f02d271ab5c9db71bab8e2fc0d5179a28ce24ac1d8e54fc88766c7b"
+content-hash = "92a32f91b0b40b7e0d989c1df45d4c48a567da3e05b67eafd8f3a183f3f5652c"

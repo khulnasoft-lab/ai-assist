@@ -35,6 +35,7 @@ class KindModelProvider(str, Enum):
     ANTHROPIC = "anthropic"
     VERTEX_AI = "vertex-ai"
     LITELLM = "litellm"
+    MISTRAL = "mistral"
 
 
 class ModelAPIError(Exception):

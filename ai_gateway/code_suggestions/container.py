@@ -30,6 +30,7 @@ class ContainerCodeGenerations(containers.DeclarativeContainer):
     anthropic_claude = providers.Dependency(instance_of=TextGenModelBase)
     anthropic_claude_chat = providers.Dependency(instance_of=ChatModelBase)
     llmlite_chat = providers.Dependency(instance_of=ChatModelBase)
+    mistral_chat = providers.Dependency(instance_of=ChatModelBase)
     snowplow_instrumentator = providers.Dependency(instance_of=SnowplowInstrumentator)
 
     vertex = providers.Factory(
@@ -75,6 +76,15 @@ class ContainerCodeGenerations(containers.DeclarativeContainer):
         snowplow_instrumentator=snowplow_instrumentator,
     )
 
+    mistral_factory = providers.Factory(
+        CodeGenerations,
+        model=providers.Factory(mistral_chat),
+        tokenization_strategy=providers.Factory(
+            TokenizerTokenStrategy, tokenizer=tokenizer
+        ),
+        snowplow_instrumentator=snowplow_instrumentator,
+    )
+
     # Default use case with claude.2.0
     anthropic_default = providers.Factory(
         anthropic_factory,
@@ -87,6 +97,7 @@ class ContainerCodeCompletions(containers.DeclarativeContainer):
     vertex_code_gecko = providers.Dependency(instance_of=TextGenModelBase)
     anthropic_claude = providers.Dependency(instance_of=TextGenModelBase)
     llmlite = providers.Dependency(instance_of=TextGenModelBase)
+    mistral = providers.Dependency(instance_of=TextGenModelBase)
     snowplow_instrumentator = providers.Dependency(instance_of=SnowplowInstrumentator)
 
     config = providers.Configuration(strict=True)
@@ -131,6 +142,14 @@ class ContainerCodeCompletions(containers.DeclarativeContainer):
         ),
     )
 
+    mistral_factory = providers.Factory(
+        CodeCompletions,
+        model=providers.Factory(mistral),
+        tokenization_strategy=providers.Factory(
+            TokenizerTokenStrategy, tokenizer=tokenizer
+        ),
+    )
+
 
 class ContainerCodeSuggestions(containers.DeclarativeContainer):
     models = providers.DependenciesContainer()
@@ -148,6 +167,7 @@ class ContainerCodeSuggestions(containers.DeclarativeContainer):
         anthropic_claude=models.anthropic_claude,
         anthropic_claude_chat=models.anthropic_claude_chat,
         llmlite_chat=models.llmlite_chat,
+        mistral_chat=models.mistral_chat,
         snowplow_instrumentator=snowplow.instrumentator,
     )
 
@@ -157,6 +177,7 @@ class ContainerCodeSuggestions(containers.DeclarativeContainer):
         vertex_code_gecko=models.vertex_code_gecko,
         anthropic_claude=models.anthropic_claude,
         llmlite=models.llmlite,
+        mistral=models.mistral,
         config=config,
         snowplow_instrumentator=snowplow.instrumentator,
     )
