@@ -1,6 +1,6 @@
 from typing import Any, Dict
 
-from langchain_anthropic import ChatAnthropic
+from langchain_community.chat_models import ChatLiteLLM
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
 from pydantic import BaseModel, Field, PrivateAttr
@@ -46,7 +46,7 @@ class HandoverAgent(BaseModel):
             tools=config.tools,
         )
         super().__init__(config=config_override)
-        self._llm = ChatAnthropic(model_name=config.model, temperature=config.temperature)  # type: ignore
+        self._llm = ChatLiteLLM(model_name=config.model, model_kwargs={"temperature": config.temperature})  # type: ignore
         self._prompt_template = ChatPromptTemplate.from_messages(
             [
                 ("system", _DEFAULT_SYSTEM_PROMPT),

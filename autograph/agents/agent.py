@@ -2,7 +2,7 @@ import datetime
 from typing import Any, Dict, List, Union
 
 from langchain.tools import Tool
-from langchain_anthropic import ChatAnthropic
+from langchain_community.chat_models import ChatLiteLLM
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import Runnable
 from pydantic import BaseModel, PrivateAttr
@@ -19,9 +19,7 @@ class Agent(BaseModel):
     _llm: Union[Runnable, None] = PrivateAttr(default=None)
 
     def setup(self, tools: List[Tool]):
-        llm = ChatAnthropic(
-            model_name=self.config.model, temperature=self.config.temperature
-        )  # type: ignore
+        llm = ChatLiteLLM(model_name=self.config.model, model_kwargs={"temperature": self.config.temperature})  # type: ignore
         self._llm = llm.bind_tools(tools)
 
     async def run(self, state: WorkflowState) -> Dict[str, Any]:

@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langchain_anthropic import ChatAnthropic
+from langchain_community.chat_models import ChatLiteLLM
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -11,12 +11,12 @@ from autograph.entities import WorkflowState
 
 class TestHandoverAgent:
     def test_setup(self, agent_config):
-        chat_anthropic_mock = MagicMock(ChatAnthropic)
-        chat_anthropic_class_mock = MagicMock(return_value=chat_anthropic_mock)
+        chat_litellm_mock = MagicMock(ChatLiteLLM)
+        chat_litellm_class_mock = MagicMock(return_value=chat_litellm_mock)
         prompt_template_mock = MagicMock(ChatPromptTemplate)
 
         with patch(
-            "autograph.agents.handover.ChatAnthropic", chat_anthropic_class_mock
+            "autograph.agents.handover.ChatLiteLLM", chat_litellm_class_mock
         ), patch(
             "autograph.agents.handover.ChatPromptTemplate", prompt_template_mock
         ), patch(
@@ -27,11 +27,12 @@ class TestHandoverAgent:
 
             handover_agent = HandoverAgent(config=agent_config)
 
-            assert handover_agent._llm == chat_anthropic_mock
+            assert handover_agent._llm == chat_litellm_mock
             assert handover_agent._prompt_template == "prompt template"
 
-            chat_anthropic_class_mock.assert_called_once_with(
-                model_name=agent_config.model, temperature=agent_config.temperature
+            chat_litellm_class_mock.assert_called_once_with(
+                model_name=agent_config.model,
+                model_kwargs={"temperature": agent_config.temperature},
             )
             prompt_template_mock.from_messages.assert_called_once_with(
                 [
@@ -50,12 +51,12 @@ class TestHandoverAgent:
             },
         )
 
-        chat_anthropic_mock = AsyncMock(ChatAnthropic)
-        chat_anthropic_mock.ainvoke.return_value = model_response
+        chat_litellm_mock = AsyncMock(ChatLiteLLM)
+        chat_litellm_mock.ainvoke.return_value = model_response
         prompt_template_mock = MagicMock(ChatPromptTemplate)
         with patch(
-            "autograph.agents.handover.ChatAnthropic",
-            MagicMock(return_value=chat_anthropic_mock),
+            "autograph.agents.handover.ChatLiteLLM",
+            MagicMock(return_value=chat_litellm_mock),
         ), patch(
             "autograph.agents.handover.ChatPromptTemplate.from_messages",
             return_value=prompt_template_mock,
@@ -81,7 +82,7 @@ class TestHandoverAgent:
             prompt_template_mock.format.assert_called_once_with(
                 goal="Test goal", messages=["Message 1", "Message 2", "Message 3"]
             )
-            chat_anthropic_mock.ainvoke.assert_called_once_with(input_messages)
+            chat_litellm_mock.ainvoke.assert_called_once_with(input_messages)
             assert result == {
                 "previous_step_summary": "Handover summary",
                 "plan": [],

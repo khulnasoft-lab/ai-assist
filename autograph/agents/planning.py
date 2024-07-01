@@ -2,7 +2,7 @@ from asyncio import gather
 from typing import List
 
 from langchain.tools import Tool
-from langchain_anthropic import ChatAnthropic
+from langchain_community.chat_models import ChatLiteLLM
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
@@ -54,8 +54,8 @@ class PlannerAgent(BaseModel):
                 tools=config.tools,
             )
         )
-        llm = ChatAnthropic(
-            model_name=config.model, temperature=config.temperature
+        llm = ChatLiteLLM(
+            model_name=config.model, model_kwargs={"temperature": config.temperature}
         )  # type: ignore
         self._llm = llm.with_structured_output(
             Plan.model_json_schema(), include_raw=True
@@ -118,7 +118,7 @@ class PlanSupervisorAgent(BaseModel):
             )
         )
 
-        llm = ChatAnthropic(model_name=config.model, temperature=config.temperature)  # type: ignore
+        llm = ChatLiteLLM(model_name=config.model, model_kwargs={"temperature": config.temperature})  # type: ignore
 
         self._prompt_template = ChatPromptTemplate.from_messages(
             [

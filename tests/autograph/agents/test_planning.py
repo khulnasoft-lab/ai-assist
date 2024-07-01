@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
-from langchain_anthropic import ChatAnthropic
+from langchain_community.chat_models import ChatLiteLLM
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -19,13 +19,11 @@ from autograph.entities import (
 
 class TestPlannerAgent:
     def test_setup(self, agent_config, tools):
-        chat_anthropic_mock = MagicMock(ChatAnthropic)
-        chat_anthropic_class_mock = MagicMock(return_value=chat_anthropic_mock)
-        chat_anthropic_mock.with_structured_output.return_value = "Set up model"
+        chat_litellm_mock = MagicMock(ChatLiteLLM)
+        chat_litellm_class_mock = MagicMock(return_value=chat_litellm_mock)
+        chat_litellm_mock.with_structured_output.return_value = "Set up model"
 
-        with patch(
-            "autograph.agents.planning.ChatAnthropic", chat_anthropic_class_mock
-        ):
+        with patch("autograph.agents.planning.ChatLiteLLM", chat_litellm_class_mock):
             planner_agent = PlannerAgent(
                 config=agent_config, team=[agent_config], tools=tools
             )
@@ -41,10 +39,11 @@ class TestPlannerAgent:
             ]
 
             assert planner_agent._llm == "Set up model"
-            chat_anthropic_class_mock.assert_called_once_with(
-                model_name=agent_config.model, temperature=agent_config.temperature
+            chat_litellm_class_mock.assert_called_once_with(
+                model_name=agent_config.model,
+                model_kwargs={"temperature": agent_config.temperature},
             )
-            chat_anthropic_mock.with_structured_output.assert_called_once_with(
+            chat_litellm_mock.with_structured_output.assert_called_once_with(
                 Plan.model_json_schema(), include_raw=True
             )
 
@@ -75,13 +74,13 @@ class TestPlannerAgent:
             ),
         }
 
-        chat_anthropic_mock = AsyncMock(ChatAnthropic)
-        chat_anthropic_mock.with_structured_output.return_value = chat_anthropic_mock
-        chat_anthropic_mock.ainvoke.return_value = model_response
+        chat_litellm_mock = AsyncMock(ChatLiteLLM)
+        chat_litellm_mock.with_structured_output.return_value = chat_litellm_mock
+        chat_litellm_mock.ainvoke.return_value = model_response
 
         with patch(
-            "autograph.agents.planning.ChatAnthropic",
-            MagicMock(return_value=chat_anthropic_mock),
+            "autograph.agents.planning.ChatLiteLLM",
+            MagicMock(return_value=chat_litellm_mock),
         ):
             planner_agent = PlannerAgent(
                 config=agent_config, team=[agent_config], tools=tools
@@ -89,7 +88,7 @@ class TestPlannerAgent:
             state = WorkflowState(goal="Test goal")
             result = await planner_agent.run(state)
 
-            chat_anthropic_mock.ainvoke.assert_called_once_with(
+            chat_litellm_mock.ainvoke.assert_called_once_with(
                 [
                     SystemMessage(_PLANNER_SYSTEM_PROMPT),
                     HumanMessage(
@@ -133,13 +132,13 @@ def _model_response(
 
 class TestPlanSupervisorAgent:
     def test_setup(self, agent_config, tools):
-        chat_anthropic_mock = MagicMock(ChatAnthropic)
-        chat_anthropic_class_mock = MagicMock(return_value=chat_anthropic_mock)
-        chat_anthropic_mock.with_structured_output.return_value = chat_anthropic_mock
+        chat_litellm_mock = MagicMock(ChatLiteLLM)
+        chat_litellm_class_mock = MagicMock(return_value=chat_litellm_mock)
+        chat_litellm_mock.with_structured_output.return_value = chat_litellm_mock
         prompt_template_mock = MagicMock(ChatPromptTemplate)
 
         with patch(
-            "autograph.agents.planning.ChatAnthropic", chat_anthropic_class_mock
+            "autograph.agents.planning.ChatLiteLLM", chat_litellm_class_mock
         ), patch(
             "autograph.agents.planning.ChatPromptTemplate", prompt_template_mock
         ), patch(
@@ -149,8 +148,9 @@ class TestPlanSupervisorAgent:
             plan_supervisor_agent = PlanSupervisorAgent(config=agent_config)
 
             assert plan_supervisor_agent._llm is not None
-            chat_anthropic_class_mock.assert_called_once_with(
-                model_name=agent_config.model, temperature=agent_config.temperature
+            chat_litellm_class_mock.assert_called_once_with(
+                model_name=agent_config.model,
+                model_kwargs={"temperature": agent_config.temperature},
             )
             prompt_template_mock.from_messages.assert_called_once_with(
                 [
@@ -167,7 +167,7 @@ class TestPlanSupervisorAgent:
                     ("human", "Please assign correct status to the task: {task}"),
                 ]
             )
-            chat_anthropic_mock.with_structured_output.assert_called_once_with(
+            chat_litellm_mock.with_structured_output.assert_called_once_with(
                 TaskStatusInput, include_raw=True
             )
 
@@ -334,14 +334,14 @@ class TestPlanSupervisorAgent:
         ]
         state = WorkflowState(goal="Test goal", plan=old_plan, messages=messages)
 
-        chat_anthropic_mock = AsyncMock(ChatAnthropic)
-        chat_anthropic_mock.with_structured_output.return_value = chat_anthropic_mock
-        chat_anthropic_mock.ainvoke.side_effect = model_responses
+        chat_litellm_mock = AsyncMock(ChatLiteLLM)
+        chat_litellm_mock.with_structured_output.return_value = chat_litellm_mock
+        chat_litellm_mock.ainvoke.side_effect = model_responses
         prompt_template_mock = MagicMock(ChatPromptTemplate)
 
         with patch(
-            "autograph.agents.planning.ChatAnthropic",
-            MagicMock(return_value=chat_anthropic_mock),
+            "autograph.agents.planning.ChatLiteLLM",
+            MagicMock(return_value=chat_litellm_mock),
         ), patch(
             "autograph.agents.planning.ChatPromptTemplate.from_messages",
             return_value=prompt_template_mock,
@@ -368,8 +368,8 @@ class TestPlanSupervisorAgent:
             prompt_template_mock.format.assert_has_calls(expected_format_calls)
 
             expected_model_calls = [call(formated_messages) for _ in revised_tasks]
-            assert chat_anthropic_mock.ainvoke.call_count == len(expected_model_calls)
-            chat_anthropic_mock.ainvoke.assert_has_calls(expected_model_calls)
+            assert chat_litellm_mock.ainvoke.call_count == len(expected_model_calls)
+            chat_litellm_mock.ainvoke.assert_has_calls(expected_model_calls)
 
             assert result["plan"] == new_plan
             expected_messages = [
