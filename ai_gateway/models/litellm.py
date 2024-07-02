@@ -25,6 +25,7 @@ class KindLiteLlmModel(str, Enum):
     MIXTRAL = "mixtral"
     CODE_GEMMA = "codegemma"
     CODESTRAL = "codestral"
+    CODE_LLAMA = "codellama"
 
     # Chat models hosted behind openai proxies should be prefixed with "openai/":
     # https://docs.litellm.ai/docs/providers/openai_compatible
