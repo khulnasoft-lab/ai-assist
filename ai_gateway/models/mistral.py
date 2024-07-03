@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import AsyncIterator, Callable, Optional, Union
+from typing import AsyncIterator, Callable, Optional, Sequence, Union
 
 from mistralai.client import MistralClient
 from mistralai.models.chat_completion import ChatCompletionStreamResponse
@@ -35,6 +35,8 @@ MODEL_STOP_TOKENS = {
 
 
 class MistralChatModel(ChatModelBase):
+    MAX_MODEL_LEN = 32768
+
     def __init__(
         self,
         client: MistralClient,
@@ -130,6 +132,8 @@ class MistralChatModel(ChatModelBase):
 
 
 class MistralTextGenModel(TextGenModelBase):
+    MAX_MODEL_LEN = 32768
+
     def __init__(
         self,
         client: MistralClient,
@@ -160,6 +164,7 @@ class MistralTextGenModel(TextGenModelBase):
         max_output_tokens: int = 16,
         top_p: float = 0.95,
         top_k: int = 40,
+        code_context: Optional[Sequence[str]] = None,
     ) -> Union[TextGenModelOutput, AsyncIterator[TextGenModelChunk]]:
 
         with self.instrumentator.watch(stream=stream) as watcher:

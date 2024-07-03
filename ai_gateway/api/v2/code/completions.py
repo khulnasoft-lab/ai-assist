@@ -131,6 +131,9 @@ async def completions(
             model__name=payload.model_name,
             model__api_key=payload.model_api_key,
         )
+
+        if payload.context:
+            kwargs.update({"code_context": [ctx.content for ctx in payload.context]})
     elif payload.model_provider == KindModelProvider.LITELLM:
         code_completions = completions_litellm_factory(
             model__name=payload.model_name,
