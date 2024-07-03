@@ -90,6 +90,7 @@ jobs = 0
 load-plugins = [
     "lints.unsafe_dependency_resolution",
     "lints.direct_environment_variable_reference",
+    "lints.deprecated_provider_overrides",
 ]
 
 [tool.pylint.messages_control]
@@ -127,6 +128,7 @@ disable = [
 enable = [
   "unsafe-dependency-resolution",
   "direct-environment-variable-reference",
+  "deprecated-provider-overrides",
 ]
 
 [tool.pylint.reports]
