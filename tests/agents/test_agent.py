@@ -1,9 +1,9 @@
 import pytest
+from gitlab_cloud_connector import UnitPrimitive
 from langchain_core.runnables import chain
 from pydantic.v1.error_wrappers import ValidationError
 
 from ai_gateway.agents.base import Agent
-from ai_gateway.gitlab_features import GitLabUnitPrimitive
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ class TestAgent:
 
         assert agent.name == "test"
         assert agent.bound == runnable  # pylint: disable=comparison-with-callable
-        assert agent.unit_primitives == [GitLabUnitPrimitive.ANALYZE_CI_JOB_FAILURE]
+        assert agent.unit_primitives == [UnitPrimitive.ANALYZE_CI_JOB_FAILURE]
 
     def test_invalid_initialize(self):
         @chain

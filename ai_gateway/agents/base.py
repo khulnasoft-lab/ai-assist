@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional, Sequence, Tuple, TypeVar
 
+from gitlab_cloud_connector.models import UnitPrimitive
 from jinja2 import BaseLoader, Environment
 from langchain_core.prompts.chat import MessageLikeRepresentation
 from langchain_core.runnables import Runnable, RunnableBinding
 
 from ai_gateway.agents.typing import ModelMetadata
 from ai_gateway.auth.user import GitLabUser
-from ai_gateway.gitlab_features import GitLabUnitPrimitive, WrongUnitPrimitives
 
 __all__ = [
     "Agent",
@@ -20,16 +20,20 @@ Output = TypeVar("Output")
 jinja_env = Environment(loader=BaseLoader())
 
 
+class WrongUnitPrimitives(Exception):
+    pass
+
+
 def _format_str(content: str, options: dict[str, Any]) -> str:
     return jinja_env.from_string(content).render(options)
 
 
 class Agent(RunnableBinding[Input, Output]):
     name: str
-    unit_primitives: list[GitLabUnitPrimitive]
+    unit_primitives: list[UnitPrimitive]
 
     def __init__(
-        self, name: str, unit_primitives: list[GitLabUnitPrimitive], chain: Runnable
+        self, name: str, unit_primitives: list[UnitPrimitive], chain: Runnable
     ):
         super().__init__(name=name, unit_primitives=unit_primitives, bound=chain)  # type: ignore[call-arg]
 

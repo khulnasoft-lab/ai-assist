@@ -5,6 +5,7 @@ import structlog
 from dependency_injector.providers import Factory
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from gitlab_cloud_connector import FeatureCategory, UnitPrimitive
 
 from ai_gateway.api.feature_category import feature_category
 from ai_gateway.api.v3.code.typing import (
@@ -28,7 +29,6 @@ from ai_gateway.code_suggestions import (
     ModelProvider,
 )
 from ai_gateway.container import ContainerApplication
-from ai_gateway.gitlab_features import GitLabFeatureCategory, GitLabUnitPrimitive
 from ai_gateway.models import KindModelProvider
 
 __all__ = [
@@ -42,14 +42,14 @@ router = APIRouter()
 
 
 @router.post("/completions")
-@feature_category(GitLabFeatureCategory.CODE_SUGGESTIONS)
+@feature_category(FeatureCategory.CODE_SUGGESTIONS)
 async def completions(
     request: Request,
     payload: CompletionRequest,
     current_user: Annotated[GitLabUser, Depends(get_current_user)],
 ):
     if not current_user.can(
-        GitLabUnitPrimitive.CODE_SUGGESTIONS,
+        UnitPrimitive.CODE_SUGGESTIONS,
         disallowed_issuers=[SELF_SIGNED_TOKEN_ISSUER],
     ):
         raise HTTPException(

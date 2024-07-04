@@ -1,10 +1,11 @@
-# from ai_gateway.gitlab_features import GitLabFeatureCategory, GitLabUnitPrimitive
+# from gitlab_cloud_connector import FeatureCategory, UnitPrimitive
 from enum import Enum
 from unittest import mock
 from unittest.mock import Mock, patch
 
 import pytest
 from fastapi import HTTPException, Request
+from gitlab_cloud_connector import FeatureCategory
 from starlette_context import context, request_cycle_context
 
 from ai_gateway.api.feature_category import (
@@ -12,15 +13,14 @@ from ai_gateway.api.feature_category import (
     feature_categories,
     feature_category,
 )
-from ai_gateway.gitlab_features import GitLabFeatureCategory
 
 
-class DummyGitLabFeatureCategory(str, Enum):
+class DummyFeatureCategory(str, Enum):
     AWESOME_CATEGORY_1 = "awesome_category_1"
     AWESOME_CATEGORY_2 = "awesome_category_2"
 
 
-class DummyGitLabUnitPrimitive(str, Enum):
+class DummyUnitPrimitive(str, Enum):
     AWESOME_FEATURE_1 = "awesome_feature_1"
     AWESOME_FEATURE_2 = "awesome_feature_2"
 
@@ -28,27 +28,27 @@ class DummyGitLabUnitPrimitive(str, Enum):
 @pytest.fixture
 def patch_feature_category():
     patcher = patch(
-        "ai_gateway.api.feature_category.GitLabFeatureCategory",
-        spec=GitLabFeatureCategory,
+        "ai_gateway.api.feature_category.FeatureCategory",
+        spec=FeatureCategory,
     )
     mock_thing = patcher.start()
-    mock_thing.side_effect = DummyGitLabFeatureCategory
+    mock_thing.side_effect = DummyFeatureCategory
     yield
     patcher.stop()
 
 
 @pytest.fixture
 def patch_unit_primitive():
-    patcher = patch("ai_gateway.api.feature_category.GitLabUnitPrimitive")
+    patcher = patch("ai_gateway.api.feature_category.UnitPrimitive")
     mock_thing = patcher.start()
-    mock_thing.side_effect = DummyGitLabUnitPrimitive
+    mock_thing.side_effect = DummyUnitPrimitive
     yield
     patcher.stop()
 
 
 @pytest.mark.asyncio
 async def test_feature_category(patch_feature_category):
-    @feature_category(DummyGitLabFeatureCategory.AWESOME_CATEGORY_1)
+    @feature_category(DummyFeatureCategory.AWESOME_CATEGORY_1)
     async def to_be_decorated():
         pass
 
@@ -56,7 +56,7 @@ async def test_feature_category(patch_feature_category):
         await to_be_decorated()
 
         mock_context.__setitem__.assert_called_once_with(
-            "meta.feature_category", DummyGitLabFeatureCategory.AWESOME_CATEGORY_1
+            "meta.feature_category", DummyFeatureCategory.AWESOME_CATEGORY_1
         )
 
 
@@ -69,7 +69,7 @@ def test_unknown_feature_category():
 
 def test_current_feature_category():
     with request_cycle_context(
-        {"meta.feature_category": GitLabFeatureCategory.CODE_SUGGESTIONS}
+        {"meta.feature_category": FeatureCategory.CODE_SUGGESTIONS}
     ):
         assert current_feature_category() == "code_suggestions"
 
@@ -89,15 +89,15 @@ def test_current_feature_category():
     ("headers", "expected_unit_primitive", "expected_category", "expected_error"),
     [
         (
-            {"x-gitlab-unit-primitive": DummyGitLabUnitPrimitive.AWESOME_FEATURE_1},
-            DummyGitLabUnitPrimitive.AWESOME_FEATURE_1,
-            DummyGitLabFeatureCategory.AWESOME_CATEGORY_1,
+            {"x-gitlab-unit-primitive": DummyUnitPrimitive.AWESOME_FEATURE_1},
+            DummyUnitPrimitive.AWESOME_FEATURE_1,
+            DummyFeatureCategory.AWESOME_CATEGORY_1,
             "",
         ),
         (
-            {"x-gitlab-unit-primitive": DummyGitLabUnitPrimitive.AWESOME_FEATURE_2},
-            DummyGitLabUnitPrimitive.AWESOME_FEATURE_2,
-            DummyGitLabFeatureCategory.AWESOME_CATEGORY_2,
+            {"x-gitlab-unit-primitive": DummyUnitPrimitive.AWESOME_FEATURE_2},
+            DummyUnitPrimitive.AWESOME_FEATURE_2,
+            DummyFeatureCategory.AWESOME_CATEGORY_2,
             "",
         ),
         ({}, None, None, "400: Missing x-gitlab-unit-primitive header"),
@@ -119,8 +119,8 @@ async def test_feature_categories(
 ):
     @feature_categories(
         {
-            DummyGitLabUnitPrimitive.AWESOME_FEATURE_1: DummyGitLabFeatureCategory.AWESOME_CATEGORY_1,
-            DummyGitLabUnitPrimitive.AWESOME_FEATURE_2: DummyGitLabFeatureCategory.AWESOME_CATEGORY_2,
+            DummyUnitPrimitive.AWESOME_FEATURE_1: DummyFeatureCategory.AWESOME_CATEGORY_1,
+            DummyUnitPrimitive.AWESOME_FEATURE_2: DummyFeatureCategory.AWESOME_CATEGORY_2,
         }
     )
     async def to_be_decorated(request: Request):

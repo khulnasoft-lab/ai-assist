@@ -2,6 +2,7 @@ from typing import Any, List, Optional, Type
 from unittest.mock import patch
 
 import pytest
+from gitlab_cloud_connector import UnitPrimitive
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models.chat_models import SimpleChatModel
 from langchain_core.messages import BaseMessage
@@ -12,7 +13,6 @@ from ai_gateway.api.v1 import api_router
 from ai_gateway.auth import User, UserClaims
 from ai_gateway.chat.agents import ReActAgent
 from ai_gateway.config import Config
-from ai_gateway.gitlab_features import GitLabUnitPrimitive
 
 
 class FakeModel(SimpleChatModel):
@@ -63,7 +63,7 @@ def mock_registry_get(mock_agent_klass: Optional[Type[Agent]]):
                     ["Hi, I'm {name} and I'm {age} years old"]
                 )
                 | model,
-                unit_primitives=[GitLabUnitPrimitive.EXPLAIN_VULNERABILITY],
+                unit_primitives=[UnitPrimitive.EXPLAIN_VULNERABILITY],
             )
         else:
             mock.side_effect = KeyError()
@@ -82,7 +82,7 @@ def auth_user():
         authenticated=True,
         claims=UserClaims(
             scopes=[
-                GitLabUnitPrimitive.EXPLAIN_VULNERABILITY,
+                UnitPrimitive.EXPLAIN_VULNERABILITY,
             ]
         ),
     )

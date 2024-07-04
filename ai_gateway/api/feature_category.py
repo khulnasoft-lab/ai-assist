@@ -2,9 +2,8 @@ import functools
 import typing
 
 from fastapi import HTTPException, Request, status
+from gitlab_cloud_connector.models import FeatureCategory, UnitPrimitive
 from starlette_context import context
-
-from ai_gateway.gitlab_features import GitLabFeatureCategory, GitLabUnitPrimitive
 
 X_GITLAB_UNIT_PRIMITIVE = "x-gitlab-unit-primitive"
 
@@ -13,18 +12,18 @@ _UNIT_PRIMITIVE_CONTEXT_KEY = "meta.unit_primitive"
 _UNKNOWN_FEATURE_CATEGORY = "unknown"
 
 
-def feature_category(name: GitLabFeatureCategory):
+def feature_category(name: FeatureCategory):
     """
     Track a feature category in a single purpose endpoint.
 
     Example:
 
     ```
-    @feature_category(GitLabFeatureCategory.DUO_CHAT)
+    @feature_category(FeatureCategory.DUO_CHAT)
     ```
     """
     try:
-        GitLabFeatureCategory(name)
+        FeatureCategory(name)
     except ValueError:
         raise ValueError(f"Invalid feature category: {name}")
 
@@ -39,7 +38,7 @@ def feature_category(name: GitLabFeatureCategory):
     return decorator
 
 
-def feature_categories(mapping: dict[GitLabUnitPrimitive, GitLabFeatureCategory]):
+def feature_categories(mapping: dict[UnitPrimitive, FeatureCategory]):
     """
     Track feature categories in a multi purpose endpoint.
 
@@ -50,14 +49,14 @@ def feature_categories(mapping: dict[GitLabUnitPrimitive, GitLabFeatureCategory]
 
     ```
     @feature_category({
-        GitLabUnitPrimitive.EXPLAIN_VULNERABILITY: GitLabFeatureCategory.VULNERABILITY_MANAGEMENT,
-        GitLabUnitPrimitive.GENERATE_COMMIT_MESSAGE: GitLabFeatureCategory.CODE_REVIEW_WORKFLOW,
+        UnitPrimitive.EXPLAIN_VULNERABILITY: FeatureCategory.VULNERABILITY_MANAGEMENT,
+        UnitPrimitive.GENERATE_COMMIT_MESSAGE: FeatureCategory.CODE_REVIEW_WORKFLOW,
     }
     ```
     """
     for category in mapping.values():
         try:
-            GitLabFeatureCategory(category)
+            FeatureCategory(category)
         except ValueError:
             raise ValueError(f"Invalid feature category: {category}")
 
@@ -98,7 +97,7 @@ def current_feature_category() -> str:
     if context.exists():
         feature_category = context.get(_CATEGORY_CONTEXT_KEY, _UNKNOWN_FEATURE_CATEGORY)
 
-        if isinstance(feature_category, GitLabFeatureCategory):
+        if isinstance(feature_category, FeatureCategory):
             return feature_category.value
 
         return feature_category

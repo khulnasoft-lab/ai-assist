@@ -2,16 +2,15 @@ import functools
 import typing
 
 from fastapi import HTTPException, Request, status
+from gitlab_cloud_connector import UnitPrimitive
 from pydantic import BaseModel
-
-from ai_gateway.gitlab_features import GitLabUnitPrimitive
 
 __all__ = ["ChatInvokable", "authorize_with_unit_primitive"]
 
 
 class ChatInvokable(BaseModel):
     name: str
-    unit_primitive: GitLabUnitPrimitive
+    unit_primitive: UnitPrimitive
 
 
 def authorize_with_unit_primitive(

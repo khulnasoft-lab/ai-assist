@@ -1,10 +1,10 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
+from gitlab_cloud_connector import UnitPrimitive
 from jose import JWTError, jwt
 
 from ai_gateway.auth.providers import CompositeProvider
-from ai_gateway.gitlab_features import GitLabUnitPrimitive
 from ai_gateway.tracking.errors import log_exception
 
 __all__ = [
@@ -34,7 +34,7 @@ class TokenAuthority:
                 "iat": datetime.now(timezone.utc),
                 "jti": str(uuid.uuid4()),
                 "gitlab_realm": gitlab_realm,
-                "scopes": [GitLabUnitPrimitive.CODE_SUGGESTIONS],
+                "scopes": [UnitPrimitive.CODE_SUGGESTIONS],
             }
 
             token = jwt.encode(claims, self.signing_key, algorithm=self.ALGORITHM)

@@ -1036,6 +1036,26 @@ ssh = ["paramiko"]
 tqdm = ["tqdm"]
 
 [[package]]
+name = "gitlab-cloud-connector"
+version = "0.1.3"
+description = ""
+optional = false
+python-versions = ">=3.10,<4.0"
+files = [
+    {file = "gitlab_cloud_connector-0.1.3-py3-none-any.whl", hash = "sha256:058eab19f3092ea2185f41d43c66068abd4192c3df34c3121fa6ce9b0036dbfa"},
+    {file = "gitlab_cloud_connector-0.1.3.tar.gz", hash = "sha256:b8bddfb28481b2d2bf5b0390f6c766338dfdad57b65f9b9083209e469b315240"},
+]
+
+[package.dependencies]
+pydantic = ">=2.8.2,<3.0.0"
+pyyaml = ">=6.0.1,<7.0.0"
+
+[package.source]
+type = "legacy"
+url = "https://test.pypi.org/simple"
+reference = "test"
+
+[[package]]
 name = "google-api-core"
 version = "2.18.0"
 description = "Google API client core library"
@@ -4954,4 +4974,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10.0"
-content-hash = "8bd273626f02d271ab5c9db71bab8e2fc0d5179a28ce24ac1d8e54fc88766c7b"
+content-hash = "32fba3e7ae69ee0ecbdbfc78edb8e207dcd7b74e0a28fc384d5f9daa52b3d6b2"

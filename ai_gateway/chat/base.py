@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
+from gitlab_cloud_connector import UnitPrimitive
 from pydantic import BaseModel
 
 from ai_gateway.auth import GitLabUser
 from ai_gateway.chat.tools import BaseTool
-from ai_gateway.gitlab_features import GitLabUnitPrimitive
 
 __all__ = [
     "UnitPrimitiveToolset",
@@ -17,7 +17,7 @@ class UnitPrimitiveToolset(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    name: GitLabUnitPrimitive
+    name: UnitPrimitive
     tools: list[BaseTool]
 
     # Minimum required GitLab version to use the tools.

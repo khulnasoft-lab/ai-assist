@@ -1,9 +1,8 @@
 from typing import NamedTuple, Optional
 
 from fastapi import Request
+from gitlab_cloud_connector import UnitPrimitive
 from starlette.authentication import BaseUser
-
-from ai_gateway.gitlab_features import GitLabUnitPrimitive
 
 __all__ = ["User", "UserClaims", "GitLabUser"]
 
@@ -44,7 +43,7 @@ class GitLabUser(BaseUser):
         return self._authenticated
 
     @property
-    def unit_primitives(self) -> list[GitLabUnitPrimitive]:
+    def unit_primitives(self) -> list[UnitPrimitive]:
         unit_primitives = []
 
         if not self.claims:
@@ -52,14 +51,14 @@ class GitLabUser(BaseUser):
 
         for scope in self.claims.scopes:
             try:
-                unit_primitives.append(GitLabUnitPrimitive(scope))
+                unit_primitives.append(UnitPrimitive(scope))
             except ValueError:
                 pass
 
         return unit_primitives
 
     def can(
-        self, unit_primitive: GitLabUnitPrimitive, disallowed_issuers: list[str] = None
+        self, unit_primitive: UnitPrimitive, disallowed_issuers: list[str] = None
     ) -> bool:
         if not unit_primitive:
             return False

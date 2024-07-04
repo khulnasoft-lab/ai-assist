@@ -2,13 +2,13 @@ from typing import Annotated
 
 import structlog
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from gitlab_cloud_connector import FeatureCategory, UnitPrimitive
 
 from ai_gateway.api.feature_category import feature_category
 from ai_gateway.api.v1.code.typing import Token
 from ai_gateway.async_dependency_resolver import get_token_authority
 from ai_gateway.auth.self_signed_jwt import SELF_SIGNED_TOKEN_ISSUER, TokenAuthority
 from ai_gateway.auth.user import GitLabUser, get_current_user
-from ai_gateway.gitlab_features import GitLabFeatureCategory, GitLabUnitPrimitive
 
 __all__ = [
     "router",
@@ -21,7 +21,7 @@ router = APIRouter()
 
 
 @router.post("/user_access_token")
-@feature_category(GitLabFeatureCategory.CODE_SUGGESTIONS)
+@feature_category(FeatureCategory.CODE_SUGGESTIONS)
 async def user_access_token(
     request: Request,
     current_user: Annotated[GitLabUser, Depends(get_current_user)],
@@ -34,7 +34,7 @@ async def user_access_token(
     ] = None,  # This is the value of X_GITLAB_REALM_HEADER
 ):
     if not current_user.can(
-        GitLabUnitPrimitive.CODE_SUGGESTIONS,
+        UnitPrimitive.CODE_SUGGESTIONS,
         disallowed_issuers=[SELF_SIGNED_TOKEN_ISSUER],
     ):
         raise HTTPException(

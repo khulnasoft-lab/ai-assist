@@ -1,6 +1,7 @@
 import re
 from typing import Any, AsyncIterator, Optional, TypedDict
 
+from gitlab_cloud_connector import UnitPrimitive
 from langchain_core.exceptions import OutputParserException
 from langchain_core.output_parsers import BaseCumulativeTransformOutputParser
 from langchain_core.outputs import Generation
@@ -16,7 +17,6 @@ from ai_gateway.chat.agents.typing import (
     Context,
     CurrentFileContext,
 )
-from ai_gateway.gitlab_features import GitLabUnitPrimitive
 
 __all__ = [
     "ReActAgentInputs",
@@ -175,7 +175,7 @@ class ReActAgent(Agent[ReActAgentInputs, TypeReActAgentAction]):
         len_thought: int
 
     def __init__(
-        self, *, name: str, unit_primitives: list[GitLabUnitPrimitive], chain: Runnable
+        self, *, name: str, unit_primitives: list[UnitPrimitive], chain: Runnable
     ):
         super().__init__(
             name, unit_primitives, ReActInputParser() | chain | ReActPlainTextParser()

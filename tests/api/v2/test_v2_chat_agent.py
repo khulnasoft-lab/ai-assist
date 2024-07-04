@@ -2,6 +2,7 @@ from typing import AsyncIterator, Optional
 from unittest.mock import Mock, patch
 
 import pytest
+from gitlab_cloud_connector import WrongUnitPrimitives
 from starlette.testclient import TestClient
 
 from ai_gateway.agents.typing import ModelMetadata
@@ -21,7 +22,6 @@ from ai_gateway.chat.agents import (
     TypeAgentAction,
     TypeReActAgentAction,
 )
-from ai_gateway.gitlab_features import WrongUnitPrimitives
 
 
 @pytest.fixture(scope="class")

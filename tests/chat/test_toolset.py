@@ -1,6 +1,7 @@
 from typing import Type
 
 import pytest
+from gitlab_cloud_connector import UnitPrimitive, WrongUnitPrimitives
 
 from ai_gateway.auth import GitLabUser, UserClaims
 from ai_gateway.chat.tools import BaseTool
@@ -11,7 +12,6 @@ from ai_gateway.chat.tools.gitlab import (
     IssueReader,
 )
 from ai_gateway.chat.toolset import DuoChatToolsRegistry
-from ai_gateway.gitlab_features import GitLabUnitPrimitive, WrongUnitPrimitives
 
 
 class TestDuoChatToolRegistry:
@@ -38,26 +38,26 @@ class TestDuoChatToolRegistry:
         ("unit_primitives", "expected_tools"),
         [
             (
-                [GitLabUnitPrimitive.DUO_CHAT],
+                [UnitPrimitive.DUO_CHAT],
                 [CiEditorAssistant, IssueReader, EpicReader],
             ),
-            ([GitLabUnitPrimitive.DOCUMENTATION_SEARCH], [GitlabDocumentation]),
+            ([UnitPrimitive.DOCUMENTATION_SEARCH], [GitlabDocumentation]),
             (
                 [
-                    GitLabUnitPrimitive.DUO_CHAT,
-                    GitLabUnitPrimitive.DOCUMENTATION_SEARCH,
+                    UnitPrimitive.DUO_CHAT,
+                    UnitPrimitive.DOCUMENTATION_SEARCH,
                 ],
                 [CiEditorAssistant, IssueReader, EpicReader, GitlabDocumentation],
             ),
             (
-                [GitLabUnitPrimitive.CODE_SUGGESTIONS],
+                [UnitPrimitive.CODE_SUGGESTIONS],
                 [],
             ),
         ],
     )
     def test_get_on_behalf_success(
         self,
-        unit_primitives: list[GitLabUnitPrimitive],
+        unit_primitives: list[UnitPrimitive],
         expected_tools: list[Type[BaseTool]],
     ):
         user = GitLabUser(
@@ -72,11 +72,11 @@ class TestDuoChatToolRegistry:
 
     @pytest.mark.parametrize(
         "unit_primitives",
-        [([GitLabUnitPrimitive.CODE_SUGGESTIONS, GitLabUnitPrimitive.EXPLAIN_CODE])],
+        [([UnitPrimitive.CODE_SUGGESTIONS, UnitPrimitive.EXPLAIN_CODE])],
     )
     def test_get_on_behalf_error(
         self,
-        unit_primitives: list[GitLabUnitPrimitive],
+        unit_primitives: list[UnitPrimitive],
     ):
         user = GitLabUser(
             authenticated=True,

@@ -1,3 +1,5 @@
+from gitlab_cloud_connector import UnitPrimitive, WrongUnitPrimitives
+
 from ai_gateway.auth import GitLabUser
 from ai_gateway.chat.base import BaseToolsRegistry, UnitPrimitiveToolset
 from ai_gateway.chat.tools import BaseTool
@@ -7,7 +9,6 @@ from ai_gateway.chat.tools.gitlab import (
     GitlabDocumentation,
     IssueReader,
 )
-from ai_gateway.gitlab_features import GitLabUnitPrimitive, WrongUnitPrimitives
 
 __all__ = ["DuoChatToolsRegistry"]
 
@@ -19,7 +20,7 @@ class DuoChatToolsRegistry(BaseToolsRegistry):
         # similar to what we implemented for the Agent Registry
         return [
             UnitPrimitiveToolset(
-                name=GitLabUnitPrimitive.DUO_CHAT,
+                name=UnitPrimitive.DUO_CHAT,
                 min_required_gl_version=None,
                 tools=[
                     CiEditorAssistant(),
@@ -28,7 +29,7 @@ class DuoChatToolsRegistry(BaseToolsRegistry):
                 ],
             ),
             UnitPrimitiveToolset(
-                name=GitLabUnitPrimitive.DOCUMENTATION_SEARCH,
+                name=UnitPrimitive.DOCUMENTATION_SEARCH,
                 min_required_gl_version=None,
                 tools=[GitlabDocumentation()],
             ),

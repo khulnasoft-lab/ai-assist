@@ -2,6 +2,7 @@ from typing import Annotated, AsyncIterator
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from gitlab_cloud_connector import FeatureCategory, WrongUnitPrimitives
 from starlette.responses import StreamingResponse
 
 from ai_gateway.api.feature_category import feature_category
@@ -16,7 +17,6 @@ from ai_gateway.chat.agents import (
     TypeReActAgentAction,
 )
 from ai_gateway.chat.executor import GLAgentRemoteExecutor
-from ai_gateway.gitlab_features import GitLabFeatureCategory, WrongUnitPrimitives
 
 __all__ = [
     "router",
@@ -33,7 +33,7 @@ async def get_gl_agent_remote_executor():
 
 
 @router.post("/agent")
-@feature_category(GitLabFeatureCategory.DUO_CHAT)
+@feature_category(FeatureCategory.DUO_CHAT)
 async def chat(
     request: Request,
     agent_request: AgentRequest,

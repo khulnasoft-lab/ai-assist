@@ -1,10 +1,10 @@
 from unittest.mock import patch
 
 import pytest
+from gitlab_cloud_connector import UnitPrimitive
 
 from ai_gateway.api.v1 import api_router
 from ai_gateway.auth import User, UserClaims
-from ai_gateway.gitlab_features import GitLabUnitPrimitive
 
 
 @pytest.fixture(scope="class")
@@ -18,7 +18,7 @@ def auth_user():
         authenticated=True,
         claims=UserClaims(
             scopes=[
-                GitLabUnitPrimitive.EXPLAIN_VULNERABILITY,
+                UnitPrimitive.EXPLAIN_VULNERABILITY,
             ]
         ),
     )
@@ -35,7 +35,7 @@ class TestProxyAnthropic:
                 headers={
                     "Authorization": "Bearer 12345",
                     "X-Gitlab-Authentication-Type": "oidc",
-                    "X-Gitlab-Unit-Primitive": GitLabUnitPrimitive.EXPLAIN_VULNERABILITY,
+                    "X-Gitlab-Unit-Primitive": UnitPrimitive.EXPLAIN_VULNERABILITY,
                 },
                 json={
                     "model": "claude-3-opus-20240229",
@@ -64,7 +64,7 @@ class TestUnauthorizedScopes:
                 headers={
                     "Authorization": "Bearer 12345",
                     "X-Gitlab-Authentication-Type": "oidc",
-                    "X-Gitlab-Unit-Primitive": GitLabUnitPrimitive.EXPLAIN_VULNERABILITY,
+                    "X-Gitlab-Unit-Primitive": UnitPrimitive.EXPLAIN_VULNERABILITY,
                 },
                 json={
                     "model": "claude-3-opus-20240229",

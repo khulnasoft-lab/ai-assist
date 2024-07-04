@@ -5,12 +5,12 @@ from unittest.mock import Mock, patch
 import pytest
 from fastapi import HTTPException, Request
 from fastapi.testclient import TestClient
+from gitlab_cloud_connector import UnitPrimitive
 from structlog.testing import capture_logs
 
 from ai_gateway.api.v1 import api_router
 from ai_gateway.api.v1.chat.auth import ChatInvokable, authorize_with_unit_primitive
 from ai_gateway.auth import GitLabUser, User, UserClaims
-from ai_gateway.gitlab_features import GitLabUnitPrimitive
 from ai_gateway.models import (
     AnthropicAPIConnectionError,
     AnthropicAPIStatusError,
@@ -557,7 +557,7 @@ class TestAuthorizeWithUnitPrimitive:
         @authorize_with_unit_primitive(
             "chat_invokable",
             chat_invokables=[
-                ChatInvokable(name="agent", unit_primitive=GitLabUnitPrimitive.DUO_CHAT)
+                ChatInvokable(name="agent", unit_primitive=UnitPrimitive.DUO_CHAT)
             ],
         )
         async def dummy_func(request):
@@ -578,7 +578,7 @@ class TestAuthorizeWithUnitPrimitive:
         @authorize_with_unit_primitive(
             "chat_invokable",
             chat_invokables=[
-                ChatInvokable(name="agent", unit_primitive=GitLabUnitPrimitive.DUO_CHAT)
+                ChatInvokable(name="agent", unit_primitive=UnitPrimitive.DUO_CHAT)
             ],
         )
         async def dummy_func(request):
@@ -599,7 +599,7 @@ class TestAuthorizeWithUnitPrimitive:
         @authorize_with_unit_primitive(
             "chat_invokable",
             chat_invokables=[
-                ChatInvokable(name="agent", unit_primitive=GitLabUnitPrimitive.DUO_CHAT)
+                ChatInvokable(name="agent", unit_primitive=UnitPrimitive.DUO_CHAT)
             ],
         )
         async def dummy_func(request):

@@ -1,7 +1,7 @@
 import pytest
+from gitlab_cloud_connector import UnitPrimitive
 
 from ai_gateway.auth.user import GitLabUser, UserClaims
-from ai_gateway.gitlab_features import GitLabUnitPrimitive
 
 
 @pytest.fixture
@@ -19,13 +19,13 @@ def user():
 
 def test_issuer_not_in_disallowed_issuers(user: GitLabUser):
     assert user.can(
-        GitLabUnitPrimitive.CODE_SUGGESTIONS, disallowed_issuers=["gitlab-ai-gateway"]
+        UnitPrimitive.CODE_SUGGESTIONS, disallowed_issuers=["gitlab-ai-gateway"]
     )
 
 
 def test_issuer_in_disallowed_issuers(user: GitLabUser):
     assert not user.can(
-        GitLabUnitPrimitive.CODE_SUGGESTIONS,
+        UnitPrimitive.CODE_SUGGESTIONS,
         disallowed_issuers=["https://customers.gitlab.com"],
     )
 
@@ -37,21 +37,21 @@ def test_issuer_in_disallowed_issuers(user: GitLabUser):
             GitLabUser(
                 authenticated=True, claims=UserClaims(scopes=["code_suggestions"])
             ),
-            [GitLabUnitPrimitive.CODE_SUGGESTIONS],
+            [UnitPrimitive.CODE_SUGGESTIONS],
         ),
         (
             GitLabUser(
                 authenticated=True,
                 claims=UserClaims(scopes=["code_suggestions", "unknown"]),
             ),
-            [GitLabUnitPrimitive.CODE_SUGGESTIONS],
+            [UnitPrimitive.CODE_SUGGESTIONS],
         ),
         (GitLabUser(authenticated=True, claims=None), []),
     ],
 )
 def test_user_unit_primitives(
     user: GitLabUser,
-    expected_unit_primitives: list[GitLabUnitPrimitive],
+    expected_unit_primitives: list[UnitPrimitive],
 ):
     actual_unit_primitives = user.unit_primitives
 

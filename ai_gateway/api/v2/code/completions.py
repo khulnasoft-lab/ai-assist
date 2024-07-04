@@ -5,6 +5,7 @@ import anthropic
 import structlog
 from dependency_injector.providers import Factory
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
+from gitlab_cloud_connector import feature_categories, unit_primitives
 from starlette.datastructures import CommaSeparatedStrings
 
 from ai_gateway.api.feature_category import feature_category
@@ -45,7 +46,6 @@ from ai_gateway.code_suggestions import (
     CodeSuggestionsChunk,
 )
 from ai_gateway.code_suggestions.processing.ops import lang_from_filename
-from ai_gateway.gitlab_features import GitLabFeatureCategory, GitLabUnitPrimitive
 from ai_gateway.instrumentators.base import TelemetryInstrumentator
 from ai_gateway.models import KindAnthropicModel, KindModelProvider
 from ai_gateway.tracking import SnowplowEvent, SnowplowEventContext
@@ -74,7 +74,7 @@ GenerationsRequestWithVersion = Annotated[
 
 @router.post("/completions")
 @router.post("/code/completions")
-@feature_category(GitLabFeatureCategory.CODE_SUGGESTIONS)
+@feature_category(feature_categories.CODE_SUGGESTIONS)
 async def completions(
     request: Request,
     payload: CompletionsRequestWithVersion,
@@ -92,7 +92,7 @@ async def completions(
         get_snowplow_instrumentator
     ),
 ):
-    if not current_user.can(GitLabUnitPrimitive.CODE_SUGGESTIONS):
+    if not current_user.can(unit_primitives.CODE_SUGGESTIONS):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Unauthorized to access code completions",
@@ -153,7 +153,7 @@ async def completions(
 
 
 @router.post("/code/generations")
-@feature_category(GitLabFeatureCategory.CODE_SUGGESTIONS)
+@feature_category(FeatureCategory.CODE_SUGGESTIONS)
 async def generations(
     request: Request,
     payload: GenerationsRequestWithVersion,
@@ -175,7 +175,7 @@ async def generations(
     ),
 ):
     if not current_user.can(
-        GitLabUnitPrimitive.CODE_SUGGESTIONS,
+        UnitPrimitive.CODE_SUGGESTIONS,
         disallowed_issuers=[SELF_SIGNED_TOKEN_ISSUER],
     ):
         raise HTTPException(

@@ -136,7 +136,7 @@ For example, if a decoded token contains the following `scopes`, the user can ac
 
 Notes:
 
-- Available feature names are listed in [`GitLabUnitPrimitive`](https://gitlab.com/gitlab-org/modelops/applied-ml/code-suggestions/ai-assist/-/blob/main/ai_gateway/gitlab_features.py).
+- Available feature names are listed in [`UnitPrimitive`](https://gitlab.com/gitlab-org/modelops/applied-ml/code-suggestions/ai-assist/-/blob/main/ai_gateway/gitlab_features.py).
 
 ### Get current user and check permission
 
@@ -151,9 +151,9 @@ async def awesome_feature(
     request: Request,
     current_user: Annotated[GitLabUser, Depends(get_current_user)]
 ):
-    if current_user.can(GitLabUnitPrimitive.AWESOME_FEATURE_1):
+    if current_user.can(UnitPrimitive.AWESOME_FEATURE_1):
         # Do X
-    elif: current_user.can(GitLabUnitPrimitive.AWESOME_FEATURE_2):
+    elif: current_user.can(UnitPrimitive.AWESOME_FEATURE_2):
         # Do Y
     else:
         raise HTTPException(

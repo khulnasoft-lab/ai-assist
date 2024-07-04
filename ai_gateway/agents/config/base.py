@@ -1,9 +1,9 @@
 from typing import Generic, TypeVar
 
+from gitlab_cloud_connector.models import UnitPrimitive
 from pydantic import BaseModel
 
 from ai_gateway.agents.config.models import TypeModelParams
-from ai_gateway.gitlab_features import GitLabUnitPrimitive
 
 __all__ = ["BaseAgentConfig", "AgentConfig", "ModelConfig"]
 
@@ -29,4 +29,4 @@ class BaseAgentConfig(BaseModel, Generic[TypeUnitPrimitive]):
 
 
 class AgentConfig(BaseAgentConfig):
-    unit_primitives: list[GitLabUnitPrimitive]
+    unit_primitives: list[UnitPrimitive]

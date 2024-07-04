@@ -1,13 +1,13 @@
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from gitlab_cloud_connector import feature_categories, unit_primitives
 from pydantic import RootModel
 
 from ai_gateway.agents import Agent, BaseAgentRegistry
 from ai_gateway.api.feature_category import feature_category
 from ai_gateway.async_dependency_resolver import get_container_application
 from ai_gateway.auth.user import GitLabUser, get_current_user
-from ai_gateway.gitlab_features import GitLabFeatureCategory, WrongUnitPrimitives
 
 
 class AgentRequest(RootModel):
@@ -26,7 +26,7 @@ async def get_agent_registry():
     response_model=str,
     status_code=status.HTTP_200_OK,
 )
-@feature_category(GitLabFeatureCategory.AI_ABSTRACTION_LAYER)
+@feature_category(feature_categories.AI_ABSTRACTION_LAYER)
 async def agent(
     request: Request,
     agent_request: AgentRequest,

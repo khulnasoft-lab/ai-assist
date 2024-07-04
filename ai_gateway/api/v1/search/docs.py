@@ -4,6 +4,7 @@ from typing import Annotated
 import structlog
 from dependency_injector.providers import Factory
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from gitlab_cloud_connector import FeatureCategory, UnitPrimitive
 
 from ai_gateway.api.feature_category import feature_category
 from ai_gateway.api.v1.search.typing import (
@@ -15,7 +16,6 @@ from ai_gateway.api.v1.search.typing import (
 )
 from ai_gateway.async_dependency_resolver import get_search_factory_provider
 from ai_gateway.auth.user import GitLabUser, get_current_user
-from ai_gateway.gitlab_features import GitLabFeatureCategory, GitLabUnitPrimitive
 from ai_gateway.searches import Searcher
 
 __all__ = [
@@ -30,14 +30,14 @@ router = APIRouter()
 @router.post(
     "/gitlab-docs", response_model=SearchResponse, status_code=status.HTTP_200_OK
 )
-@feature_category(GitLabFeatureCategory.DUO_CHAT)
+@feature_category(FeatureCategory.DUO_CHAT)
 async def docs(
     request: Request,
     current_user: Annotated[GitLabUser, Depends(get_current_user)],
     search_request: SearchRequest,
     search_factory: Factory[Searcher] = Depends(get_search_factory_provider),
 ):
-    if not current_user.can(GitLabUnitPrimitive.DOCUMENTATION_SEARCH):
+    if not current_user.can(UnitPrimitive.DOCUMENTATION_SEARCH):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Unauthorized to search documentations",
