@@ -28,6 +28,7 @@ from ai_gateway.instrumentators.threads import monitor_threads
 from ai_gateway.models import ModelAPIError
 from ai_gateway.profiling import setup_profiling
 from ai_gateway.structured_logging import setup_app_logging
+from ai_gateway.self_hosted import download_documentation_index
 
 __all__ = [
     "create_fast_api_server",
@@ -102,6 +103,7 @@ def create_fast_api_server(config: Config):
     setup_prometheus_fastapi_instrumentator(fastapi_app)
     setup_profiling(config.google_cloud_profiler)
     setup_gcp_service_account(config)
+    setup_self_hosted_models(config)
 
     return fastapi_app
 
@@ -168,3 +170,10 @@ def setup_gcp_service_account(config: Config):
                 "/tmp/gcp-service-account.json"
             )
             # pylint: enable=direct-environment-variable-reference
+
+def setup_self_hosted_models(config):
+    """
+    Performs setup for self hosted models, including download of documentation index
+    """
+    if config.custom_models.enabled:
+        download_documentation_index(config)

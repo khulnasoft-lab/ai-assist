@@ -81,6 +81,9 @@ class ConfigSnowplow(BaseModel):
 
 class ConfigCustomModels(BaseModel):
     enabled: bool = False
+    self_hosted_version: str = None
+    documentation_index_dir: str = 'tmp/self_hosted/documentation_index/'
+    documentation_index_source: str = None
 
 
 def _build_location(default: str = "us-central1") -> str:
