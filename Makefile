@@ -23,6 +23,10 @@ MYPY_LINT_TODO_DIR ?= --exclude "ai_gateway/api/*" \
 	--exclude "tests/chat/*" \
 	--exclude "tests/code_suggestions/*" \
 
+TEST_COVERAGE_DIR ?= --cov=ai_gateway \
+	--cov=autograph \
+	--cov=lints
+
 COMPOSE_FILES := -f docker-compose.dev.yaml
 ifneq (,$(wildcard docker-compose.override.yaml))
 COMPOSE_FILES += -f docker-compose.override.yaml
@@ -118,12 +122,12 @@ test-watch: install-test-deps
 .PHONY: test-coverage
 test-coverage: install-test-deps
 	@echo "Running tests with coverage..."
-	@poetry run pytest --cov=ai_gateway --cov=lints --cov-report term --cov-report html
+	@poetry run pytest ${TEST_COVERAGE_DIR} --cov-report term --cov-report html
 
 .PHONY: test-coverage-ci
 test-coverage-ci: install-test-deps
 	@echo "Running tests with coverage on CI..."
-	@poetry run pytest --cov=ai_gateway --cov=lints --cov-report term --cov-report xml:.test-reports/coverage.xml --junitxml=".test-reports/tests.xml"
+	@poetry run pytest ${TEST_COVERAGE_DIR} --cov-report term --cov-report xml:.test-reports/coverage.xml --junitxml=".test-reports/tests.xml"
 
 .PHONY: test-integration
 test-integration: install-test-deps
