@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from ai_gateway.api.v3.code import completions
+from ai_gateway.api.v3.code import chunk
 
 __all__ = [
     "router",
@@ -18,3 +19,4 @@ router = APIRouter()
 # ```
 
 router.include_router(completions.router)
+router.include_router(chunk.router)
