@@ -2,20 +2,48 @@ from dependency_injector import containers, providers
 from py_grpc_prometheus.prometheus_client_interceptor import PromClientInterceptor
 
 from ai_gateway.abuse_detection.container import ContainerAbuseDetection
-from ai_gateway.agents.container import ContainerAgents
+from ai_gateway.agents.container import ContainerAgents, SelfHostedContainerAgents
 from ai_gateway.auth.container import ContainerSelfSignedJwt
-from ai_gateway.chat.container import ContainerChat
-from ai_gateway.code_suggestions.container import ContainerCodeSuggestions
-from ai_gateway.models.container import ContainerModels
-from ai_gateway.models.v2.container import ContainerModels as ContainerModelsV2
-from ai_gateway.searches.container import ContainerSearches
-from ai_gateway.tracking.container import ContainerTracking
+from ai_gateway.chat.container import ContainerChat, SelfHostedContainerChat
+from ai_gateway.code_suggestions.container import (
+    ContainerCodeSuggestions,
+    SelfHostedContainerCodeSuggestions,
+)
+from ai_gateway.models.container import ContainerModels, SelfHostedContainerModels
+from ai_gateway.models.v2.container import (
+    ContainerModels as ContainerModelsV2,
+    SelfHostedContainerModels as SelfHostedContainerModelsV2,
+)
+from ai_gateway.searches.container import ContainerSearches, SelfHostedContainerSearches
+from ai_gateway.tracking.container import ContainerTracking, SelfHostedContainerTracking
 
 __all__ = [
     "ContainerApplication",
 ]
 
 from ai_gateway.x_ray.container import ContainerXRay
+
+SELF_HOSTED_CONTAINERS = {
+    "chat": SelfHostedContainerChat,
+    "code_suggestions": SelfHostedContainerCodeSuggestions,
+    "pkg_agents": SelfHostedContainerAgents,
+    "pkg_models": SelfHostedContainerModels,
+    "pkg_models_v2": SelfHostedContainerModelsV2,
+    "searches": SelfHostedContainerSearches,
+    "tracking": SelfHostedContainerTracking,
+    "x_ray": ContainerXRay,
+}
+
+GITLAB_HOSTED_CONTAINERS = {
+    "chat": ContainerChat,
+    "code_suggestions": ContainerCodeSuggestions,
+    "pkg_agents": ContainerAgents,
+    "pkg_models": ContainerModels,
+    "pkg_models_v2": ContainerModelsV2,
+    "searches": ContainerSearches,
+    "tracking": ContainerTracking,
+    "x_ray": ContainerXRay,
+}
 
 
 class ContainerApplication(containers.DeclarativeContainer):
@@ -41,42 +69,36 @@ class ContainerApplication(containers.DeclarativeContainer):
         enable_client_stream_send_time_histogram=True,
     )
 
-    searches = providers.Container(
-        ContainerSearches,
-        config=config,
+    _containers = (
+        SELF_HOSTED_CONTAINERS if config.self_hosted else GITLAB_HOSTED_CONTAINERS
     )
 
-    snowplow = providers.Container(ContainerTracking, config=config.snowplow)
+    snowplow = providers.Container(_containers["tracking"], config=config.snowplow)
 
-    pkg_models = providers.Container(
-        ContainerModels,
-        config=config,
-    )
-    pkg_models_v2 = providers.Container(
-        ContainerModelsV2,
-        config=config,
-    )
+    searches = providers.Container(_containers["searches"], config=config)
+
+    pkg_models = providers.Container(_containers["pkg_models"], config=config)
+
+    pkg_models_v2 = providers.Container(_containers["pkg_models_v2"], config=config)
+
     pkg_agents = providers.Container(
-        ContainerAgents,
-        models=pkg_models_v2,
-        config=config,
+        _containers["pkg_agents"], models=pkg_models_v2, config=config
     )
+
+    chat = providers.Container(_containers["chat"], models=pkg_models)
 
     code_suggestions = providers.Container(
-        ContainerCodeSuggestions,
+        _containers["code_suggestions"],
         models=pkg_models,
         config=config.f.code_suggestions,
         snowplow=snowplow,
     )
+
     x_ray = providers.Container(
-        ContainerXRay,
+        _containers["x_ray"],
         models=pkg_models,
     )
-    chat = providers.Container(
-        ContainerChat,
-        agents=pkg_agents,
-        models=pkg_models,
-    )
+
     self_signed_jwt = providers.Container(
         ContainerSelfSignedJwt,
         config=config,

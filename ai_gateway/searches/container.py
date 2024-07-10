@@ -6,7 +6,7 @@ from google.cloud import discoveryengine
 from .search import VertexAISearch
 from .sqlite_search import SqliteSearch
 
-__all__ = ["ContainerSearches"]
+__all__ = ["ContainerSearches", "SelfHostedContainerSearches"]
 
 
 def _init_vertex_search_service_client(
@@ -28,23 +28,22 @@ class ContainerSearches(containers.DeclarativeContainer):
         config.mock_model_responses,
     )
 
-    _local_or_vertex = providers.Callable(
-        lambda custom_models_enabled: "local" if custom_models_enabled else "vertex",
-        config.custom_models.enabled,
-    )
-
     grpc_client_vertex = providers.Resource(
         _init_vertex_search_service_client,
         mock_model_responses=config.mock_model_responses,
     )
 
-    search_provider = providers.Selector(
-        _local_or_vertex,
-        local=providers.Factory(SqliteSearch),
-        vertex=providers.Factory(
-            VertexAISearch,
-            client=grpc_client_vertex,
-            project=config.vertex_search.project,
-            fallback_datastore_version=config.vertex_search.fallback_datastore_version,
-        ),
+    search_provider = providers.Factory(
+        VertexAISearch,
+        client=grpc_client_vertex,
+        project=config.vertex_search.project,
+        fallback_datastore_version=config.vertex_search.fallback_datastore_version,
     )
+
+
+class SelfHostedContainerSearches(containers.DeclarativeContainer):
+    config = providers.Configuration(strict=True)
+
+    grpc_client_vertex = providers.Callable(lambda: None)
+
+    search_provider = providers.Factory(SqliteSearch)

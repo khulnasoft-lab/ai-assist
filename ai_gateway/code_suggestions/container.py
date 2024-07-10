@@ -19,9 +19,7 @@ from ai_gateway.models.base_text import TextGenModelBase
 from ai_gateway.tokenizer import init_tokenizer
 from ai_gateway.tracking.instrumentator import SnowplowInstrumentator
 
-__all__ = [
-    "ContainerCodeSuggestions",
-]
+__all__ = ["ContainerCodeSuggestions", "SelfHostedContainerCodeSuggestions"]
 
 
 class ContainerCodeGenerations(containers.DeclarativeContainer):
@@ -132,6 +130,54 @@ class ContainerCodeCompletions(containers.DeclarativeContainer):
     )
 
 
+class SelfHostedContainerCodeCompletions(containers.DeclarativeContainer):
+    tokenizer = providers.Dependency(instance_of=PreTrainedTokenizerFast)
+    vertex_code_gecko = providers.Callable(lambda: None)
+    anthropic_claude = providers.Callable(lambda: None)
+    llmlite = providers.Dependency(instance_of=TextGenModelBase)
+    snowplow_instrumentator = providers.Callable(lambda: None)
+
+    config = providers.Configuration(strict=True)
+
+    vertex_legacy = providers.Callable(lambda: None)
+
+    anthropic = providers.Callable(lambda: None)
+
+    litellm_factory = providers.Factory(
+        CodeCompletions,
+        model=providers.Factory(llmlite),
+        tokenization_strategy=providers.Factory(
+            TokenizerTokenStrategy, tokenizer=tokenizer
+        ),
+    )
+
+
+class SelfHostedContainerCodeGenerations(containers.DeclarativeContainer):
+    tokenizer = providers.Dependency(instance_of=PreTrainedTokenizerFast)
+    vertex_code_bison = providers.Callable(lambda: None)
+    anthropic_claude = providers.Callable(lambda: None)
+    anthropic_claude_chat = providers.Callable(lambda: None)
+    llmlite_chat = providers.Dependency(instance_of=ChatModelBase)
+    snowplow_instrumentator = providers.Callable(lambda: None)
+
+    vertex = providers.Callable(lambda: None)
+
+    anthropic_factory = providers.Callable(lambda: None)
+
+    anthropic_chat_factory = providers.Callable(lambda: None)
+
+    litellm_factory = providers.Factory(
+        CodeGenerations,
+        model=providers.Factory(llmlite_chat),
+        tokenization_strategy=providers.Factory(
+            TokenizerTokenStrategy, tokenizer=tokenizer
+        ),
+        snowplow_instrumentator=snowplow_instrumentator,
+    )
+
+    anthropic_default = providers.Callable(lambda: None)
+
+
 class ContainerCodeSuggestions(containers.DeclarativeContainer):
     models = providers.DependenciesContainer()
 
@@ -156,6 +202,36 @@ class ContainerCodeSuggestions(containers.DeclarativeContainer):
         tokenizer=tokenizer,
         vertex_code_gecko=models.vertex_code_gecko,
         anthropic_claude=models.anthropic_claude,
+        llmlite=models.llmlite,
+        config=config,
+        snowplow_instrumentator=snowplow.instrumentator,
+    )
+
+
+class SelfHostedContainerCodeSuggestions(containers.DeclarativeContainer):
+    models = providers.DependenciesContainer()
+
+    config = providers.Configuration(strict=True)
+
+    tokenizer = providers.Resource(init_tokenizer)
+
+    snowplow = providers.DependenciesContainer()
+
+    generations = providers.Container(
+        ContainerCodeGenerations,
+        tokenizer=tokenizer,
+        vertex_code_bison=providers.Callable(lambda: None),
+        anthropic_claude=providers.Callable(lambda: None),
+        anthropic_claude_chat=providers.Callable(lambda: None),
+        llmlite_chat=models.llmlite_chat,
+        snowplow_instrumentator=snowplow.instrumentator,
+    )
+
+    completions = providers.Container(
+        ContainerCodeCompletions,
+        tokenizer=tokenizer,
+        vertex_code_gecko=providers.Callable(lambda: None),
+        anthropic_claude=providers.Callable(lambda: None),
         llmlite=models.llmlite,
         config=config,
         snowplow_instrumentator=snowplow.instrumentator,

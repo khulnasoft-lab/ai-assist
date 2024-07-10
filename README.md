@@ -20,7 +20,10 @@ You'll need:
 
 ### Google Cloud SDK
 
-Set up a Google Cloud project with access to the Vertex AI API and authenticate to it locally by following [these instructions](https://docs.gitlab.com/ee/development/ai_features/#gcp-vertex).
+When using gitlab hosted models, set up a Google Cloud project with access to the Vertex AI API and authenticate to it 
+locally by following [these instructions](https://docs.gitlab.com/ee/development/ai_features/#gcp-vertex).
+
+This step is not necessary when running mdoels locally.
 
 ## Testing
 
@@ -96,14 +99,14 @@ See [Application settings doc](docs/application_settings.md)
 1. [Activate virtualenv](#how-to-manually-activate-the-virtualenv).
 1. Install dependencies: `poetry install`.
 1. Copy the `example.env` file to `.env`: `cp example.env .env`
-1. Update the `.env` file in the root folder with the following variables:
+1. If using gitlab hosted models, update the `.env` file in the root folder with the following variables:
 
    ```shell
    ANTHROPIC_API_KEY=<API_KEY>
    ```
 
 1. You can enable hot reload by setting the `AIGW_FASTAPI__RELOAD` environment variable to `true` in the `.env` file.
-1. Ensure you're authenticated with the `gcloud` CLI by running `gcloud auth application-default login`.
+1. If using gitlab hosted models, ensure you're authenticated with the `gcloud` CLI by running `gcloud auth application-default login`. 
 1. Start the model-gateway server locally: `poetry run ai_gateway`.
 1. Open `http://localhost:5052/docs` in your browser and run any requests to the model.
 

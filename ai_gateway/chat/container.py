@@ -10,9 +10,7 @@ from ai_gateway.chat.toolset import DuoChatToolsRegistry
 if TYPE_CHECKING:
     from ai_gateway.agents import BaseAgentRegistry
 
-__all__ = [
-    "ContainerChat",
-]
+__all__ = ["ContainerChat", "SelfHostedContainerChat"]
 
 
 def _react_agent_factory(
@@ -53,6 +51,21 @@ class ContainerChat(containers.DeclarativeContainer):
     anthropic_claude_factory = providers.FactoryAggregate(
         llm=_anthropic_claude_llm_factory, chat=_anthropic_claude_chat_factory
     )
+
+    litellm_factory = providers.Factory(models.llmlite_chat)
+
+    gl_agent_remote_executor = providers.Factory(
+        GLAgentRemoteExecutor,
+        agent_factory=_react_agent_factory,
+        tools_registry=DuoChatToolsRegistry(),
+    )
+
+
+class SelfHostedContainerChat(containers.DeclarativeContainer):
+    agents = providers.DependenciesContainer()
+    models = providers.DependenciesContainer()
+
+    anthropic_claude_factory = providers.Callable(lambda: None)
 
     litellm_factory = providers.Factory(models.llmlite_chat)
 

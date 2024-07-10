@@ -7,9 +7,7 @@ from ai_gateway.tracking.snowplow import (
     SnowplowClientStub,
 )
 
-__all__ = [
-    "ContainerTracking",
-]
+__all__ = ["ContainerTracking", "SelfHostedContainerTracking"]
 
 
 def _init_snowplow_client(
@@ -33,6 +31,19 @@ class ContainerTracking(containers.DeclarativeContainer):
             batch_size=config.batch_size,
             thread_count=config.thread_count,
         ),
+    )
+
+    instrumentator = providers.Resource(
+        SnowplowInstrumentator,
+        client=client,
+    )
+
+
+class SelfHostedContainerTracking(containers.DeclarativeContainer):
+    config = providers.Configuration(strict=True)
+
+    client = providers.Resource(
+        _init_snowplow_client, enabled=False, configuration=None
     )
 
     instrumentator = providers.Resource(

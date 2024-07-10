@@ -19,6 +19,7 @@ from ai_gateway.proxy.clients import AnthropicProxyClient, VertexAIProxyClient
 
 __all__ = [
     "ContainerModels",
+    "SelfHostedContainerModels",
 ]
 
 
@@ -74,6 +75,58 @@ async def _init_vertex_ai_proxy_client(
     )
     yield client
     await client.aclose()
+
+
+class SelfHostedContainerModels(containers.DeclarativeContainer):
+    # We need to resolve the model based on the model name provided by the upstream container.
+    # Hence, `VertexTextBaseModel.from_model_name` and `AnthropicModel.from_model_name` are only partially applied here.
+
+    config = providers.Configuration(strict=True)
+
+    _mock_selector = providers.Callable(
+        lambda mock_model_responses: "mocked" if mock_model_responses else "original",
+        config.mock_model_responses,
+    )
+
+    grpc_client_vertex = providers.Callable(lambda: None)
+
+    http_client_anthropic = providers.Callable(lambda: None)
+
+    http_client_anthropic_proxy = providers.Factory(mock.AsyncClient)
+
+    http_client_vertex_ai_proxy = providers.Callable(lambda: None)
+
+    vertex_text_bison = providers.Factory(mock.LLM)
+
+    vertex_code_bison = providers.Factory(mock.LLM)
+
+    vertex_code_gecko = providers.Factory(mock.LLM)
+
+    anthropic_claude = providers.Factory(mock.LLM)
+
+    anthropic_claude_chat = providers.Factory(mock.LLM)
+
+    anthropic_proxy_client = providers.Factory(mock.ProxyClient)
+
+    vertex_ai_proxy_client = providers.Factory(mock.ProxyClient)
+
+    llmlite = providers.Selector(
+        _mock_selector,
+        original=providers.Factory(
+            LiteLlmTextGenModel.from_model_name,
+            custom_models_enabled=config.custom_models.enabled,
+        ),
+        mocked=providers.Factory(mock.ChatModel),
+    )
+
+    llmlite_chat = providers.Selector(
+        _mock_selector,
+        original=providers.Factory(
+            LiteLlmChatModel.from_model_name,
+            custom_models_enabled=config.custom_models.enabled,
+        ),
+        mocked=providers.Factory(mock.ChatModel),
+    )
 
 
 class ContainerModels(containers.DeclarativeContainer):
