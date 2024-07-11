@@ -1,5 +1,6 @@
 import asyncio
 from typing import Optional
+import pdb
 
 from tree_sitter import Node, Tree
 from tree_sitter_languages import get_parser
@@ -56,6 +57,20 @@ class CodeParser(BaseCodeParser):
         function_signatures = visitor.function_signatures
 
         return function_signatures
+
+    def function_signature_bodies(self, line) -> list[str]:
+        visitor = FunctionSignatureVisitorFactory.from_language_id(self.lang_id)
+        if visitor is None:
+            return None
+
+        self._visit_nodes(visitor)
+        function_signature_bodies = visitor.function_signature_bodies
+
+        for start, end, body in function_signature_bodies:
+            if line >= start and line <= end:
+                return body
+
+        return None
 
     def count_symbols(self) -> dict:
         visitor = CounterVisitorFactory.from_language_id(self.lang_id)

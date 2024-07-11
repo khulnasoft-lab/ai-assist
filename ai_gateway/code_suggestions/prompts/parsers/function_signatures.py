@@ -1,10 +1,11 @@
 from typing import Optional
 
 from tree_sitter import Node
-
+import pdb
 from ai_gateway.code_suggestions.processing.ops import LanguageId
 from ai_gateway.code_suggestions.prompts.parsers.base import BaseVisitor
 from ai_gateway.code_suggestions.prompts.parsers.mixins import RubyParserMixin
+from ai_gateway.code_suggestions.prompts.parsers.base import CodeContext
 
 __all__ = [
     "BaseFunctionSignatureVisitor",
@@ -17,10 +18,15 @@ class BaseFunctionSignatureVisitor(BaseVisitor):
 
     def __init__(self):
         self._signatures = []
+        self._signature_bodies = []
 
     @property
     def function_signatures(self) -> list[str]:
         return self._signatures
+
+    @property
+    def function_signature_bodies(self) -> list[str]:
+        return self._signature_bodies
 
     def _visit_node(self, node: Node):
         function_text = self._bytes_to_str(node.text)
@@ -28,12 +34,15 @@ class BaseFunctionSignatureVisitor(BaseVisitor):
         block_text = ""
         for child in node.children:
             if child.type == self._FUNCTION_BODY_SYMBOL:
+                start_line = child.start_point[0]
+                end_line = child.end_point[0]
                 block_text = self._bytes_to_str(child.text)
 
         # remove the body of the function
         signature = function_text.replace(block_text, "")
 
         self._signatures.append(signature)
+        self._signature_bodies.append((start_line, end_line, function_text))
 
 
 class CFunctionSignatureVisitor(BaseFunctionSignatureVisitor):
@@ -84,6 +93,8 @@ class RubyFunctionSignatureVisitor(BaseFunctionSignatureVisitor, RubyParserMixin
         block_text = ""
         for child in node.children:
             if child.type == self._FUNCTION_BODY_SYMBOL:
+                start_line = child.start_point[0]
+                end_line = child.end_point[0]
                 block_text = self._bytes_to_str(child.text)
 
         # remove the body of the function
@@ -94,6 +105,7 @@ class RubyFunctionSignatureVisitor(BaseFunctionSignatureVisitor, RubyParserMixin
             signature = signature.replace("end", "")
 
         self._signatures.append(signature)
+        self._signature_bodies.append((start_line, end_line, function_text))
 
 
 class RustFunctionSignatureVisitor(BaseFunctionSignatureVisitor):

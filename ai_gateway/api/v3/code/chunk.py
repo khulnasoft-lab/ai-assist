@@ -1,5 +1,3 @@
-import pdb
-
 import structlog
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -7,14 +5,17 @@ from pydantic import BaseModel
 from ai_gateway.api.feature_category import feature_category
 from ai_gateway.gitlab_features import GitLabFeatureCategory
 
+from ai_gateway.code_suggestions.prompts.parsers import CodeParser
+from ai_gateway.code_suggestions.processing.ops import lang_from_filename
+
 __all__ = [
     "router",
 ]
 
 class Blob(BaseModel):
-    language: str
     content: str
     line: int
+    filename: str
 
 log = structlog.stdlib.get_logger("codesuggestions")
 
@@ -25,17 +26,20 @@ router = APIRouter()
 @feature_category(GitLabFeatureCategory.CODE_SUGGESTIONS)
 async def chunk(blobs: list[Blob]):
     list = []
+
     for blob in blobs:
-        language = blob.language
         content = blob.content
         line = blob.line
-        # at the moment this just returns a subset of the blob
-        # we want to use tree-sitter to do this instead
-        num_lines = 2
-        lines = content.splitlines()
-        start = max(0, line - (num_lines + 1))
-        end = min(len(lines), line + num_lines)
-        chunk = "\n".join(lines[start:end])
-        list.append(chunk)
+        filename = blob.filename
+
+        lang_id = lang_from_filename(filename)
+
+        if lang_id is not None:
+            parser = await CodeParser.from_language_id(content, lang_id)
+            function_body_for_line = parser.function_signature_bodies(line)
+        else:
+            function_body_for_line = None
+
+        list.append(function_body_for_line)
 
     return list
