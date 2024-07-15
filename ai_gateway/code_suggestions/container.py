@@ -30,6 +30,7 @@ class ContainerCodeGenerations(containers.DeclarativeContainer):
     anthropic_claude = providers.Dependency(instance_of=TextGenModelBase)
     anthropic_claude_chat = providers.Dependency(instance_of=ChatModelBase)
     llmlite_chat = providers.Dependency(instance_of=ChatModelBase)
+    agent_model = providers.Dependency(instance_of=TextGenModelBase)
     snowplow_instrumentator = providers.Dependency(instance_of=SnowplowInstrumentator)
 
     vertex = providers.Factory(
@@ -69,6 +70,15 @@ class ContainerCodeGenerations(containers.DeclarativeContainer):
     litellm_factory = providers.Factory(
         CodeGenerations,
         model=providers.Factory(llmlite_chat),
+        tokenization_strategy=providers.Factory(
+            TokenizerTokenStrategy, tokenizer=tokenizer
+        ),
+        snowplow_instrumentator=snowplow_instrumentator,
+    )
+
+    agent_factory = providers.Factory(
+        CodeGenerations,
+        model=providers.Factory(agent_model),
         tokenization_strategy=providers.Factory(
             TokenizerTokenStrategy, tokenizer=tokenizer
         ),
@@ -157,6 +167,7 @@ class ContainerCodeSuggestions(containers.DeclarativeContainer):
         anthropic_claude=models.anthropic_claude,
         anthropic_claude_chat=models.anthropic_claude_chat,
         llmlite_chat=models.llmlite_chat,
+        agent_model=models.agent_model,
         snowplow_instrumentator=snowplow.instrumentator,
     )
 

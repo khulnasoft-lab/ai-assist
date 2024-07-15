@@ -33,6 +33,7 @@ from ai_gateway.async_dependency_resolver import (
     get_code_suggestions_completions_anthropic_provider,
     get_code_suggestions_completions_litellm_factory_provider,
     get_code_suggestions_completions_vertex_legacy_provider,
+    get_code_suggestions_generations_agent_factory_provider,
     get_code_suggestions_generations_anthropic_chat_factory_provider,
     get_code_suggestions_generations_anthropic_factory_provider,
     get_code_suggestions_generations_litellm_factory_provider,
@@ -76,6 +77,7 @@ GenerationsRequestWithVersion = Annotated[
 ]
 
 COMPLETIONS_AGENT_ID = "code_suggestions/completions"
+GENERATIONS_AGENT_ID = "code_suggestions/generations"
 
 
 async def get_agent_registry():
@@ -189,6 +191,7 @@ async def generations(
     request: Request,
     payload: GenerationsRequestWithVersion,
     current_user: Annotated[GitLabUser, Depends(get_current_user)],
+    agent_registry: Annotated[BaseAgentRegistry, Depends(get_agent_registry)],
     generations_vertex_factory: Factory[CodeGenerations] = Depends(
         get_code_suggestions_generations_vertex_provider
     ),
@@ -200,6 +203,9 @@ async def generations(
     ),
     generations_litellm_factory: Factory[CodeGenerations] = Depends(
         get_code_suggestions_generations_litellm_factory_provider
+    ),
+    generations_agent_factory: Factory[CodeGenerations] = Depends(
+        get_code_suggestions_generations_agent_factory_provider
     ),
     snowplow_instrumentator: SnowplowInstrumentator = Depends(
         get_snowplow_instrumentator
@@ -243,15 +249,31 @@ async def generations(
                 generations_anthropic_factory,
             )
     elif payload.model_provider == KindModelProvider.LITELLM:
-        code_generations = generations_litellm_factory(
-            model__name=payload.model_name,
-            model__endpoint=payload.model_endpoint,
-            model__api_key=payload.model_api_key,
-        )
+        if payload.prompt_version == 2 and not payload.prompt:
+            model_metadata = ModelMetadata(
+                name=payload.model_name,
+                endpoint=payload.model_endpoint,
+                api_key=payload.model_api_key,
+                provider="openai",
+            )
+
+            agent = agent_registry.get_on_behalf(
+                current_user, GENERATIONS_AGENT_ID, None, model_metadata
+            )
+
+            code_generations = generations_agent_factory(
+                model__agent=agent,
+            )
+        else:
+            code_generations = generations_litellm_factory(
+                model__name=payload.model_name,
+                model__endpoint=payload.model_endpoint,
+                model__api_key=payload.model_api_key,
+            )
     else:
         code_generations = generations_vertex_factory()
 
-    if payload.prompt_version in {2, 3}:
+    if payload.prompt_version in {2, 3} and payload.prompt:
         code_generations.with_prompt_prepared(payload.prompt)
 
     with TelemetryInstrumentator().watch(payload.telemetry):
