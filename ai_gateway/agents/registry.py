@@ -94,14 +94,17 @@ class LocalAgentRegistry(BaseAgentRegistry):
         agents_definitions_dir = Path(__file__).parent / "definitions"
         agents_registered = {}
         for path in agents_definitions_dir.glob("*/*.yml"):
-            agent_id = str(
+            agent_id_with_model_name = str(
                 # E.g., "chat/react", "generate_description/base", etc.
                 path.relative_to(agents_definitions_dir).with_suffix("")
             )
 
+            # Remove model name, for example: to receive "chat/react" from "chat/react-mistral"
+            agent_id, _, _ = agent_id_with_model_name.partition("-")
+
             with open(path, "r") as fp:
                 klass = class_overrides.get(agent_id, Agent)
-                agents_registered[agent_id] = AgentRegistered(
+                agents_registered[agent_id_with_model_name] = AgentRegistered(
                     klass=klass, config=AgentConfig(**yaml.safe_load(fp))
                 )
 

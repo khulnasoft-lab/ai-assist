@@ -205,7 +205,6 @@ class TestLocalAgentRegistry:
         registry = LocalAgentRegistry.from_local_yaml(
             class_overrides={
                 "chat/react": MockAgentClass,
-                "chat/react-custom": MockAgentClass,
             },
             model_factories=model_factories,
         )
@@ -326,7 +325,6 @@ class TestCustomModelsAgentRegistry:
         registry = LocalAgentRegistry.from_local_yaml(
             class_overrides={
                 "chat/react": MockAgentClass,
-                "chat/react-custom": MockAgentClass,
             },
             model_factories=model_factories,
         )
