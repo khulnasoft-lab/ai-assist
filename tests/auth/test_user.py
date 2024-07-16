@@ -1,7 +1,7 @@
 import pytest
 
 from ai_gateway.auth.user import GitLabUser, UserClaims
-from ai_gateway.gitlab_features import GitLabUnitPrimitive
+from ai_gateway.cloud_connector.unit_primitive import GitLabUnitPrimitive
 
 
 @pytest.fixture

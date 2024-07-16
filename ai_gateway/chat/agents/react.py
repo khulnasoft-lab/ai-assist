@@ -16,7 +16,7 @@ from ai_gateway.chat.agents.typing import (
     Context,
     CurrentFile,
 )
-from ai_gateway.gitlab_features import GitLabUnitPrimitive
+from ai_gateway.cloud_connector.unit_primitive import GitLabUnitPrimitive
 
 __all__ = [
     "ReActAgentInputs",

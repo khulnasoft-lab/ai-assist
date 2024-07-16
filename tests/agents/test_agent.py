@@ -3,7 +3,7 @@ from langchain_core.runnables import chain
 from pydantic.v1.error_wrappers import ValidationError
 
 from ai_gateway.agents.base import Agent
-from ai_gateway.gitlab_features import GitLabUnitPrimitive
+from ai_gateway.cloud_connector.unit_primitive import GitLabUnitPrimitive
 
 
 @pytest.fixture

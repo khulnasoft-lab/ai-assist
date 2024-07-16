@@ -7,7 +7,8 @@ from ai_gateway.chat.tools.gitlab import (
     GitlabDocumentation,
     IssueReader,
 )
-from ai_gateway.gitlab_features import GitLabUnitPrimitive, WrongUnitPrimitives
+from ai_gateway.gitlab_features import WrongUnitPrimitives
+from ai_gateway.cloud_connector.unit_primitive import GitLabUnitPrimitive
 
 __all__ = ["DuoChatToolsRegistry"]
 

@@ -4,7 +4,8 @@ import typing
 from fastapi import HTTPException, Request, status
 from starlette_context import context
 
-from ai_gateway.gitlab_features import GitLabFeatureCategory, GitLabUnitPrimitive
+from ai_gateway.gitlab_features import GitLabFeatureCategory
+from ai_gateway.cloud_connector.unit_primitive import GitLabUnitPrimitive
 
 X_GITLAB_UNIT_PRIMITIVE = "x-gitlab-unit-primitive"
 

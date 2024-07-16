@@ -18,7 +18,7 @@ from ai_gateway.api.v3.code.typing import (
     ResponseMetadataBase,
     StreamSuggestionsResponse,
 )
-from ai_gateway.auth.self_signed_jwt import SELF_SIGNED_TOKEN_ISSUER
+from ai_gateway.cloud_connector.auth.self_signed_jwt import SELF_SIGNED_TOKEN_ISSUER
 from ai_gateway.auth.user import GitLabUser, get_current_user
 from ai_gateway.code_suggestions import (
     CodeCompletions,
@@ -28,7 +28,8 @@ from ai_gateway.code_suggestions import (
     ModelProvider,
 )
 from ai_gateway.container import ContainerApplication
-from ai_gateway.gitlab_features import GitLabFeatureCategory, GitLabUnitPrimitive
+from ai_gateway.gitlab_features import GitLabFeatureCategory
+from ai_gateway.cloud_connector.unit_primitive import GitLabUnitPrimitive
 from ai_gateway.models import KindModelProvider
 
 __all__ = [

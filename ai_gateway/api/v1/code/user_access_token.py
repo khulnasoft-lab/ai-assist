@@ -6,9 +6,10 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from ai_gateway.api.feature_category import feature_category
 from ai_gateway.api.v1.code.typing import Token
 from ai_gateway.async_dependency_resolver import get_token_authority
-from ai_gateway.auth.self_signed_jwt import SELF_SIGNED_TOKEN_ISSUER, TokenAuthority
+from ai_gateway.cloud_connector.auth.self_signed_jwt import SELF_SIGNED_TOKEN_ISSUER, TokenAuthority
 from ai_gateway.auth.user import GitLabUser, get_current_user
-from ai_gateway.gitlab_features import GitLabFeatureCategory, GitLabUnitPrimitive
+from ai_gateway.gitlab_features import GitLabFeatureCategory
+from ai_gateway.cloud_connector.unit_primitive import GitLabUnitPrimitive
 
 __all__ = [
     "router",
@@ -54,11 +55,15 @@ async def user_access_token(
             detail="Missing X-Gitlab-Realm header",
         )
 
-    try:
-        token, expires_at = token_authority.encode(
-            x_gitlab_global_user_id, x_gitlab_realm
-        )
-    except Exception:
+    # try: - we no longer raise in TokenAuthority
+    result = token_authority.encode(
+        x_gitlab_global_user_id, x_gitlab_realm
+    )
+
+    # except Exception: we no longer catch
+    if not result.success:
+        # we need to log the result.error contents here! (but it's a string)
         raise HTTPException(status_code=500, detail="Failed to generate JWT")
 
+    token, expires_at = result.result
     return Token(token=token, expires_at=expires_at)

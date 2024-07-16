@@ -3,7 +3,7 @@ from typing import NamedTuple, Optional
 from fastapi import Request
 from starlette.authentication import BaseUser
 
-from ai_gateway.gitlab_features import GitLabUnitPrimitive
+from ai_gateway.cloud_connector.unit_primitive import GitLabUnitPrimitive
 
 __all__ = ["User", "UserClaims", "GitLabUser"]
 

@@ -3,7 +3,7 @@ from typing import Generic, TypeVar
 from pydantic import BaseModel
 
 from ai_gateway.agents.config.models import TypeModelParams
-from ai_gateway.gitlab_features import GitLabUnitPrimitive
+from ai_gateway.cloud_connector.unit_primitive import GitLabUnitPrimitive
 
 __all__ = ["BaseAgentConfig", "AgentConfig", "ModelConfig"]
 
