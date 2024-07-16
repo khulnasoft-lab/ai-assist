@@ -11,8 +11,8 @@ from ai_gateway.agents import Agent
 from ai_gateway.api.v1 import api_router
 from ai_gateway.auth import User, UserClaims
 from ai_gateway.chat.agents import ReActAgent
-from ai_gateway.config import Config
 from ai_gateway.cloud_connector.unit_primitive import GitLabUnitPrimitive
+from ai_gateway.config import Config
 
 
 class FakeModel(SimpleChatModel):

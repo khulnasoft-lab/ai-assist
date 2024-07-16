@@ -11,8 +11,8 @@ from ai_gateway.chat.tools.gitlab import (
     IssueReader,
 )
 from ai_gateway.chat.toolset import DuoChatToolsRegistry
-from ai_gateway.gitlab_features import WrongUnitPrimitives
 from ai_gateway.cloud_connector.unit_primitive import GitLabUnitPrimitive
+from ai_gateway.gitlab_features import WrongUnitPrimitives
 
 
 class TestDuoChatToolRegistry:

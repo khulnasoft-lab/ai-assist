@@ -3,8 +3,8 @@ from langchain_core.runnables import chain
 
 from ai_gateway.agents import Agent, BaseAgentRegistry
 from ai_gateway.auth.user import GitLabUser, UserClaims
-from ai_gateway.gitlab_features import WrongUnitPrimitives
 from ai_gateway.cloud_connector.unit_primitive import GitLabUnitPrimitive
+from ai_gateway.gitlab_features import WrongUnitPrimitives
 
 
 @pytest.fixture

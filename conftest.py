@@ -12,12 +12,24 @@ from starlette_context.middleware import RawContextMiddleware
 from ai_gateway.api.middleware import MiddlewareAuthentication, MiddlewareLogRequest
 from ai_gateway.code_suggestions.base import CodeSuggestionsChunk, CodeSuggestionsOutput
 from ai_gateway.code_suggestions.processing.base import ModelEngineOutput
-from ai_gateway.code_suggestions.processing.typing import LanguageId, MetadataCodeContent, MetadataPromptBuilder
+from ai_gateway.code_suggestions.processing.typing import (
+    LanguageId,
+    MetadataCodeContent,
+    MetadataPromptBuilder,
+)
 from ai_gateway.config import Config
 from ai_gateway.container import ContainerApplication
-from ai_gateway.models.base_text import TextGenModelBase, TextGenModelChunk, TextGenModelOutput
 from ai_gateway.experimentation.base import ExperimentTelemetry
-from ai_gateway.models.base import ModelMetadata, SafetyAttributes, TokensConsumptionMetadata
+from ai_gateway.models.base import (
+    ModelMetadata,
+    SafetyAttributes,
+    TokensConsumptionMetadata,
+)
+from ai_gateway.models.base_text import (
+    TextGenModelBase,
+    TextGenModelChunk,
+    TextGenModelOutput,
+)
 
 pytest_plugins = ("pytest_asyncio",)
 

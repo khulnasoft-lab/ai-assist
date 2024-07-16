@@ -7,8 +7,8 @@ from langchain_core.runnables import Runnable, RunnableBinding
 
 from ai_gateway.agents.typing import ModelMetadata
 from ai_gateway.auth.user import GitLabUser
-from ai_gateway.gitlab_features import WrongUnitPrimitives
 from ai_gateway.cloud_connector.unit_primitive import GitLabUnitPrimitive
+from ai_gateway.gitlab_features import WrongUnitPrimitives
 
 __all__ = [
     "Agent",

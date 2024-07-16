@@ -17,9 +17,6 @@ class GitLabFeatureCategory(str, Enum):
     VULNERABILITY_MANAGEMENT = "vulnerability_management"
 
 
-
-
-
 class WrongUnitPrimitives(Exception):
     pass
 

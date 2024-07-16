@@ -26,8 +26,8 @@ from uvicorn.protocols.utils import get_path_with_query_string
 
 from ai_gateway.api.timing import timing
 from ai_gateway.auth import AuthProvider, UserClaims
-from ai_gateway.cloud_connector.auth.self_signed_jwt import SELF_SIGNED_TOKEN_ISSUER
 from ai_gateway.auth.user import GitLabUser
+from ai_gateway.cloud_connector.auth.self_signed_jwt import SELF_SIGNED_TOKEN_ISSUER
 from ai_gateway.instrumentators.base import Telemetry, TelemetryInstrumentator
 from ai_gateway.tracking.errors import log_exception
 

@@ -3,4 +3,3 @@ class ServiceResponse:
         self.success = success
         self.result = result
         self.error = error
-

@@ -15,8 +15,8 @@ from ai_gateway.api.v1.search.typing import (
 )
 from ai_gateway.async_dependency_resolver import get_search_factory_provider
 from ai_gateway.auth.user import GitLabUser, get_current_user
-from ai_gateway.gitlab_features import GitLabFeatureCategory
 from ai_gateway.cloud_connector.unit_primitive import GitLabUnitPrimitive
+from ai_gateway.gitlab_features import GitLabFeatureCategory
 from ai_gateway.searches import Searcher
 
 __all__ = [
