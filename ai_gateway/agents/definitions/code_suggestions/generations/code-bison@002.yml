@@ -1,0 +1,19 @@
+---
+name: Vertex Code Generations
+model:
+  name: code-bison@002
+  params:
+    model_class_provider: litellm
+    temperature: 0.95
+    timeout: 60
+    max_tokens: 128
+    max_retries: 1
+unit_primitives:
+  - code_suggestions
+prompt_template:
+  user: |
+    Generate some amazing code for
+
+    {prefix}
+
+    Provide only code without any additional explanation

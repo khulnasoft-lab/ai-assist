@@ -7,6 +7,7 @@ from dependency_injector.providers import Factory
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from starlette.datastructures import CommaSeparatedStrings
 
+from ai_gateway.models import KindAnthropicModel, KindVertexTextModel
 from ai_gateway.agents import BaseAgentRegistry
 from ai_gateway.agents.typing import ModelMetadata
 from ai_gateway.api.feature_category import feature_category
@@ -276,7 +277,21 @@ async def generations(
                 model__api_key=payload.model_api_key,
             )
     else:
-        code_generations = generations_vertex_factory()
+        if payload.prompt_version == 2 and not payload.prompt:
+            model_metadata = ModelMetadata(
+                name=KindVertexTextModel.CODE_BISON_002.value,
+                provider="vertex_ai",
+            )
+
+            agent = agent_registry.get_on_behalf(
+                current_user, GENERATIONS_AGENT_ID, None, model_metadata
+            )
+
+            code_generations = generations_agent_factory(
+                model__agent=agent,
+            )
+        else:
+            code_generations = generations_vertex_factory()
 
     if payload.prompt_version in {2, 3} and payload.prompt:
         code_generations.with_prompt_prepared(payload.prompt)
