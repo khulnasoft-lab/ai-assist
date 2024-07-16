@@ -239,10 +239,15 @@ async def generations(
 
     if payload.model_provider == KindModelProvider.ANTHROPIC:
         if payload.prompt_version == 3:
-            code_generations = _resolve_code_generations_anthropic_chat(
-                payload,
-                generations_anthropic_chat_factory,
-            )
+            if payload.prompt:
+                code_generations = _resolve_code_generations_anthropic_chat(
+                    payload,
+                    generations_anthropic_chat_factory,
+                )
+            else:
+                agent = agent_registry.get_on_behalf(current_user, GENERATIONS_AGENT_ID)
+
+                code_generations = generations_agent_factory(model__agent=agent)
         else:
             code_generations = _resolve_code_generations_anthropic(
                 payload,
