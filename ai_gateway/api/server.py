@@ -13,7 +13,6 @@ from starlette.requests import Request
 from starlette_context import context
 from starlette_context.middleware import RawContextMiddleware
 
-from ai_gateway.agents.instrumentator import AgentInstrumentator
 from ai_gateway.api.middleware import (
     MiddlewareAuthentication,
     MiddlewareLogRequest,
@@ -24,6 +23,7 @@ from ai_gateway.api.v1 import api_router as http_api_router_v1
 from ai_gateway.api.v2 import api_router as http_api_router_v2
 from ai_gateway.api.v3 import api_router as http_api_router_v3
 from ai_gateway.auth import CompositeProvider, GitLabOidcProvider, LocalAuthProvider
+from ai_gateway.chains.instrumentator import ChainInstrumentator
 from ai_gateway.config import Config
 from ai_gateway.container import ContainerApplication
 from ai_gateway.instrumentators.threads import monitor_threads
@@ -129,7 +129,7 @@ def setup_custom_exception_handlers(app: FastAPI):
 
 
 def setup_litellm():
-    litellm.callbacks = [AgentInstrumentator()]
+    litellm.callbacks = [ChainInstrumentator()]
 
 
 def setup_router(app: FastAPI):

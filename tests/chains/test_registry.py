@@ -1,44 +1,47 @@
 from pathlib import Path
-from typing import Optional, Sequence, Type
+from typing import Optional, Sequence, Type, cast
 
 import pytest
 from langchain_anthropic import ChatAnthropic
 from langchain_community.chat_models import ChatLiteLLM
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.prompts.chat import MessageLikeRepresentation
+from langchain_core.runnables import RunnableBinding, RunnableSequence
+from pydantic import AnyUrl
 from pyfakefs.fake_filesystem import FakeFilesystem
 
-from ai_gateway.agents import (
-    Agent,
-    AgentRegistered,
-    CustomModelsAgentRegistry,
-    LocalAgentRegistry,
+from ai_gateway.chains import (
+    Chain,
+    ChainRegistered,
+    CustomModelsChainRegistry,
+    LocalChainRegistry,
 )
-from ai_gateway.agents.config import (
-    AgentConfig,
+from ai_gateway.chains.config import (
+    ChainConfig,
     ChatAnthropicParams,
     ChatLiteLLMParams,
     ModelClassProvider,
     ModelConfig,
 )
-from ai_gateway.agents.registry import TypeModelFactory
-from ai_gateway.agents.typing import ModelMetadata
+from ai_gateway.chains.registry import TypeModelFactory
+from ai_gateway.chains.typing import ModelMetadata
 
 
-class MockAgentClass(Agent):
+class MockChainClass(Chain):
     pass
 
 
 @pytest.fixture
 def mock_fs(fs: FakeFilesystem):
-    agents_definitions_dir = (
-        Path(__file__).parent.parent.parent / "ai_gateway" / "agents" / "definitions"
+    chains_definitions_dir = (
+        Path(__file__).parent.parent.parent / "ai_gateway" / "chains" / "definitions"
     )
     fs.create_file(
-        agents_definitions_dir / "test" / "base.yml",
+        chains_definitions_dir / "test" / "base.yml",
         contents="""
 ---
-name: Test agent
+name: Test chain
 model:
   name: claude-2.1
   params:
@@ -56,10 +59,10 @@ prompt_template:
 """,
     )
     fs.create_file(
-        agents_definitions_dir / "chat" / "react.yml",
+        chains_definitions_dir / "chat" / "react.yml",
         contents="""
 ---
-name: Chat react agent
+name: Chat react chain
 model:
   name: claude-3-haiku-20240307
   params:
@@ -84,10 +87,10 @@ stop:
 """,
     )
     fs.create_file(
-        agents_definitions_dir / "chat" / "react-custom.yml",
+        chains_definitions_dir / "chat" / "react-custom.yml",
         contents="""
 ---
-name: Chat react custom agent
+name: Chat react custom chain
 model:
   name: custom
   params:
@@ -122,12 +125,12 @@ def model_factories():
 
 
 @pytest.fixture
-def agents_registered():
+def chains_registered():
     yield {
-        "test/base": AgentRegistered(
-            klass=Agent,
-            config=AgentConfig(
-                name="Test agent",
+        "test/base": ChainRegistered(
+            klass=Chain,
+            config=ChainConfig(
+                name="Test chain",
                 model=ModelConfig(
                     name="claude-2.1",
                     params=ChatLiteLLMParams(
@@ -144,10 +147,10 @@ def agents_registered():
                 prompt_template={"system": "Template1"},
             ),
         ),
-        "chat/react": AgentRegistered(
-            klass=MockAgentClass,
-            config=AgentConfig(
-                name="Chat react agent",
+        "chat/react": ChainRegistered(
+            klass=MockChainClass,
+            config=ChainConfig(
+                name="Chat react chain",
                 model=ModelConfig(
                     name="claude-3-haiku-20240307",
                     provider="anthropic",
@@ -170,10 +173,10 @@ def agents_registered():
                 stop=["Foo", "Bar"],
             ),
         ),
-        "chat/react-custom": AgentRegistered(
-            klass=MockAgentClass,
-            config=AgentConfig(
-                name="Chat react custom agent",
+        "chat/react-custom": ChainRegistered(
+            klass=MockChainClass,
+            config=ChainConfig(
+                name="Chat react custom chain",
                 model=ModelConfig(
                     name="custom",
                     provider="litellm",
@@ -195,26 +198,26 @@ def agents_registered():
     }
 
 
-class TestLocalAgentRegistry:
+class TestLocalChainRegistry:
     def test_from_local_yaml(
         self,
         mock_fs: FakeFilesystem,
         model_factories: dict[ModelClassProvider, TypeModelFactory],
-        agents_registered: dict[str, AgentRegistered],
+        chains_registered: dict[str, ChainRegistered],
     ):
-        registry = LocalAgentRegistry.from_local_yaml(
+        registry = LocalChainRegistry.from_local_yaml(
             class_overrides={
-                "chat/react": MockAgentClass,
-                "chat/react-custom": MockAgentClass,
+                "chat/react": MockChainClass,
+                "chat/react-custom": MockChainClass,
             },
             model_factories=model_factories,
         )
 
-        assert registry.agents_registered == agents_registered
+        assert registry.chains_registered == chains_registered
 
     @pytest.mark.parametrize(
         (
-            "agent_id",
+            "chain_id",
             "expected_name",
             "expected_class",
             "expected_messages",
@@ -225,8 +228,8 @@ class TestLocalAgentRegistry:
         [
             (
                 "test",
-                "Test agent",
-                Agent,
+                "Test chain",
+                Chain,
                 [("system", "Template1")],
                 "claude-2.1",
                 None,
@@ -234,8 +237,8 @@ class TestLocalAgentRegistry:
             ),
             (
                 "test/base",
-                "Test agent",
-                Agent,
+                "Test chain",
+                Chain,
                 [("system", "Template1")],
                 "claude-2.1",
                 None,
@@ -250,8 +253,8 @@ class TestLocalAgentRegistry:
             ),
             (
                 "chat/react",
-                "Chat react agent",
-                MockAgentClass,
+                "Chat react chain",
+                MockChainClass,
                 [("system", "Template1"), ("user", "Template2")],
                 "claude-3-haiku-20240307",
                 {"stop": ["Foo", "Bar"]},
@@ -272,29 +275,29 @@ class TestLocalAgentRegistry:
     )
     def test_get(
         self,
-        agents_registered: dict[str, AgentRegistered],
+        chains_registered: dict[str, ChainRegistered],
         model_factories: dict[ModelClassProvider, TypeModelFactory],
-        agent_id: str,
+        chain_id: str,
         expected_name: str,
-        expected_class: Type[Agent],
+        expected_class: Type[Chain],
         expected_messages: Sequence[MessageLikeRepresentation],
         expected_model: str,
         expected_kwargs: dict,
         expected_model_params: dict | None,
     ):
-        registry = LocalAgentRegistry(
+        registry = LocalChainRegistry(
             model_factories=model_factories,
-            agents_registered=agents_registered,
+            chains_registered=chains_registered,
         )
 
-        agent = registry.get(agent_id, {}, None)
+        chain = registry.get(chain_id, {}, None)
 
-        chain = agent.bound
-        actual_messages = chain.first.messages
-        actual_model = chain.last
+        sequence = cast(RunnableSequence, chain.bound)
+        actual_messages = cast(ChatPromptTemplate, sequence.first).messages
+        actual_model = cast(RunnableBinding, sequence.last)
 
-        assert agent.name == expected_name
-        assert isinstance(agent, expected_class)
+        assert chain.name == expected_name
+        assert isinstance(chain, expected_class)
         assert (
             actual_messages
             == ChatPromptTemplate.from_messages(expected_messages).messages
@@ -305,7 +308,7 @@ class TestLocalAgentRegistry:
             assert actual_model.kwargs == expected_kwargs
 
         actual_model = (
-            actual_model.bound if getattr(actual_model, "bound", None) else actual_model
+            actual_model.bound if getattr(actual_model, "bound", None) else actual_model  # type: ignore[assignment]
         )
         if expected_model_params:
             actual_model_params = {
@@ -316,26 +319,26 @@ class TestLocalAgentRegistry:
             assert actual_model_params == expected_model_params
 
 
-class TestCustomModelsAgentRegistry:
+class TestCustomModelsChainRegistry:
     def test_from_local_yaml(
         self,
         mock_fs: FakeFilesystem,
         model_factories: dict[ModelClassProvider, TypeModelFactory],
-        agents_registered: dict[str, AgentRegistered],
+        chains_registered: dict[str, ChainRegistered],
     ):
-        registry = LocalAgentRegistry.from_local_yaml(
+        registry = LocalChainRegistry.from_local_yaml(
             class_overrides={
-                "chat/react": MockAgentClass,
-                "chat/react-custom": MockAgentClass,
+                "chat/react": MockChainClass,
+                "chat/react-custom": MockChainClass,
             },
             model_factories=model_factories,
         )
 
-        assert registry.agents_registered == agents_registered
+        assert registry.chains_registered == chains_registered
 
     @pytest.mark.parametrize(
         (
-            "agent_id",
+            "chain_id",
             "model_metadata",
             "expected_name",
             "expected_class",
@@ -348,8 +351,8 @@ class TestCustomModelsAgentRegistry:
             (
                 "chat/react",
                 None,
-                "Chat react agent",
-                MockAgentClass,
+                "Chat react chain",
+                MockChainClass,
                 [("system", "Template1"), ("user", "Template2")],
                 "claude-3-haiku-20240307",
                 {"stop": ["Foo", "Bar"]},
@@ -366,12 +369,12 @@ class TestCustomModelsAgentRegistry:
                 "chat/react",
                 ModelMetadata(
                     name="mistral",
-                    endpoint="http://localhost:4000/",
+                    endpoint=cast(AnyUrl, "http://localhost:4000/"),
                     api_key="token",
                     provider="openai",
                 ),
-                "Chat react custom agent",
-                MockAgentClass,
+                "Chat react custom chain",
+                MockChainClass,
                 [("system", "Template1"), ("user", "Template2")],
                 "custom",
                 {
@@ -393,30 +396,30 @@ class TestCustomModelsAgentRegistry:
     )
     def test_get(
         self,
-        agents_registered: dict[str, AgentRegistered],
+        chains_registered: dict[str, ChainRegistered],
         model_factories: dict[ModelClassProvider, TypeModelFactory],
-        agent_id: str,
+        chain_id: str,
         model_metadata: Optional[ModelMetadata],
         expected_name: str,
-        expected_class: Type[Agent],
+        expected_class: Type[Chain],
         expected_messages: Sequence[MessageLikeRepresentation],
         expected_model: str,
         expected_kwargs: dict,
         expected_model_params: dict | None,
     ):
-        registry = CustomModelsAgentRegistry(
+        registry = CustomModelsChainRegistry(
             model_factories=model_factories,
-            agents_registered=agents_registered,
+            chains_registered=chains_registered,
         )
 
-        agent = registry.get(agent_id, {}, model_metadata)
+        chain = registry.get(chain_id, {}, model_metadata)
 
-        chain = agent.bound
-        actual_messages = chain.first.messages
-        actual_model = chain.last
+        sequence = cast(RunnableSequence, chain.bound)
+        actual_messages = cast(ChatPromptTemplate, sequence.first).messages
+        actual_model = cast(RunnableBinding, sequence.last)
 
-        assert agent.name == expected_name
-        assert isinstance(agent, expected_class)
+        assert chain.name == expected_name
+        assert isinstance(chain, expected_class)
         assert (
             actual_messages
             == ChatPromptTemplate.from_messages(expected_messages).messages
@@ -427,7 +430,7 @@ class TestCustomModelsAgentRegistry:
             assert actual_model.kwargs == expected_kwargs
 
         actual_model = (
-            actual_model.bound if getattr(actual_model, "bound", None) else actual_model
+            actual_model.bound if getattr(actual_model, "bound", None) else actual_model  # type: ignore[assignment]
         )
         if expected_model_params:
             actual_model_params = {

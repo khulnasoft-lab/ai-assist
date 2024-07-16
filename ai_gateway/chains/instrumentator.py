@@ -6,7 +6,7 @@ from litellm.integrations.custom_logger import CustomLogger
 from ai_gateway.instrumentators.model_requests import ModelRequestInstrumentator
 
 
-class AgentInstrumentator(CustomLogger):
+class ChainInstrumentator(CustomLogger):
     def log_pre_api_call(self, model, messages, kwargs):
         self._start(kwargs)
 

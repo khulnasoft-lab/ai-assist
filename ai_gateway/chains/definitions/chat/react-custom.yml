@@ -1,9 +1,9 @@
 ---
-name: Claude 3 ReAct Chat agent
+name: Custom ReAct Chat chain
 model:
-  name: claude-3-sonnet-20240229
+  name: custom
   params:
-    model_class_provider: anthropic
+    model_class_provider: litellm
     temperature: 0.0
     timeout: 60
     max_tokens: 2_048

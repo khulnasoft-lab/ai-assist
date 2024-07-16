@@ -5,13 +5,13 @@ from jinja2 import BaseLoader, Environment
 from langchain_core.prompts.chat import MessageLikeRepresentation
 from langchain_core.runnables import Runnable, RunnableBinding
 
-from ai_gateway.agents.typing import ModelMetadata
 from ai_gateway.auth.user import GitLabUser
+from ai_gateway.chains.typing import ModelMetadata
 from ai_gateway.gitlab_features import GitLabUnitPrimitive, WrongUnitPrimitives
 
 __all__ = [
-    "Agent",
-    "BaseAgentRegistry",
+    "Chain",
+    "BaseChainRegistry",
 ]
 
 Input = TypeVar("Input")
@@ -24,12 +24,15 @@ def _format_str(content: str, options: dict[str, Any]) -> str:
     return jinja_env.from_string(content).render(options)
 
 
-class Agent(RunnableBinding[Input, Output]):
+class Chain(RunnableBinding[Input, Output]):
     name: str
     unit_primitives: list[GitLabUnitPrimitive]
 
     def __init__(
-        self, name: str, unit_primitives: list[GitLabUnitPrimitive], chain: Runnable
+        self,
+        name: str,
+        unit_primitives: list[GitLabUnitPrimitive],
+        chain: Runnable,
     ):
         super().__init__(name=name, unit_primitives=unit_primitives, bound=chain)  # type: ignore[call-arg]
 
@@ -55,23 +58,23 @@ class Agent(RunnableBinding[Input, Output]):
         return messages
 
 
-class BaseAgentRegistry(ABC):
+class BaseChainRegistry(ABC):
     @abstractmethod
     def get(
         self,
-        agent_id: str,
+        chain_id: str,
         options: Optional[dict[str, Any]] = None,
         model_metadata: Optional[ModelMetadata] = None,
-    ) -> Agent:
+    ) -> Chain:
         pass
 
     def get_on_behalf(
-        self, user: GitLabUser, agent_id: str, options: Optional[dict[str, Any]] = None
-    ) -> Agent:
-        agent = self.get(agent_id, options)
+        self, user: GitLabUser, chain_id: str, options: Optional[dict[str, Any]] = None
+    ) -> Chain:
+        chain = self.get(chain_id, options)
 
-        for unit_primitive in agent.unit_primitives:
+        for unit_primitive in chain.unit_primitives:
             if not user.can(unit_primitive):
                 raise WrongUnitPrimitives
 
-        return agent
+        return chain

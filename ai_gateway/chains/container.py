@@ -1,15 +1,15 @@
 from dependency_injector import containers, providers
 
-from ai_gateway.agents.config import ModelClassProvider
-from ai_gateway.agents.registry import CustomModelsAgentRegistry, LocalAgentRegistry
+from ai_gateway.chains.config import ModelClassProvider
+from ai_gateway.chains.registry import CustomModelsChainRegistry, LocalChainRegistry
 from ai_gateway.chat import agents as chat
 
 __all__ = [
-    "ContainerAgents",
+    "ContainerChains",
 ]
 
 
-class ContainerAgents(containers.DeclarativeContainer):
+class ContainerChains(containers.DeclarativeContainer):
     config = providers.Configuration(strict=True)
     models = providers.DependenciesContainer()
 
@@ -33,12 +33,12 @@ class ContainerAgents(containers.DeclarativeContainer):
         config.custom_models.enabled,
     )
 
-    _agent_registry_factory = providers.Selector(
+    _chain_registry_factory = providers.Selector(
         _custom_models_or_local,
         custom_models=providers.Factory(
-            CustomModelsAgentRegistry.from_local_yaml, **_registry_params
+            CustomModelsChainRegistry.from_local_yaml, **_registry_params
         ),
-        local=providers.Factory(LocalAgentRegistry.from_local_yaml, **_registry_params),
+        local=providers.Factory(LocalChainRegistry.from_local_yaml, **_registry_params),
     )
 
-    agent_registry = providers.Singleton(_agent_registry_factory)
+    chain_registry = providers.Singleton(_chain_registry_factory)

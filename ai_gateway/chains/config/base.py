@@ -2,13 +2,13 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
-from ai_gateway.agents.config.models import TypeModelParams
+from ai_gateway.chains.config.models import TypeModelParams
 from ai_gateway.gitlab_features import GitLabUnitPrimitive
 
-__all__ = ["BaseAgentConfig", "AgentConfig", "ModelConfig"]
+__all__ = ["BaseChainConfig", "ChainConfig", "ModelConfig"]
 
 
-# Agents may operate with unit primitives in various ways.
+# Chains may operate with unit primitives in various ways.
 # Basic agents typically use plain strings as unit primitives.
 # More sophisticated agents, like Duo Chat, assign unit primitives to specific tools.
 # Creating a generic UnitPrimitiveType enables storage of unit primitives in any desired format.
@@ -20,7 +20,7 @@ class ModelConfig(BaseModel):
     params: TypeModelParams
 
 
-class BaseAgentConfig(BaseModel, Generic[TypeUnitPrimitive]):
+class BaseChainConfig(BaseModel, Generic[TypeUnitPrimitive]):
     name: str
     model: ModelConfig
     unit_primitives: list[TypeUnitPrimitive]
@@ -28,5 +28,5 @@ class BaseAgentConfig(BaseModel, Generic[TypeUnitPrimitive]):
     stop: list[str] | None = None
 
 
-class AgentConfig(BaseAgentConfig):
+class ChainConfig(BaseChainConfig):
     unit_primitives: list[GitLabUnitPrimitive]

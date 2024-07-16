@@ -7,8 +7,8 @@ from langchain_core.outputs import Generation
 from langchain_core.runnables import Runnable, RunnableConfig
 from pydantic import BaseModel
 
-from ai_gateway.agents.base import Agent
-from ai_gateway.agents.typing import ModelMetadata
+from ai_gateway.chains.base import Chain
+from ai_gateway.chains.typing import ModelMetadata
 from ai_gateway.chat.agents.typing import (
     AgentFinalAnswer,
     AgentStep,
@@ -167,7 +167,7 @@ class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
         return self.parse_result([Generation(text=text)])
 
 
-class ReActAgent(Agent[ReActAgentInputs, TypeReActAgentAction]):
+class ReActAgent(Chain[ReActAgentInputs, TypeReActAgentAction]):
     class _StreamState(TypedDict):
         tool_action: Optional[ReActAgentToolAction]
         len_final_answer: int

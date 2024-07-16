@@ -7,9 +7,9 @@ from langchain_core.language_models.chat_models import SimpleChatModel
 from langchain_core.messages import BaseMessage
 from langchain_core.prompts import ChatPromptTemplate
 
-from ai_gateway.agents import Agent
 from ai_gateway.api.v1 import api_router
 from ai_gateway.auth import User, UserClaims
+from ai_gateway.chains import Chain
 from ai_gateway.chat.agents import ReActAgent
 from ai_gateway.config import Config
 from ai_gateway.gitlab_features import GitLabUnitPrimitive
@@ -36,8 +36,8 @@ class FakeModel(SimpleChatModel):
 
 
 @pytest.fixture
-def mock_agent_klass():
-    yield Agent
+def mock_chain_klass():
+    yield Chain
 
 
 @pytest.fixture
@@ -49,15 +49,15 @@ def mock_config():
 
 
 @pytest.fixture
-def mock_registry_get(mock_agent_klass: Optional[Type[Agent]]):
-    with patch("ai_gateway.agents.registry.LocalAgentRegistry.get") as mock:
-        if mock_agent_klass:
+def mock_registry_get(mock_chain_klass: Optional[Type[Chain]]):
+    with patch("ai_gateway.chains.registry.LocalChainRegistry.get") as mock:
+        if mock_chain_klass:
             model = FakeModel(
                 expected_message="Hi, I'm John and I'm 20 years old",
                 response="Hi John!",
             )
 
-            mock.return_value = mock_agent_klass(
+            mock.return_value = mock_chain_klass(
                 name="fake_agent",
                 chain=ChatPromptTemplate.from_messages(
                     ["Hi, I'm {name} and I'm {age} years old"]
@@ -88,19 +88,19 @@ def auth_user():
     )
 
 
-class TestAgent:
+class TestChains:
     @pytest.mark.parametrize(
-        ("mock_agent_klass", "inputs", "expected_status", "expected_response"),
+        ("mock_chain_klass", "inputs", "expected_status", "expected_response"),
         [
-            (Agent, {"name": "John", "age": 20}, 200, "Hi John!"),
+            (Chain, {"name": "John", "age": 20}, 200, "Hi John!"),
             (
                 None,
                 {"name": "John", "age": 20},
                 404,
-                {"detail": "Agent 'test' not found"},
+                {"detail": "Chain 'test' not found"},
             ),
             (
-                Agent,
+                Chain,
                 {"name": "John"},
                 422,
                 {
@@ -111,13 +111,13 @@ class TestAgent:
                 ReActAgent,
                 {"name": "John", "age": 20},
                 422,
-                {"detail": "Agent 'test' is not supported"},
+                {"detail": "Chain 'test' is not supported"},
             ),
         ],
     )
     def test_request(
         self,
-        mock_agent_klass,
+        mock_chain_klass,
         mock_registry_get,
         mock_client,
         inputs: dict[str, str],
@@ -125,7 +125,7 @@ class TestAgent:
         expected_response: Any,
     ):
         response = mock_client.post(
-            "/agents/test",
+            "/chains/test",
             headers={
                 "Authorization": "Bearer 12345",
                 "X-Gitlab-Authentication-Type": "oidc",
@@ -150,7 +150,7 @@ class TestUnauthorizedScopes:
         self, mock_container, mock_client, mock_registry_get
     ):
         response = mock_client.post(
-            "/agents/test",
+            "/chains/test",
             headers={
                 "Authorization": "Bearer 12345",
                 "X-Gitlab-Authentication-Type": "oidc",
