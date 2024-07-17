@@ -104,15 +104,17 @@ build-docker-model-gateway:
   extends:
     - .kaniko_base
   variables:
-    HF_OFFLINE: false
+    HF_OFFLINE: "false"
     KANIKO_BUILD_FILE: Dockerfile
     KANIKO_DESTINATION: "${TARGET_IMAGE}"
   script:
     - |
       if [ "$HF_OFFLINE" = "true" ]; then
-        echo "HuggingFace Hub is down. Failing build-docker-model-gateway job."
+        echo "HuggingFace Hub is offline. Failing build-docker-model-gateway job."
         exit 1
       fi
+      echo "HuggingFace Hub is online. Proceeding with build-docker-model-gateway job."
+
 
 tests:unit:
   extends: .poetry
