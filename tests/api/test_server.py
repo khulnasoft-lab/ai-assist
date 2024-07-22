@@ -5,12 +5,14 @@ from typing import Iterator, cast
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
+import litellm
 import pytest
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from ai_gateway.agents.instrumentator import AgentInstrumentator
 from ai_gateway.api import create_fast_api_server, server
 from ai_gateway.api.server import (
     custom_http_exception_handler,
@@ -18,7 +20,12 @@ from ai_gateway.api.server import (
     setup_custom_exception_handlers,
     setup_gcp_service_account,
 )
-from ai_gateway.config import Config, ConfigAuth, ConfigGoogleCloudPlatform
+from ai_gateway.config import (
+    Config,
+    ConfigAuth,
+    ConfigGoogleCloudPlatform,
+    ConfigSnowplow,
+)
 from ai_gateway.container import ContainerApplication
 from ai_gateway.models import ModelAPIError
 from ai_gateway.structured_logging import setup_logging
@@ -173,6 +180,8 @@ async def test_lifespan(config, app, unused_port, monkeypatch):
         if config.instrumentator.thread_monitoring_enabled:
             asyncio.get_running_loop.assert_called_once()
 
+        assert isinstance(litellm.callbacks[0], AgentInstrumentator)
+
     assert mock_container_app.return_value.shutdown_resources.called_once()
 
 
@@ -203,6 +212,26 @@ def test_middleware_log_request(fastapi_server_app: FastAPI, caplog):
         client.post("/monitoring/healthz")
         log_messages = [record.message for record in caplog.records]
         assert all("correlation_id" not in msg for msg in log_messages)
+
+
+@pytest.mark.parametrize(
+    "test_path,expected", [("/v1/chat/agent", True), ("/monitoring/healthz", False)]
+)
+def test_middleware_internal_event(test_path, expected):
+    config = Config(
+        _env_file=None,
+        auth=ConfigAuth(bypass_external=True),
+        snowplow=ConfigSnowplow(enabled=True),
+    )
+    server = create_fast_api_server(config)
+    client = TestClient(server)
+
+    with patch("ai_gateway.api.middleware.current_event_context") as mock_event_context:
+        client.post(test_path)
+        if expected:
+            mock_event_context.set.assert_called_once()
+        else:
+            mock_event_context.set.assert_not_called()
 
 
 def test_setup_custom_exception_handlers(app, monkeypatch):

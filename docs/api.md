@@ -1,6 +1,6 @@
 # API
 
-An interactive API documentation site is available at http://127.0.0.1:5001/docs.
+An interactive API documentation site is available at <http://127.0.0.1:5001/docs>.
 For more information, please see the official FastAPI [doc](https://fastapi.tiangolo.com/tutorial/first-steps/?h=interactive+api+docs#interactive-api-docs).
 
 ## Authentication
@@ -41,7 +41,7 @@ POST /v3/code/completions
 
 ```shell
 curl --request POST \
-  --url 'http://localhost:5052/v3/code/completions' \
+  --url "http://localhost:5052/v3/code/completions" \
   --header 'Authorization: Bearer <access_token>' \
   --header 'X-Gitlab-Authentication-Type: oidc' \
   --header 'Content-Type: application/json' \
@@ -98,7 +98,7 @@ Example response:
 
 ```shell
 curl --request POST \
-  --url 'http://localhost:5052/v3/code/completions' \
+  --url "http://localhost:5052/v3/code/completions" \
   --header 'Authorization: Bearer <access_token>' \
   --header 'X-Gitlab-Authentication-Type: oidc' \
   --header 'Content-Type: application/json' \
@@ -169,7 +169,7 @@ third-party model provider.
 | ----------------------------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------- |
 | `prompt_version`                    | int    | yes      | The version of the prompt.                                                                                       | `1`                       |
 | `project_path`                      | string | no       | The name of the project (max_len: **255**).                                                                      | `gitlab-orb/gitlab-shell` |
-| `project_id`                        | int    | no       | The id of the project.                                                                                           | `33191677`                |
+| `project_id`                        | int    | no       | The ID of the project.                                                                                           | `33191677`                |
 | `model_provider`                    | string | no       | The name of the model provider. Valid values are: `anthropic` and `vertex-ai`.                                   | `vertex-ai`               |
 | `current_file`                      | hash   | yes      | The data of the current file.                                                                                    |                           |
 | `current_file.file_name`            | string | yes      | The name of the current file (max_len: **255**).                                                                 | `README.md`               |
@@ -190,7 +190,7 @@ third-party model provider.
 
 ```shell
 curl --request POST \
-  --url 'http://localhost:5052/v2/code/completions' \
+  --url "http://localhost:5052/v2/code/completions" \
   --header 'Authorization: Bearer <access_token>' \
   --header 'X-Gitlab-Authentication-Type: oidc' \
   --header 'Content-Type: application/json' \
@@ -264,7 +264,7 @@ This accepts prebuilt `prompt` and forwards it directly to third-party provider.
 | ----------------------------------- | ------ | -------- | ------------------------------------------------------------------------------ | ------------------------------------ |
 | `prompt_version`                    | int    | yes      | The version of the prompt                                                      | `2`                                  |
 | `project_path`                      | string | no       | The name of the project (max_len: **255**)                                     | `gitlab-orb/gitlab-shell`            |
-| `project_id`                        | int    | no       | The id of the project                                                          | `33191677`                           |
+| `project_id`                        | int    | no       | The ID of the project                                                          | `33191677`                           |
 | `model_provider`                    | string | no       | The name of the model provider. Valid values are: `anthropic` and `vertex-ai`. | `anthropic`                          |
 | `current_file`                      | hash   | yes      | The data of the current file                                                   |                                      |
 | `current_file.file_name`            | string | yes      | The name of the current file (max_len: **255**)                                | `README.md`                          |
@@ -285,7 +285,7 @@ This accepts prebuilt `prompt` and forwards it directly to third-party provider.
 
 ```shell
 curl --request POST \
-  --url 'http://localhost:5052/v2/code/completions' \
+  --url "http://localhost:5052/v2/code/completions" \
   --header 'Authorization: Bearer <access_token>' \
   --header 'X-Gitlab-Authentication-Type: oidc' \
   --header 'Content-Type: application/json' \
@@ -375,7 +375,7 @@ third-party model provider.
 | ----------------------------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
 | `prompt_version`                    | int    | yes      | The version of the prompt.                                                                                                                                                             | `1`                       |
 | `project_path`                      | string | no       | The name of the project (max_len: **255**).                                                                                                                                            | `gitlab-orb/gitlab-shell` |
-| `project_id`                        | int    | no       | The id of the project.                                                                                                                                                                 | `33191677`                |
+| `project_id`                        | int    | no       | The ID of the project.                                                                                                                                                                 | `33191677`                |
 | `model_provider`                    | string | no       | The name of the model provider. Valid values are: `anthropic` and `vertex-ai`.                                                                                                         | `vertex-ai`               |
 | `model_name`                        | string | no       | The name of the model name. Valid values are: `claude-2`, `claude-2.0`, `claude-2.1` if model_provider is `anthropic`.`code-bison`, `code-bison@002` if model_provider is `vertex-ai`. | `code-bison@002`          |
 | `current_file`                      | hash   | yes      | The data of the current file.                                                                                                                                                          |                           |
@@ -395,7 +395,7 @@ third-party model provider.
 
 ```shell
 curl --request POST \
-  --url 'http://localhost:5052/v2/code/generations' \
+  --url "http://localhost:5052/v2/code/generations" \
   --header 'Authorization: Bearer <access_token>' \
   --header 'X-Gitlab-Authentication-Type: oidc' \
   --header 'Content-Type: application/json' \
@@ -463,7 +463,7 @@ This accepts prebuilt `prompt` and forwards it directly to third-party provider.
 | ----------------------------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
 | `prompt_version`                    | int    | yes      | The version of the prompt                                                                                                                                                              | `2`                                  |
 | `project_path`                      | string | no       | The name of the project (max_len: **255**)                                                                                                                                             | `gitlab-orb/gitlab-shell`            |
-| `project_id`                        | int    | no       | The id of the project                                                                                                                                                                  | `33191677`                           |
+| `project_id`                        | int    | no       | The ID of the project                                                                                                                                                                  | `33191677`                           |
 | `model_provider`                    | string | no       | The name of the model provider. Valid values are: `anthropic` and `vertex-ai`. Default to `vertex-ai`.                                                                                 | `anthropic`                          |
 | `model_name`                        | string | no       | The name of the model name. Valid values are: `claude-2`, `claude-2.0`, `claude-2.1` if model_provider is `anthropic`.`code-bison`, `code-bison@002` if model_provider is `vertex-ai`. | `claude-2.1`                         |
 | `current_file`                      | hash   | yes      | The data of the current file                                                                                                                                                           |                                      |
@@ -484,7 +484,7 @@ This accepts prebuilt `prompt` and forwards it directly to third-party provider.
 
 ```shell
 curl --request POST \
-  --url 'http://localhost:5052/v2/code/generations' \
+  --url "http://localhost:5052/v2/code/generations" \
   --header 'Authorization: Bearer <access_token>' \
   --header 'X-Gitlab-Authentication-Type: oidc' \
   --header 'Content-Type: application/json' \
@@ -564,19 +564,19 @@ POST /v1/agent/chat
 
 | Attribute                                      | Type   | Required | Description                                                                                                                                     | Example                                               |
 | ---------------------------------------------- | ------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `prompt_components`                            | array  | yes      | The list of prompt components compliant with https://docs.gitlab.com/ee/architecture/blueprints/ai_gateway/index.html#protocol (max_len: **1**). |                                                       |
+| `prompt_components`                            | array  | yes      | The list of prompt components compliant with <https://docs.gitlab.com/ee/architecture/blueprints/ai_gateway/index.html#protocol> (max_len: **1**). |                                                       |
 | `prompt_components.type`                       | string | yes      | The type of the prompt component (max_len: **255**).                                                                                            | `prompt`                                              |
 | `prompt_components.payload`                    | hash   | yes      | The data of the current prompt component.                                                                                                       |                                                       |
-| `prompt_components.payload.content`            | string | yes      | The complete AI prompt (max_len: **400 000**).                                                                                                  | `Human: Tell me a fun fact about ducks\n\nAssistant:` |
+| `prompt_components.payload.content`            | [string, array]  | yes      | The complete AI prompt (max_len: **400 000**). See [Claude Message API](https://docs.anthropic.com/en/api/messages) for conversation roles payload.models in `claude-3` family. | `content: "hi how are you"`       |
 | `prompt_components.payload.provider`           | string | yes      | The AI provider for which the prompt is designed for. Valid value is: `anthropic`.                                                              | `anthropic`                                           |
-| `prompt_components.payload.model`              | string | yes      | The AI model for which the prompt is designed for. Valid values are: `claude-2.0` and `claude-instant-1.2`.                                     | `claude-2.0`                                          |
+| `prompt_components.payload.model`              | string | yes      | The AI model for which the prompt is designed for. Valid values are: `claude-3-5-sonnet-20240620`,`claude-3-sonnet-20240229`,`claude-3-haiku-2024030`, `claude-3-opus-20240229`, `claude-2.1` and `claude-instant-1.2`.         | `claude-2.0`                            |
 | `prompt_components.prompt_components.metadata` | hash   | no       | The metadata of the prompt component. Only string - string key value pairs are accepted.                                                        |                                                       |
 | `prompt_components.metadata.source`            | string | yes      | The source of the prompt component (max_len: **100**).                                                                                          | `GitLab EE`                                           |
 | `prompt_components.metadata.version`           | string | yes      | The version of the source (max_len: **100**).                                                                                                   | `16.7.0`                                              |
 
 ```shell
 curl --request POST \
-  --url 'http://localhost:5052/v1/chat/agent \
+  --url "http://localhost:5052/v1/chat/agent" \
   --header 'Authorization: Bearer <access_token>' \
   --header 'X-Gitlab-Authentication-Type: oidc' \
   --header 'Content-Type: application/json' \
@@ -585,13 +585,18 @@ curl --request POST \
     {
       "type":"prompt",
       "payload": {
-        "content": "Human: Tell me a fun fact about ducts\n\n\Assistant:",
+        "content": [
+          {
+            "role": "user", 
+            "content": "Hi, how are you?"
+          }
+        ],
         "provider": "anthropic",
-        "model": "claude-2.0"
+        "model": "claude-3-sonnet-20240229"
       },
       "metadata": {
         "source": "GitLab EE",
-        "version": "16.7.0"
+        "version": "17.2.0"
       }
     }
  ]
@@ -602,10 +607,11 @@ Example response:
 
 ```json
 {
-  "response": "Here's a fun fact about ducks:...",
+  "response": "Hi there! As an AI language model, I don't have feelings or emotions, \
+               but I'm operating properly and ready to assist you with any questions or tasks you may have. How can I help you today?.",
   "metadata": {
     "provider": "anthropic",
-    "model": "claude-2.0",
+    "model": "claude-3-sonnet-20240229",
     "timestamp": 1702292323
   }
 }
@@ -629,7 +635,7 @@ POST /v1/x-ray/libraries
 
 | Attribute                            | Type   | Required | Description                                                                                                                                     | Example                               |
 | ------------------------------------ | ------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| `prompt_components`                  | array  | yes      | The list of prompt components compliant with https://docs.gitlab.com/ee/architecture/blueprints/ai_gateway/index.html#protocol (max_len: **1**). |                                       |
+| `prompt_components`                  | array  | yes      | The list of prompt components compliant with <https://docs.gitlab.com/ee/architecture/blueprints/ai_gateway/index.html#protocol> (max_len: **1**). |                                       |
 | `prompt_components.type`             | string | yes      | The type of the prompt component (max_len: **255**).                                                                                            | `x_ray_package_file_prompt`           |
 | `prompt_components.payload`          | hash   | yes      | The data of the prompt component.                                                                                                               |                                       |
 | `prompt_components.payload.prompt`   | string | yes      | The complete AI prompt.                                                                                                                         | `Human: Tell me fun fact about ducks` |
@@ -637,9 +643,9 @@ POST /v1/x-ray/libraries
 | `prompt_components.payload.model`    | string | yes      | The AI model for which the prompt is designed for.                                                                                              | `claude-2.0`                          |
 | `prompt_components.metadata`         | hash   | no       | The metadata of the prompt component. Only string - string key value pairs are accepted (max_len: **10**).                                      |                                       |
 
-````shell
+```shell
 curl --request POST \
-  --url 'http://localhost:5052/v1/x-ray/libraries' \
+  --url "http://localhost:5052/v1/x-ray/libraries" \
   --header 'Authorization: Bearer <access_token>' \
   --header 'X-Gitlab-Authentication-Type: oidc' \
   --header 'Content-Type: application/json' \

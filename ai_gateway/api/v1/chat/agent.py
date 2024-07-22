@@ -45,6 +45,14 @@ CHAT_INVOKABLES = [
         name="explain_vulnerability",
         unit_primitive=GitLabUnitPrimitive.EXPLAIN_VULNERABILITY,
     ),
+    ChatInvokable(
+        name="summarize_comments",
+        unit_primitive=GitLabUnitPrimitive.SUMMARIZE_COMMENTS,
+    ),
+    ChatInvokable(
+        name="troubleshoot_job",
+        unit_primitive=GitLabUnitPrimitive.TROUBLESHOOT_JOB,
+    ),
     # Deprecated. Added for backward compatibility.
     # Please, refer to `v2/chat/agent` for additional details.
     ChatInvokable(name="agent", unit_primitive=GitLabUnitPrimitive.DUO_CHAT),
@@ -70,11 +78,12 @@ async def chat(
     payload = prompt_component.payload
 
     try:
-        if payload.provider == KindModelProvider.LITELLM:
+        if payload.provider in (KindModelProvider.LITELLM, KindModelProvider.MISTRALAI):
             model = litellm_factory(
                 name=payload.model,
                 endpoint=payload.model_endpoint,
                 api_key=payload.model_api_key,
+                provider=payload.provider,
             )
 
             completion = await model.generate(

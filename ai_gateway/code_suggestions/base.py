@@ -42,6 +42,7 @@ PROVIDERS_MODELS_MAP = {
     KindModelProvider.ANTHROPIC: KindAnthropicModel,
     KindModelProvider.VERTEX_AI: KindVertexTextModel,
     KindModelProvider.LITELLM: KindLiteLlmModel,
+    KindModelProvider.MISTRALAI: KindLiteLlmModel,
 }
 
 USE_CASES_MODELS_MAP = {
@@ -53,6 +54,7 @@ USE_CASES_MODELS_MAP = {
         KindLiteLlmModel.MIXTRAL,
         KindLiteLlmModel.CODE_GEMMA,
         KindLiteLlmModel.CODESTRAL,
+        KindLiteLlmModel.CODE_LLAMA_CODE,
     },
     KindUseCase.CODE_GENERATIONS: {
         KindAnthropicModel.CLAUDE_2_0,
@@ -66,6 +68,7 @@ USE_CASES_MODELS_MAP = {
         KindLiteLlmModel.MIXTRAL,
         KindLiteLlmModel.CODE_GEMMA,
         KindLiteLlmModel.CODESTRAL,
+        KindLiteLlmModel.CODE_LLAMA,
     },
 }
 

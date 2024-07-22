@@ -1,23 +1,20 @@
-from typing import Iterator, Optional
-
 from dependency_injector import containers, providers
 from google.cloud import discoveryengine
 
-from .search import SqliteSearch, VertexAISearch
+from .search import VertexAISearch
+from .sqlite_search import SqliteSearch
 
 __all__ = ["ContainerSearches"]
 
 
 def _init_vertex_search_service_client(
     mock_model_responses: bool,
-) -> Iterator[Optional[discoveryengine.SearchServiceAsyncClient]]:
-    if mock_model_responses:
-        yield None
-        return
+    custom_models_enabled: bool,
+) -> discoveryengine.SearchServiceAsyncClient | None:
+    if mock_model_responses or custom_models_enabled:
+        return None
 
-    client = discoveryengine.SearchServiceAsyncClient()
-    yield client
-    client.transport.close()
+    return discoveryengine.SearchServiceAsyncClient()
 
 
 class ContainerSearches(containers.DeclarativeContainer):
@@ -32,9 +29,10 @@ class ContainerSearches(containers.DeclarativeContainer):
         config.custom_models.enabled,
     )
 
-    grpc_client_vertex = providers.Resource(
+    grpc_client_vertex = providers.Singleton(
         _init_vertex_search_service_client,
         mock_model_responses=config.mock_model_responses,
+        custom_models_enabled=config.custom_models.enabled,
     )
 
     search_provider = providers.Selector(

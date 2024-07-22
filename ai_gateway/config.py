@@ -2,7 +2,7 @@ import os
 from typing import Annotated, Optional
 
 from dotenv import find_dotenv
-from pydantic import AliasChoices, BaseModel, Field, RootModel
+from pydantic import BaseModel, Field, RootModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = [
@@ -18,6 +18,7 @@ __all__ = [
     "ConfigVertexTextModel",
     "ConfigModelConcurrency",
     "ConfigCustomModels",
+    "ConfigModelKeys",
 ]
 
 ENV_PREFIX = "AIGW"
@@ -83,6 +84,15 @@ class ConfigCustomModels(BaseModel):
     enabled: bool = False
 
 
+class ConfigAbuseDetection(BaseModel):
+    enabled: bool = False
+    sampling_rate: float = 0.1  # 1/10 of requests are sampled
+
+
+class ConfigModelKeys(BaseModel):
+    mistral_api_key: Optional[str] = None
+
+
 def _build_location(default: str = "us-central1") -> str:
     """
     Reads the GCP region from the environment.
@@ -134,17 +144,11 @@ class Config(BaseSettings):
         extra="ignore",
     )
 
+    environment: str = "production"
     gitlab_url: str = "https://gitlab.com"
     gitlab_api_url: str = "https://gitlab.com/api/v4/"
     customer_portal_url: str = "https://customers.gitlab.com"
-
-    mock_model_responses: bool = Field(
-        validation_alias=AliasChoices(
-            f"{ENV_PREFIX.lower()}_mock_model_responses",
-            f"{ENV_PREFIX.lower()}_use_fake_models",  # Backward compatibility with the GitLab QA tests
-        ),
-        default=False,
-    )
+    mock_model_responses: bool = False
 
     logging: Annotated[ConfigLogging, Field(default_factory=ConfigLogging)] = (
         ConfigLogging()
@@ -172,6 +176,9 @@ class Config(BaseSettings):
     custom_models: Annotated[
         ConfigCustomModels, Field(default_factory=ConfigCustomModels)
     ] = ConfigCustomModels()
+    model_keys: Annotated[ConfigModelKeys, Field(default_factory=ConfigModelKeys)] = (
+        ConfigModelKeys()
+    )
     vertex_text_model: Annotated[
         ConfigVertexTextModel, Field(default_factory=ConfigVertexTextModel)
     ] = ConfigVertexTextModel()
@@ -181,6 +188,9 @@ class Config(BaseSettings):
     model_engine_concurrency_limits: Annotated[
         ConfigModelConcurrency, Field(default_factory=ConfigModelConcurrency)
     ] = ConfigModelConcurrency()
+    abuse_detection: Annotated[
+        ConfigAbuseDetection, Field(default_factory=ConfigAbuseDetection)
+    ] = ConfigAbuseDetection()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

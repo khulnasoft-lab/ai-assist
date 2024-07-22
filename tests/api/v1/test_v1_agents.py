@@ -11,6 +11,7 @@ from ai_gateway.agents import Agent
 from ai_gateway.api.v1 import api_router
 from ai_gateway.auth import User, UserClaims
 from ai_gateway.chat.agents import ReActAgent
+from ai_gateway.config import Config
 from ai_gateway.gitlab_features import GitLabUnitPrimitive
 
 
@@ -37,6 +38,14 @@ class FakeModel(SimpleChatModel):
 @pytest.fixture
 def mock_agent_klass():
     yield Agent
+
+
+@pytest.fixture
+def mock_config():
+    config = Config()
+    config.custom_models.enabled = False
+
+    yield config
 
 
 @pytest.fixture
@@ -124,7 +133,7 @@ class TestAgent:
             json=inputs,
         )
 
-        mock_registry_get.assert_called_with("test", None)
+        mock_registry_get.assert_called_with("test", None, None)
         assert response.status_code == expected_status
         assert response.json() == expected_response
 

@@ -34,7 +34,7 @@ Participants:
 
 Process flow:
 
-1. A client requests to an OIDC provider to issue a JWT (Json Web Token).
+1. A client requests to an OIDC provider to issue a JWT (JSON Web Token).
 1. The OIDC provider authenticates the request and returns JWT.
 1. The client requests to the AI Gateway to access a feature with the JWT.
 1. AI Gateway attempts to decode the JWT with JWKS provided by trusted OIDC providers.
@@ -95,8 +95,8 @@ This ensures we always have a key in place to sign and validate tokens.
 
 ### JWK signing key rotation
 
-The `AIGW_SELF_SIGNED_JWT__SIGNING_KEY` and `AIGW_SELF_SIGNED_JWT__VALIDATION_KEY` private keys should be rotated yearly. 
-There is an issue created to remind us of this: https://gitlab.com/gitlab-org/modelops/applied-ml/code-suggestions/ai-assist/-/issues/514.
+The `AIGW_SELF_SIGNED_JWT__SIGNING_KEY` and `AIGW_SELF_SIGNED_JWT__VALIDATION_KEY` private keys should be rotated yearly.
+There is an issue created to remind us of this: <https://gitlab.com/gitlab-org/modelops/applied-ml/code-suggestions/ai-assist/-/issues/514>.
 
 #### Keep already issued tokens valid during the key rotation
 
@@ -120,7 +120,7 @@ Since we have to update values in the Vault, and the keys are sensitive data, ce
 
 ## Authorization in AI Gateway
 
-AI Gateway uses `scopes` custom claim in JWT to check user permissions, which was decoded in [the previous authentication process](#authentication-overview).
+AI Gateway uses `scopes` custom claim in JWT to check user permissions, which was decoded in [the previous authentication process](#authentication-in-ai-gateway).
 
 For example, if a decoded token contains the following `scopes`, the user can access to `code_suggestions` and `duo_chat` features:
 
@@ -161,3 +161,29 @@ async def awesome_feature(
             detail=f"Unauthorized to access awesome feature",
         )
 ```
+
+### Use `x-gitlab-unit-primitive` header
+
+As an alternative approach to the [fine-grained authorization](#get-current-user-and-check-permission),
+you can also enable authorization on a specific endpoint with `authorize_with_unit_primitive_header`.
+This decorator reads the `x-gitlab-unit-primitive` header from requests and
+checks if the user has permission to access the unit primitive. Example:
+
+```python
+from ai_gateway.auth.request import authorize_with_unit_primitive_header
+
+@router.post("/awesome_feature")
+@authorize_with_unit_primitive_header()
+async def awesome_feature(
+    request: Request,
+):
+    # Do something
+```
+
+This decorator also validates that the request is not modified at client side.
+If a client attempts to use a unit primitive for a different purpose,
+the request is flagged as an abused request, which reported to
+the `abuse_request_probabilities` Prometheus metric and `abuse_detection` log.
+For such requests, GitLab may conduct further investigation and 
+block the requests in Cloud Connector LB or AI Gateway middleware.
+See [this issue](https://gitlab.com/gitlab-com/legal-and-compliance/-/issues/2176) (Internal Only) for more information.

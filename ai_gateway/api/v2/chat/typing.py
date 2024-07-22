@@ -2,7 +2,8 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from ai_gateway.chat.agents import Context, CurrentFileContext, TypeReActAgentAction
+from ai_gateway.agents.typing import ModelMetadata
+from ai_gateway.chat.agents import Context, CurrentFile, TypeReActAgentAction
 
 __all__ = [
     "ReActAgentScratchpad",
@@ -27,12 +28,13 @@ class AgentRequestOptions(BaseModel):
     chat_history: str | list[str]
     agent_scratchpad: ReActAgentScratchpad = Field(discriminator="agent_type")
     context: Optional[Context] = None
-    current_file_context: Optional[CurrentFileContext] = None
+    current_file: Optional[CurrentFile] = None
 
 
 class AgentRequest(BaseModel):
     prompt: str
     options: AgentRequestOptions
+    model_metadata: Optional[ModelMetadata] = None
 
 
 class AgentStreamResponseEvent(BaseModel):

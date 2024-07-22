@@ -2,6 +2,7 @@ import asyncio
 import os
 from contextlib import asynccontextmanager
 
+import litellm
 from fastapi import APIRouter, FastAPI
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,7 +13,9 @@ from starlette.requests import Request
 from starlette_context import context
 from starlette_context.middleware import RawContextMiddleware
 
+from ai_gateway.agents.instrumentator import AgentInstrumentator
 from ai_gateway.api.middleware import (
+    InternalEventMiddleware,
     MiddlewareAuthentication,
     MiddlewareLogRequest,
     MiddlewareModelTelemetry,
@@ -41,7 +44,6 @@ async def lifespan(app: FastAPI):
     config = app.extra["extra"]["config"]
     container_application = ContainerApplication()
     container_application.config.from_dict(config.model_dump())
-    container_application.init_resources()
 
     if config.instrumentator.thread_monitoring_enabled:
         loop = asyncio.get_running_loop()
@@ -51,16 +53,16 @@ async def lifespan(app: FastAPI):
             )
         )
 
-    yield
+    setup_litellm()
 
-    container_application.shutdown_resources()
+    yield
 
 
 def create_fast_api_server(config: Config):
 
     fastapi_app = FastAPI(
-        title="GitLab Code Suggestions",
-        description="GitLab Code Suggestions API to serve code completion predictions",
+        title="GitLab AI Gateway",
+        description="GitLab AI Gateway API to execute AI actions",
         openapi_url=config.fastapi.openapi_url,
         docs_url=config.fastapi.docs_url,
         redoc_url=config.fastapi.redoc_url,
@@ -90,6 +92,12 @@ def create_fast_api_server(config: Config):
                 bypass_auth=config.auth.bypass_external,
                 bypass_auth_with_header=config.auth.bypass_external_with_header,
                 skip_endpoints=_SKIP_ENDPOINTS,
+            ),
+            Middleware(
+                InternalEventMiddleware,
+                skip_endpoints=_SKIP_ENDPOINTS,
+                enabled=config.snowplow.enabled,
+                environment=config.environment,
             ),
             MiddlewareModelTelemetry(skip_endpoints=_SKIP_ENDPOINTS),
         ],
@@ -122,6 +130,10 @@ async def model_api_exception_handler(request: Request, exc: ModelAPIError):
 def setup_custom_exception_handlers(app: FastAPI):
     app.add_exception_handler(StarletteHTTPException, custom_http_exception_handler)
     app.add_exception_handler(ModelAPIError, model_api_exception_handler)
+
+
+def setup_litellm():
+    litellm.callbacks = [AgentInstrumentator()]
 
 
 def setup_router(app: FastAPI):

@@ -24,7 +24,7 @@ Set up a Google Cloud project with access to the Vertex AI API and authenticate 
 
 ## Testing
 
-See [test doc](./docs/tests.md).
+See [test doc](docs/tests.md).
 
 ## Linting
 
@@ -86,7 +86,7 @@ Middlewares are hosted at `ai_gateway/api/middleware.py` and interact with the `
 
 ## Application settings
 
-See [Application settings doc](./docs/application_settings.md)
+See [Application settings doc](docs/application_settings.md)
 
 ## How to run the server locally
 
@@ -115,18 +115,18 @@ You might encounter a known symlink failure when installing `poetry` during `mis
 
 The error may look something like:
 
-```sh
+```shell
 Error output:
 dyld[87914]: Library not loaded: @executable_path/../lib/libpython3.10.dylib
   Referenced from: <4C4C4415-5555-3144-A171-523C428CAE71> /Users/yourusername/Code/ai-assist/.venv/bin/python
   Reason: tried: '/Users/yourusername/Code/ai-assist/.venv/lib/libpython3.10.dylib' (no such file)
 ```
 
-To fix the issue, locate the `libpython3.10.dylib` on your system. Once you have located the file, use the `ln -s ` command to create a symbolic link from the location where `poetry` expects it to be to where it is actually located.
+To fix the issue, locate the `libpython3.10.dylib` on your system. Once you have located the file, use the `ln -s` command to create a symbolic link from the location where `poetry` expects it to be to where it is actually located.
 
 Example command:
 
-```sh
+```shell
 ln -s /Users/yourusername/.local/share/mise/installs/python/3.10.14/lib/libpython3.10.dylib /Users/yourusername/Code/ai-assist/.venv/lib/libpython3.10.dylib
 ```
 
@@ -136,7 +136,7 @@ Next, try installing `poetry` again.
 
 If `gcloud` setup fails with `ModuleNotFoundError: No module named 'imp'`, during `asdf install` run:
 
-```sh
+```shell
 export CLOUDSDK_PYTHON=$(which python3.11)
 ```
 
@@ -190,7 +190,7 @@ In VS Code code, we need to set the `MODEL_GATEWAY_AI_ASSISTED_CODE_SUGGESTIONS_
 
 Since the feature is only for SaaS, you need to run GDK in SaaS mode:
 
-```bash
+```shell
 export GITLAB_SIMULATE_SAAS=1
 gdk restart
 ```
@@ -202,7 +202,7 @@ go to `/admin/groups` select `Edit` on the group you are using, set `Plan` to `U
 
 ## Authentication
 
-See [authentication and authorization doc](./docs/auth.md).
+See [authentication and authorization doc](docs/auth.md).
 
 ## Component overview
 
@@ -212,16 +212,16 @@ In above diagram, the main components are shown.
 
 The Client has the following functions:
 
-1. Determine input parameters
-   1. Stop sequences
-   1. Gather code for the prompt
+1. Determine input parameters.
+   1. Stop sequences.
+   1. Gather code for the prompt.
 1. Send the input parameters to the AI Gateway API.
 1. Parse results from AI Gateway and present them as `inlineCompletions`.
 
 We are supporting the following clients:
 
-- [GitLab VS Code Extension](https://gitlab.com/gitlab-org/gitlab-vscode-extension)
-- [GitLab Language Server for Code Suggestions](https://gitlab.com/gitlab-org/editor-extensions/gitlab-language-server-for-code-suggestions)
+- [GitLab VS Code Extension](https://gitlab.com/gitlab-org/gitlab-vscode-extension).
+- [GitLab Language Server for Code Suggestions](https://gitlab.com/gitlab-org/editor-extensions/gitlab-language-server-for-code-suggestions).
 
 ## Deployment
 
@@ -237,19 +237,19 @@ The service overview dashboard is available at [https://dashboards.gitlab.net/d/
 
 For more information and assistance, please check out:
 
-- [Runway - Handbook](https://about.gitlab.com/handbook/engineering/infrastructure/platforms/tools/runway/)
-- [Runway - Group](https://gitlab.com/gitlab-com/gl-infra/platform/runway)
-- [Runway - Docs](https://gitlab.com/gitlab-com/gl-infra/platform/runway/docs)
-- [Runway - Issue Tracker](https://gitlab.com/groups/gitlab-com/gl-infra/platform/runway/-/issues)
+- [Runway - Handbook](https://about.gitlab.com/handbook/engineering/infrastructure/platforms/tools/runway/).
+- [Runway - Group](https://gitlab.com/gitlab-com/gl-infra/platform/runway).
+- [Runway - Docs](https://gitlab.com/gitlab-com/gl-infra/platform/runway/docs).
+- [Runway - Issue Tracker](https://gitlab.com/groups/gitlab-com/gl-infra/platform/runway/-/issues).
 - `#f_runway` in Slack.
 
 ## Release
 
-See [release doc](./docs/release.md).
+See [release doc](docs/release.md).
 
 ## Rate limiting
 
-Access to AI Gateway is subjected to rate limiting defined as part of https://gitlab.com/gitlab-com/gl-infra/scalability/-/issues/2719#note_1780449328.
+Access to AI Gateway is subjected to rate limiting defined as part of <https://gitlab.com/gitlab-com/gl-infra/scalability/-/issues/2719#note_1780449328>.
 
 ## Multiple worker processes
 
@@ -259,8 +259,8 @@ workers. To do this, there are a number of environment variables that
 need to be set:
 
 - `WEB_CONCURRENCY`: The [number of worker processes](https://www.uvicorn.org/deployment/) to run (1 is default).
-
 - `PROMETHEUS_MULTIPROC_DIR`: This is needed to support scraping of [Prometheus metrics](https://prometheus.github.io/client_python/multiprocess/) from a single endpoint.
+
 This directory holds the metrics from the processes and should be cleared before the application starts.
 
 ## How to become a project maintainer

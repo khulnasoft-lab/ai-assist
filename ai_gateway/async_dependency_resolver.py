@@ -52,6 +52,10 @@ async def get_code_suggestions_completions_litellm_factory_provider():
     yield get_container_application().code_suggestions.completions.litellm_factory
 
 
+async def get_code_suggestions_completions_agent_factory_provider():
+    yield get_container_application().code_suggestions.completions.agent_factory
+
+
 async def get_snowplow_instrumentator():
     yield get_container_application().snowplow.instrumentator()
 
@@ -92,6 +96,13 @@ async def get_vertex_ai_proxy_client(
     ],
 ):
     return vertex_ai_proxy_client
+
+
+@inject
+async def get_abuse_detector(
+    abuse_detector=Provide[ContainerApplication.abuse_detection.abuse_detector],
+):
+    return abuse_detector
 
 
 @inject

@@ -1,5 +1,3 @@
-from typing import Iterator, Optional
-
 import httpx
 from anthropic import AsyncAnthropic
 from dependency_injector import containers, providers
@@ -7,6 +5,7 @@ from google.cloud.aiplatform.gapic import PredictionServiceAsyncClient
 
 from ai_gateway.config import ConfigModelConcurrency
 from ai_gateway.models import mock
+from ai_gateway.models.agent_model import AgentModel
 from ai_gateway.models.anthropic import AnthropicChatModel, AnthropicModel
 from ai_gateway.models.base import connect_anthropic, grpc_connect_vertex
 from ai_gateway.models.litellm import LiteLlmChatModel, LiteLlmTextGenModel
@@ -23,57 +22,47 @@ __all__ = [
 
 
 def _init_vertex_grpc_client(
-    endpoint: str, mock_model_responses: bool
-) -> Iterator[Optional[PredictionServiceAsyncClient]]:
-    if mock_model_responses:
-        yield None
-        return
+    endpoint: str,
+    mock_model_responses: bool,
+    custom_models_enabled: bool,
+) -> PredictionServiceAsyncClient | None:
+    if mock_model_responses or custom_models_enabled:
+        return None
 
-    client = grpc_connect_vertex({"api_endpoint": endpoint})
-    yield client
-    client.transport.close()
+    return grpc_connect_vertex({"api_endpoint": endpoint})
 
 
 def _init_anthropic_client(
     mock_model_responses: bool,
-) -> Iterator[Optional[AsyncAnthropic]]:
+) -> AsyncAnthropic | None:
     if mock_model_responses:
-        yield None
-        return
+        return None
 
-    client = connect_anthropic()
-    yield client
-    client.close()
+    return connect_anthropic()
 
 
-async def _init_anthropic_proxy_client(
+def _init_anthropic_proxy_client(
     mock_model_responses: bool,
-):
+) -> httpx.AsyncClient | mock.AsyncClient:
     if mock_model_responses:
-        yield mock.AsyncClient()
-        return
+        return mock.AsyncClient()
 
-    client = httpx.AsyncClient(
+    return httpx.AsyncClient(
         base_url="https://api.anthropic.com/", timeout=httpx.Timeout(timeout=60.0)
     )
-    yield client
-    await client.aclose()
 
 
-async def _init_vertex_ai_proxy_client(
+def _init_vertex_ai_proxy_client(
     mock_model_responses: bool,
     endpoint: str,
-):
+) -> httpx.AsyncClient | None:
     if mock_model_responses:
-        yield None
-        return
+        return None
 
-    client = httpx.AsyncClient(
+    return httpx.AsyncClient(
         base_url=f"https://{endpoint}/",
         timeout=httpx.Timeout(timeout=60.0),
     )
-    yield client
-    await client.aclose()
 
 
 class ContainerModels(containers.DeclarativeContainer):
@@ -87,23 +76,24 @@ class ContainerModels(containers.DeclarativeContainer):
         config.mock_model_responses,
     )
 
-    grpc_client_vertex = providers.Resource(
+    grpc_client_vertex = providers.Singleton(
         _init_vertex_grpc_client,
         endpoint=config.vertex_text_model.endpoint,
         mock_model_responses=config.mock_model_responses,
+        custom_models_enabled=config.custom_models.enabled,
     )
 
-    http_client_anthropic = providers.Resource(
+    http_client_anthropic = providers.Singleton(
         _init_anthropic_client,
         mock_model_responses=config.mock_model_responses,
     )
 
-    http_client_anthropic_proxy = providers.Resource(
+    http_client_anthropic_proxy = providers.Singleton(
         _init_anthropic_proxy_client,
         mock_model_responses=config.mock_model_responses,
     )
 
-    http_client_vertex_ai_proxy = providers.Resource(
+    http_client_vertex_ai_proxy = providers.Singleton(
         _init_vertex_ai_proxy_client,
         mock_model_responses=config.mock_model_responses,
         endpoint=config.vertex_text_model.endpoint,
@@ -164,6 +154,7 @@ class ContainerModels(containers.DeclarativeContainer):
         original=providers.Factory(
             LiteLlmTextGenModel.from_model_name,
             custom_models_enabled=config.custom_models.enabled,
+            provider_keys=config.model_keys,
         ),
         mocked=providers.Factory(mock.ChatModel),
     )
@@ -173,8 +164,15 @@ class ContainerModels(containers.DeclarativeContainer):
         original=providers.Factory(
             LiteLlmChatModel.from_model_name,
             custom_models_enabled=config.custom_models.enabled,
+            provider_keys=config.model_keys,
         ),
         mocked=providers.Factory(mock.ChatModel),
+    )
+
+    agent_model = providers.Selector(
+        _mock_selector,
+        original=providers.Factory(AgentModel),
+        mocked=providers.Factory(mock.LLM),
     )
 
     anthropic_proxy_client = providers.Factory(

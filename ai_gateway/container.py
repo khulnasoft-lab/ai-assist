@@ -1,6 +1,7 @@
 from dependency_injector import containers, providers
 from py_grpc_prometheus.prometheus_client_interceptor import PromClientInterceptor
 
+from ai_gateway.abuse_detection.container import ContainerAbuseDetection
 from ai_gateway.agents.container import ContainerAgents
 from ai_gateway.auth.container import ContainerSelfSignedJwt
 from ai_gateway.chat.container import ContainerChat
@@ -33,7 +34,7 @@ class ContainerApplication(containers.DeclarativeContainer):
 
     config = providers.Configuration(strict=True)
 
-    interceptor: providers.Resource = providers.Resource(
+    interceptor: providers.Singleton = providers.Singleton(
         PromClientInterceptor,
         enable_client_handling_time_histogram=True,
         enable_client_stream_receive_time_histogram=True,
@@ -58,6 +59,7 @@ class ContainerApplication(containers.DeclarativeContainer):
     pkg_agents = providers.Container(
         ContainerAgents,
         models=pkg_models_v2,
+        config=config,
     )
 
     code_suggestions = providers.Container(
@@ -78,4 +80,9 @@ class ContainerApplication(containers.DeclarativeContainer):
     self_signed_jwt = providers.Container(
         ContainerSelfSignedJwt,
         config=config,
+    )
+    abuse_detection = providers.Container(
+        ContainerAbuseDetection,
+        config=config.abuse_detection,
+        models=pkg_models,
     )

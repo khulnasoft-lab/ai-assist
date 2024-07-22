@@ -87,6 +87,7 @@ class ContainerCodeCompletions(containers.DeclarativeContainer):
     vertex_code_gecko = providers.Dependency(instance_of=TextGenModelBase)
     anthropic_claude = providers.Dependency(instance_of=TextGenModelBase)
     llmlite = providers.Dependency(instance_of=TextGenModelBase)
+    agent_model = providers.Dependency(instance_of=TextGenModelBase)
     snowplow_instrumentator = providers.Dependency(instance_of=SnowplowInstrumentator)
 
     config = providers.Configuration(strict=True)
@@ -131,13 +132,21 @@ class ContainerCodeCompletions(containers.DeclarativeContainer):
         ),
     )
 
+    agent_factory = providers.Factory(
+        CodeCompletions,
+        model=providers.Factory(agent_model),
+        tokenization_strategy=providers.Factory(
+            TokenizerTokenStrategy, tokenizer=tokenizer
+        ),
+    )
+
 
 class ContainerCodeSuggestions(containers.DeclarativeContainer):
     models = providers.DependenciesContainer()
 
     config = providers.Configuration(strict=True)
 
-    tokenizer = providers.Resource(init_tokenizer)
+    tokenizer = providers.Singleton(init_tokenizer)
 
     snowplow = providers.DependenciesContainer()
 
@@ -157,6 +166,7 @@ class ContainerCodeSuggestions(containers.DeclarativeContainer):
         vertex_code_gecko=models.vertex_code_gecko,
         anthropic_claude=models.anthropic_claude,
         llmlite=models.llmlite,
+        agent_model=models.agent_model,
         config=config,
         snowplow_instrumentator=snowplow.instrumentator,
     )

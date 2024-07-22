@@ -32,9 +32,17 @@ RUN asdf plugin-add python
 RUN asdf install python
 RUN ln -sf /root/.asdf/shims/python /root/.asdf/shims/python3
 
-RUN asdf plugin-add poetry https://github.com/asdf-community/asdf-poetry.git
-RUN asdf plugin-add ruby https://github.com/asdf-vm/asdf-ruby.git
+RUN asdf plugin-add poetry https://github.com/asdf-community/asdf-poetry
+RUN asdf plugin-add ruby https://github.com/asdf-vm/asdf-ruby
 RUN asdf plugin-add gcloud https://github.com/jthegedus/asdf-gcloud
+RUN asdf plugin add vale https://github.com/pdemagny/asdf-vale
+RUN asdf plugin add markdownlint-cli2 https://github.com/paulo-ferraz-oliveira/asdf-markdownlint-cli2
+RUN asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs
+
+# Install nodejs first since markdownlint-cli2 needs it.
+# This can be dropped once asdf installs dependencies in order: https://github.com/asdf-vm/asdf/pull/1723
+RUN asdf install nodejs
+
 RUN asdf install
 
 # Install python dependencies

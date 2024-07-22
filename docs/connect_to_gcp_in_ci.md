@@ -1,11 +1,11 @@
 # Connect to GCP in CI/CD pipelines
 
-Some jobs in CI/CD pipelines in AI Gateway project connect to GCP for managing resources, such as [`ingest:dev`](./search.md).
+Some jobs in CI/CD pipelines in AI Gateway project connect to GCP for managing resources, such as [`ingest:dev`](search.md).
 We use OpenID Connect with GCP Workload Identity Federation for authentication and authorization to GCP resources.
 
 ## Setup
 
-Here is how to setup service account, workload identity pool/provider and IAM permissions in a GCP project:
+Here is how to set up service account, workload identity pool/provider and IAM permissions in a GCP project:
 
 Create a service account:
 
@@ -86,7 +86,7 @@ Get the service account name. This value will be specified in `SERVICE_ACCOUNT` 
 echo "${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 ```
 
-## .gitlab-ci.yml
+## CI/CD YAML
 
 You can use the service account created in the previous section in `.gitlab-ci.yml`:
 

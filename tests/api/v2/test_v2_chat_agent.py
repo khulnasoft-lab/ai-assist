@@ -1,9 +1,10 @@
-from typing import AsyncIterator
+from typing import AsyncIterator, Optional
 from unittest.mock import Mock, patch
 
 import pytest
 from starlette.testclient import TestClient
 
+from ai_gateway.agents.typing import ModelMetadata
 from ai_gateway.api.v2 import api_router
 from ai_gateway.api.v2.chat.typing import (
     AgentRequestOptions,
@@ -14,7 +15,7 @@ from ai_gateway.auth import GitLabUser, User, UserClaims
 from ai_gateway.chat.agents import (
     AgentStep,
     Context,
-    CurrentFileContext,
+    CurrentFile,
     ReActAgentInputs,
     ReActAgentToolAction,
     TypeAgentAction,
@@ -61,7 +62,7 @@ def mocked_on_behalf():
 class TestReActAgentStream:
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        ("prompt", "agent_options", "actions", "expected_actions"),
+        ("prompt", "agent_options", "actions", "model_metadata", "expected_actions"),
         [
             (
                 "What's the title of this issue?",
@@ -79,8 +80,10 @@ class TestReActAgentStream:
                         ],
                     ),
                     context=Context(type="issue", content="issue content"),
-                    current_file_context=CurrentFileContext(
-                        file_name="main.py", selected_text="def main()"
+                    current_file=CurrentFile(
+                        file_path="main.py",
+                        data="def main()",
+                        selected_code=True,
                     ),
                 ),
                 [
@@ -91,6 +94,12 @@ class TestReActAgentStream:
                         log="log",
                     )
                 ],
+                ModelMetadata(
+                    name="mistral",
+                    provider="litellm",
+                    endpoint="http://localhost:4000",
+                    api_key="token",
+                ),
                 [
                     AgentStreamResponseEvent(
                         type="action",
@@ -113,6 +122,7 @@ class TestReActAgentStream:
         agent_options: AgentRequestOptions,
         actions: list[TypeAgentAction],
         expected_actions: list[AgentStreamResponseEvent],
+        model_metadata: ModelMetadata,
     ):
         async def _agent_stream(*_args, **_kwargs) -> AsyncIterator[TypeAgentAction]:
             for action in actions:
@@ -129,6 +139,7 @@ class TestReActAgentStream:
             json={
                 "prompt": prompt,
                 "options": agent_options.model_dump(mode="json"),
+                "model_metadata": model_metadata.model_dump(mode="json"),
             },
         )
 
@@ -154,7 +165,8 @@ class TestReActAgentStream:
             chat_history=agent_options.chat_history,
             agent_scratchpad=agent_scratchpad,
             context=agent_options.context,
-            current_file_context=agent_options.current_file_context,
+            current_file=agent_options.current_file,
+            model_metadata=model_metadata,
         )
 
         assert response.status_code == 200

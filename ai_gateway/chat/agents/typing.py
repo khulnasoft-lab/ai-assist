@@ -10,7 +10,7 @@ __all__ = [
     "TypeAgentInputs",
     "TypeAgentAction",
     "Context",
-    "CurrentFileContext",
+    "CurrentFile",
 ]
 
 
@@ -37,10 +37,11 @@ class AgentStep(BaseModel, Generic[TypeAgentAction]):
 
 
 class Context(BaseModel, frozen=True):  # type: ignore[call-arg]
-    type: Literal["issue", "epic"]
+    type: Literal["issue", "epic", "merge_request"]
     content: str
 
 
-class CurrentFileContext(BaseModel):
-    file_name: str
-    selected_text: str
+class CurrentFile(BaseModel):
+    file_path: str
+    data: str
+    selected_code: bool
