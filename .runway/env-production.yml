@@ -1,5 +1,5 @@
 AIGW_FASTAPI__API_PORT: "8080"
-AIGW_GITLAB_URL: "https://gitlab.com"
+AIGW_GITLAB_URL: "https://gitlab.com.test"
 AIGW_GITLAB_API_URL: "https://gitlab.com/api/v4/"
 AIGW_CUSTOMER_PORTAL_URL: "https://customers.gitlab.com"
 AIGW_VERTEX_TEXT_MODEL__PROJECT: "unreview-poc-390200e5"
