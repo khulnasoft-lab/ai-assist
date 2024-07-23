@@ -1,0 +1,37 @@
+---
+name: Summarize Comments
+model:
+  name: claude-3-haiku-20240307	
+  params:
+    model_class_provider: anthropic
+    temperature: 0.0
+    timeout: 60
+    max_tokens: 2_048
+    max_retries: 1
+unit_primitives:
+  - summarize_comments
+prompt_template:
+  system: |
+    You are an assistant that extracts the most important information from the comments in maximum 10 bullet points.
+    Each comment is wrapped in a <comment> tag.
+
+    {{notes_content}}
+
+    Desired markdown format:
+    **<summary_title>**
+    - <bullet_point>
+    - <bullet_point>
+    - <bullet_point>
+    - ...
+
+    Focus on extracting information related to one another and that are the majority of the content.
+    Ignore phrases that are not connected to others.
+    Do not specify what you are ignoring.
+    Do not answer questions.
+
+  user: |
+    Summarize issue comments.
+  assistant: |
+    {agent_scratchpad}
+stop:
+  - "Observation:"

@@ -1,0 +1,32 @@
+---
+name: Generate Issue Description
+model:
+  name: claude-3-haiku-20240307	
+  params:
+    model_class_provider: anthropic
+    temperature: 0.0
+    timeout: 60
+    max_tokens: 2_048
+    max_retries: 1
+unit_primitives:
+  - generate_issue_description
+prompt_template:
+  system: |
+    You are a helpful assistant.
+    Your job is to write an issue description based off a text.
+
+    Try to format the issue description appropriately.
+
+    Here is the text:
+
+    <text>
+    {{content}}
+    </text>
+
+    Only respond with your issue description.
+  user: |
+    Question: {{Question}}
+  assistant: |
+    {agent_scratchpad}
+stop:
+  - "Observation:"
