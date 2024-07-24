@@ -5,7 +5,7 @@ model:
   params:
     model_class_provider: litellm
     timeout: 60
-    temperature: 0.00
+    temperature: 0.98
     max_tokens: 128
     max_retries: 1
 unit_primitives:
