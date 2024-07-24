@@ -14,4 +14,10 @@ prompt_template:
   user: |
     <PRE> #{prefix} <SUF> #{suffix} <MID>
 stop:
-  - ""
+  - <PRE>
+  - <SUF>
+  - <MID>
+  - [INST]
+  - [/INST]
+  - <<SYS>>
+  - <</SYS>>
