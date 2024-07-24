@@ -17,7 +17,7 @@ stop:
   - <PRE>
   - <SUF>
   - <MID>
-  - [INST]
-  - [/INST]
+  - "[INST]"
+  - "[/INST]"
   - <<SYS>>
   - <</SYS>>
