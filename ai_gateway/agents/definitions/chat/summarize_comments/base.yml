@@ -15,7 +15,7 @@ prompt_template:
     You are an assistant that extracts the most important information from the comments in maximum 10 bullet points.
     Each comment is wrapped in a <comment> tag.
 
-    {{notes_content}}
+    {notes_content}
 
     Desired markdown format:
     **<summary_title>**
@@ -28,10 +28,5 @@ prompt_template:
     Ignore phrases that are not connected to others.
     Do not specify what you are ignoring.
     Do not answer questions.
-
   user: |
     Summarize issue comments.
-  assistant: |
-    {agent_scratchpad}
-stop:
-  - "Observation:"

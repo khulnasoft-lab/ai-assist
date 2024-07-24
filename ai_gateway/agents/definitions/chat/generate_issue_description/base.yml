@@ -14,19 +14,13 @@ prompt_template:
   system: |
     You are a helpful assistant.
     Your job is to write an issue description based off a text.
-
+  user: |
     Try to format the issue description appropriately.
 
     Here is the text:
 
     <text>
-    {{content}}
+    {content}
     </text>
 
     Only respond with your issue description.
-  user: |
-    Question: {{Question}}
-  assistant: |
-    {agent_scratchpad}
-stop:
-  - "Observation:"
