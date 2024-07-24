@@ -105,6 +105,12 @@ async def chat(
                 timestamp=int(time()),
             ),
         )
+    except AnthropicAPIConnectionError as ex:
+        log_exception(ex)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Anthropic API Malformed Request",
+        )
     except AnthropicAPIStatusError as ex:
         log_exception(ex)
         raise HTTPException(

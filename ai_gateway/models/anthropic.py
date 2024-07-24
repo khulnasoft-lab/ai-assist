@@ -93,6 +93,7 @@ class AnthropicModel(TextGenModelBase):
     OPTS_CLIENT = {
         "default_headers": {},
         "max_retries": 1,
+        "anthropic-beta": {}
     }
 
     OPTS_MODEL = {
@@ -111,10 +112,14 @@ class AnthropicModel(TextGenModelBase):
         model_name: str = KindAnthropicModel.CLAUDE_2_1.value,
         **kwargs: Any,
     ):
-        client_opts = self._obtain_client_opts(version, **kwargs)
+        client_opts = self._obtain_client_opts(version, model_name, **kwargs)
 
         self.client = client.with_options(**client_opts)
-        self.model_opts = self._obtain_model_opts(**kwargs)
+
+        if client_opts.get("anthropic-beta") and client_opts["anthropic-beta"]:
+            self.model_opts = self._obtain_model_opts(max_tokens_to_sample=8196, **kwargs)
+        else:
+            self.model_opts = self._obtain_model_opts(**kwargs)
 
         self._metadata = ModelMetadata(
             name=model_name,
@@ -126,12 +131,16 @@ class AnthropicModel(TextGenModelBase):
         return _obtain_opts(AnthropicModel.OPTS_MODEL, **kwargs)
 
     @staticmethod
-    def _obtain_client_opts(version: str, **kwargs: Any):
+    def _obtain_client_opts(version: str, model_name: str, **kwargs: Any):
         opts = _obtain_opts(AnthropicModel.OPTS_CLIENT, **kwargs)
 
         headers = opts["default_headers"]
         if not headers.get("anthropic-version", None):
             headers["anthropic-version"] = version
+        
+        beta_header = opts["anthropic-beta"]
+        if model_name == KindAnthropicModel.CLAUDE_3_5_SONNET.value:
+            beta_header.update("max-tokens-3-5-sonnet-2024-07-15")
 
         return opts
 
@@ -209,6 +218,7 @@ class AnthropicChatModel(ChatModelBase):
     OPTS_CLIENT = {
         "default_headers": {},
         "max_retries": 1,
+        "anthropic-beta": {}
     }
 
     OPTS_MODEL = {
@@ -227,7 +237,7 @@ class AnthropicChatModel(ChatModelBase):
         model_name: str = KindAnthropicModel.CLAUDE_3_HAIKU.value,
         **kwargs: Any,
     ):
-        client_opts = self._obtain_client_opts(version, **kwargs)
+        client_opts = self._obtain_client_opts(version, model_name, **kwargs)
 
         self.client = client.with_options(**client_opts)
         self.model_opts = self._obtain_model_opts(**kwargs)
@@ -242,12 +252,18 @@ class AnthropicChatModel(ChatModelBase):
         return _obtain_opts(AnthropicChatModel.OPTS_MODEL, **kwargs)
 
     @staticmethod
-    def _obtain_client_opts(version: str, **kwargs: Any):
+    def _obtain_client_opts(version: str, model_name: str, **kwargs: Any):
         opts = _obtain_opts(AnthropicChatModel.OPTS_CLIENT, **kwargs)
 
         headers = opts["default_headers"]
         if not headers.get("anthropic-version", None):
             headers["anthropic-version"] = version
+
+        beta_header = opts["anthropic-beta"]
+        if model_name == KindAnthropicModel.CLAUDE_3_5_SONNET.value:
+            beta_header.update("max-tokens-3-5-sonnet-2024-07-15")
+
+        headers.merge()
 
         return opts
 
