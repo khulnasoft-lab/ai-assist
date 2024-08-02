@@ -172,19 +172,10 @@ async def completions(
     ):
         code_completions = _resolve_code_completions_vertex_codestral(
             payload=payload,
-            completions_litellm_factory=completions_litellm_factory,
+            current_user=current_user,
+            prompt_registry=prompt_registry,
+            completions_agent_factory=completions_agent_factory,
         )
-
-        # We need to pass this here since litellm.LiteLlmTextGenModel
-        # sets the default temperature and max_output_tokens in the `generate` function signature
-        # To override those values, the kwargs passed to `generate` is updated here
-        # For further details, see:
-        #     https://gitlab.com/gitlab-org/modelops/applied-ml/code-suggestions/ai-assist/-/merge_requests/1172#note_2060587592
-        #
-        # The temperature value is taken from Mistral's docs: https://docs.mistral.ai/api/#operation/createFIMCompletion
-        # The max_output_tokens value is based on an ELI5 test:
-        #     https://gitlab.com/gitlab-org/modelops/applied-ml/code-suggestions/ai-assist/-/merge_requests/1172#note_2048354501
-        kwargs.update({"temperature": 0.7, "max_output_tokens": 128})
     else:
         code_completions = completions_legacy_factory()
         if payload.choices_count > 0:
@@ -408,7 +399,9 @@ def _resolve_code_completions_litellm(
 
 def _resolve_code_completions_vertex_codestral(
     payload: SuggestionsRequest,
-    completions_litellm_factory: Factory[CodeCompletions],
+    current_user: GitLabUser,
+    prompt_registry: BasePromptRegistry,
+    completions_agent_factory: Factory[CodeCompletions],
 ) -> CodeCompletions:
     if payload.prompt_version == 2 and payload.prompt is not None:
         raise HTTPException(
@@ -416,11 +409,16 @@ def _resolve_code_completions_vertex_codestral(
             detail="You cannot specify a prompt with the given provider and model combination",
         )
 
-    return completions_litellm_factory(
-        model__name=payload.model_name,
-        model__provider=payload.model_provider,
-        model__api_key=payload.model_api_key,
-        model__endpoint=payload.model_endpoint,
+    model_metadata = ModelMetadata(
+        name=payload.model_name,
+        provider="vertex_ai",
+    )
+
+    return _resolve_agent_code_completions(
+        model_metadata=model_metadata,
+        current_user=current_user,
+        prompt_registry=prompt_registry,
+        completions_agent_factory=completions_agent_factory,
     )
 
 

@@ -108,6 +108,23 @@ MODEL_SPECIFICATIONS = {
     }
 }
 
+MODEL_SPECIFICATIONS = {
+    KindLiteLlmModel.CODESTRAL_2405: {
+        "stop": [
+            "[INST]",
+            "[/INST]",
+            "[PREFIX]",
+            "[MIDDLE]",
+            "[SUFFIX]",
+        ],
+        "temperature": 0.7,
+        "max_tokens": 128,
+        "timeout": 60,
+        "vertex_location": "us-central1",
+        "completion_type": ModelCompletionType.TEXT,
+    }
+}
+
 
 class LiteLlmChatModel(ChatModelBase):
     @property

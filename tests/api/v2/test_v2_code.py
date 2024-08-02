@@ -15,6 +15,7 @@ from ai_gateway.auth import User, UserClaims
 from ai_gateway.config import Config
 from ai_gateway.internal_events import InternalEventAdditionalProperties
 from ai_gateway.models.base_chat import Message, Role
+from ai_gateway.prompts.typing import ModelMetadata
 from ai_gateway.tracking.container import ContainerTracking
 from ai_gateway.tracking.instrumentator import SnowplowInstrumentator
 from ai_gateway.tracking.snowplow import SnowplowEvent, SnowplowEventContext
