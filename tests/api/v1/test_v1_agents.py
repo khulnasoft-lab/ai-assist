@@ -1,5 +1,4 @@
-from typing import Any, List, Optional, Type
-from unittest.mock import patch
+from typing import Any, List, Optional
 
 import pytest
 from langchain_core.callbacks import CallbackManagerForLLMRun
@@ -58,17 +57,6 @@ def model_factory():
 @pytest.fixture
 def prompt_template():
     yield {"system": "Hi, I'm {name} and I'm {age} years old"}
-
-
-@pytest.fixture
-def mock_registry_get(request, prompt_class: Optional[Type[Prompt]]):
-    with patch("ai_gateway.prompts.registry.LocalPromptRegistry.get") as mock:
-        if prompt_class:
-            mock.return_value = request.getfixturevalue("prompt")
-        else:
-            mock.side_effect = KeyError()
-
-        yield mock
 
 
 @pytest.fixture(scope="class")

@@ -106,6 +106,34 @@ params:
     - Bar
 """,
     )
+    fs.create_file(
+        prompts_definitions_dir
+        / "code_suggestions"
+        / "completions"
+        / "codestral@2405.yml",
+        contents="""
+---
+name: Codestral-on-Vertex Code Completions
+model:
+  name: codestral@2405
+  params:
+    model_class_provider: litellm
+    custom_llm_provider: vertex_ai
+    temperature: 0.95
+    max_tokens: 128
+    max_retries: 1
+unit_primitives:
+  - code_suggestions
+prompt_template:
+  user: UserTemplate1
+params:
+  vertex_location: us-central1
+  timeout: 60
+  stop:
+    - Foo
+    - Bar
+""",
+    )
     yield fs
 
 
@@ -189,6 +217,29 @@ def prompts_registered():
                 },
             ),
         ),
+        "code_suggestions/completions/codestral@2405": PromptRegistered(
+            klass=MockPromptClass,
+            config=PromptConfig(
+                name="Codestral-on-Vertex Code Completions",
+                model=ModelConfig(
+                    name="codestral@2405",
+                    params=ChatLiteLLMParams(
+                        model_class_provider=ModelClassProvider.LITE_LLM,
+                        custom_llm_provider="vertex_ai",
+                        temperature=0.95,
+                        max_tokens=128,
+                        max_retries=1,
+                    ),
+                ),
+                unit_primitives=["code_suggestions"],
+                prompt_template={"user": "UserTemplate1"},
+                params={
+                    "vertex_location": "us-central1",
+                    "timeout": 60,
+                    "stop": ["Foo", "Bar"],
+                },
+            ),
+        ),
     }
 
 
@@ -220,6 +271,7 @@ class TestLocalPromptRegistry:
         registry = LocalPromptRegistry.from_local_yaml(
             class_overrides={
                 "chat/react": MockPromptClass,
+                "code_suggestions/completions": MockPromptClass,
             },
             model_factories=model_factories,
             custom_models_enabled=False,
@@ -302,6 +354,31 @@ class TestLocalPromptRegistry:
                     "top_k": 40,
                     "max_tokens": 256,
                     "max_retries": 6,
+                },
+            ),
+            (
+                "code_suggestions/completions",
+                ModelMetadata(
+                    name="codestral@2405",
+                    provider="vertex_ai",
+                ),
+                "Codestral-on-Vertex Code Completions",
+                MockPromptClass,
+                [("user", "UserTemplate1")],
+                "codestral@2405",
+                {
+                    "stop": ["Foo", "Bar"],
+                    "timeout": 60.0,
+                    "model": "codestral@2405",
+                    "custom_llm_provider": "vertex_ai",
+                    "vertex_location": "us-central1",
+                    "api_key": "<api-key>",
+                    "api_base": "None",
+                },
+                {
+                    "temperature": 0.95,
+                    "max_tokens": 128,
+                    "max_retries": 1,
                 },
             ),
         ],

@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Type
+from typing import Any, AsyncIterator, Optional, Type
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -333,6 +333,17 @@ def mock_litellm_atext_completion():
         )
 
         yield mock_acompletion
+
+
+@pytest.fixture
+def mock_registry_get(request, prompt_class: Optional[Type[Prompt]]):
+    with patch("ai_gateway.prompts.registry.LocalPromptRegistry.get") as mock:
+        if prompt_class:
+            mock.return_value = request.getfixturevalue("prompt")
+        else:
+            mock.side_effect = KeyError()
+
+        yield mock
 
 
 @pytest.fixture
