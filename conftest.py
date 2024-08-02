@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Type
+from typing import Any, AsyncIterator, Optional, Type
 from unittest.mock import Mock, patch
 
 import pytest
@@ -314,6 +314,17 @@ def mock_completions_stream(mock_suggestions_output: CodeSuggestionsOutput):
 @pytest.fixture
 def mock_with_prompt_prepared():
     with patch("ai_gateway.code_suggestions.CodeGenerations.with_prompt_prepared") as mock:
+        yield mock
+
+
+@pytest.fixture
+def mock_registry_get(request, prompt_class: Optional[Type[Prompt]]):
+    with patch("ai_gateway.prompts.registry.LocalPromptRegistry.get") as mock:
+        if prompt_class:
+            mock.return_value = request.getfixturevalue("prompt")
+        else:
+            mock.side_effect = KeyError()
+
         yield mock
 
 

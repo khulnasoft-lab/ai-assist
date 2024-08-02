@@ -85,3 +85,12 @@ class TestModelMetadata:
 
         metadata = ModelMetadata(**params, api_key="")
         assert metadata.api_key == STUBBED_API_KEY
+
+    def test_empty_endpoint(self):
+        params = {
+            "name": "codestral",
+            "provider": "vertex_ai",
+        }
+
+        metadata = ModelMetadata(**params)
+        assert metadata.endpoint is None

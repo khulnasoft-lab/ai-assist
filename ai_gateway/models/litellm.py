@@ -28,6 +28,7 @@ class KindLiteLlmModel(str, Enum):
     DEEPSEEKCODER = "deepseekcoder"
     MISTRAL = "mistral"
     MIXTRAL = "mixtral"
+    CODESTRAL_2405 = "codestral@2405"
 
     # Chat models hosted behind openai proxies should be prefixed with "openai/":
     # https://docs.litellm.ai/docs/providers/openai_compatible

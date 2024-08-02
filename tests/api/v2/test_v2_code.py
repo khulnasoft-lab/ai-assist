@@ -15,6 +15,7 @@ from ai_gateway.auth import User, UserClaims
 from ai_gateway.config import Config
 from ai_gateway.internal_events import InternalEventAdditionalProperties
 from ai_gateway.models.base_chat import Message, Role
+from ai_gateway.prompts.typing import ModelMetadata
 from ai_gateway.tracking.container import ContainerTracking
 from ai_gateway.tracking.instrumentator import SnowplowInstrumentator
 from ai_gateway.tracking.snowplow import SnowplowEvent, SnowplowEventContext
@@ -44,6 +45,11 @@ def mock_config():
     config.custom_models.enabled = True
 
     yield config
+
+
+@pytest.fixture
+def unit_primitives():
+    yield ["code_suggestions"]
 
 
 class TestCodeCompletions:
@@ -557,6 +563,60 @@ class TestCodeCompletions:
                     }
                 ],
             ),
+            (
+                2,
+                "foo",
+                "codestral",
+                "codestral",
+                "http://localhost:4000/",
+                "api-key",
+                True,
+                False,
+                200,
+                [
+                    {
+                        "text": "test completion",
+                        "index": 0,
+                        "finish_reason": "length",
+                    }
+                ],
+            ),
+            (
+                1,
+                None,
+                "vertex-ai",
+                "codestral@2405",
+                None,
+                None,
+                False,
+                True,
+                200,
+                [
+                    {
+                        "text": "test completion",
+                        "index": 0,
+                        "finish_reason": "length",
+                    }
+                ],
+            ),
+            (
+                2,
+                None,
+                "vertex-ai",
+                "codestral@2405",
+                None,
+                None,
+                False,
+                True,
+                200,
+                [
+                    {
+                        "text": "test completion",
+                        "index": 0,
+                        "finish_reason": "length",
+                    }
+                ],
+            ),
         ],
     )
     def test_non_stream_response(
@@ -849,6 +909,77 @@ class TestCodeCompletions:
         )
 
         assert response.status_code == expected_status_code
+
+    def test_vertex_codestral(
+        self, mock_client, mock_agent_model: Mock, mock_registry_get: Mock
+    ):
+        params = {
+            "prompt_version": 1,
+            "project_path": "gitlab-org/gitlab",
+            "project_id": 278964,
+            "current_file": {
+                "file_name": "main.py",
+                "content_above_cursor": "foo",
+                "content_below_cursor": "\n",
+            },
+            "prompt": None,
+            "model_provider": "vertex-ai",
+            "model_name": "codestral@2405",
+        }
+
+        response = self._send_code_completions_request(mock_client, params)
+
+        mock_registry_get.assert_called_with(
+            "code_suggestions/completions",
+            None,
+            ModelMetadata(
+                name="codestral@2405",
+                provider="vertex_ai",
+            ),
+        )
+        assert mock_agent_model.called
+
+        assert response.status_code == 200
+
+    def test_vertex_codestral_with_prompt(self, mock_client, mock_agent_model: Mock):
+        params = {
+            "prompt_version": 2,
+            "project_path": "gitlab-org/gitlab",
+            "project_id": 278964,
+            "current_file": {
+                "file_name": "main.py",
+                "content_above_cursor": "foo",
+                "content_below_cursor": "\n",
+            },
+            "prompt": "bar",
+            "model_provider": "vertex-ai",
+            "model_name": "codestral@2405",
+        }
+
+        assert not mock_agent_model.called
+
+        response = self._send_code_completions_request(mock_client, params)
+        assert response.status_code == 400
+
+        body = response.json()
+        assert (
+            (body["detail"])
+            == "You cannot specify a prompt with the given provider and model combination"
+        )
+
+    def _send_code_completions_request(self, mock_client, params):
+        headers = {
+            "Authorization": "Bearer 12345",
+            "X-Gitlab-Authentication-Type": "oidc",
+            "X-GitLab-Instance-Id": "1234",
+            "X-GitLab-Realm": "self-managed",
+        }
+
+        return mock_client.post(
+            "/code/completions",
+            headers=headers,
+            json=params,
+        )
 
 
 class TestCodeGenerations:

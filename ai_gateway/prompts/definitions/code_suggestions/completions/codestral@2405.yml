@@ -1,0 +1,24 @@
+---
+name: Codestral-on-Vertex Code Completions
+model:
+  name: codestral@2405
+  params:
+    model_class_provider: litellm
+    custom_llm_provider: vertex_ai
+    temperature: 0.7
+    max_tokens: 128
+    max_retries: 1
+unit_primitives:
+  - code_suggestions
+prompt_template:
+  user: |
+      <s>[SUFFIX]{suffix}[PREFIX]{prefix}
+params:
+  vertex_location: us-central1
+  timeout: 60
+  stop:
+    - "[INST]"
+    - "[/INST]"
+    - "[PREFIX]"
+    - "[MIDDLE]"
+    - "[SUFFIX]"

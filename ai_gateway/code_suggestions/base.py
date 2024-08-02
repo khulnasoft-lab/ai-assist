@@ -40,10 +40,11 @@ class KindUseCase(str, Enum):
 
 
 PROVIDERS_MODELS_MAP = {
-    KindModelProvider.ANTHROPIC: KindAnthropicModel,
-    KindModelProvider.VERTEX_AI: KindVertexTextModel,
-    KindModelProvider.LITELLM: KindLiteLlmModel,
-    KindModelProvider.MISTRALAI: KindLiteLlmModel,
+    KindModelProvider.ANTHROPIC: set(KindAnthropicModel),
+    KindModelProvider.VERTEX_AI: set(KindVertexTextModel)
+    | set([KindLiteLlmModel.CODESTRAL_2405]),
+    KindModelProvider.LITELLM: set(KindLiteLlmModel),
+    KindModelProvider.MISTRALAI: set(KindLiteLlmModel),
 }
 
 USE_CASES_MODELS_MAP = {
@@ -57,6 +58,7 @@ USE_CASES_MODELS_MAP = {
         KindLiteLlmModel.CODESTRAL,
         KindLiteLlmModel.CODE_LLAMA_CODE,
         KindLiteLlmModel.DEEPSEEKCODER,
+        KindLiteLlmModel.CODESTRAL_2405,
     },
     KindUseCase.CODE_GENERATIONS: {
         KindAnthropicModel.CLAUDE_2_0,
