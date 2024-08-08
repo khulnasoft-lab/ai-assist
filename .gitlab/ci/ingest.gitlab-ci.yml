@@ -1,3 +1,9 @@
+include:
+  # see https://gitlab.com/gitlab-com/gl-infra/common-ci-tasks/-/blob/main/oidc.md
+  - project: 'gitlab-com/gl-infra/common-ci-tasks'
+    ref: v2.25 # renovate:managed
+    file: 'oidc.yml'
+
 .ingest-base:
   image: $INGEST_IMAGE
   variables:
@@ -27,11 +33,11 @@
 
 ingest:dev:
   stage: ingest
-  extends: [.ingest-base, .oidc-base]
+  extends: [.ingest-base, .oidc_base_gcp]
   variables:
     GCP_PROJECT_NAME: $INGEST_GCP_PROJECT_NAME
-    WORKLOAD_IDENTITY_PROVIDER: $INGEST_WORKLOAD_IDENTITY_PROVIDER
-    SERVICE_ACCOUNT: $INGEST_SERVICE_ACCOUNT
+    GCP_OIDC_WORKLOAD_ID_POOL_PROVIDER_NAME: $INGEST_WORKLOAD_IDENTITY_PROVIDER
+    GCP_OIDC_SERVICE_ACCOUNT_EMAIL: $INGEST_SERVICE_ACCOUNT
   script:
     - cd /app && make ingest
   environment: ingest/dev
