@@ -7,13 +7,12 @@ from dependency_injector.providers import Factory
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from starlette.datastructures import CommaSeparatedStrings
 
-from ai_gateway.agents import BaseAgentRegistry
-from ai_gateway.agents.typing import ModelMetadata
 from ai_gateway.api.feature_category import feature_category
 from ai_gateway.api.middleware import (
     X_GITLAB_GLOBAL_USER_ID_HEADER,
     X_GITLAB_HOST_NAME_HEADER,
     X_GITLAB_INSTANCE_ID_HEADER,
+    X_GITLAB_LANGUAGE_SERVER_VERSION,
     X_GITLAB_REALM_HEADER,
     X_GITLAB_SAAS_DUO_PRO_NAMESPACE_IDS_HEADER,
     X_GITLAB_SAAS_NAMESPACE_IDS_HEADER,
@@ -51,6 +50,7 @@ from ai_gateway.code_suggestions import (
     CodeSuggestionsChunk,
 )
 from ai_gateway.code_suggestions.base import CodeSuggestionsOutput
+from ai_gateway.code_suggestions.language_server import LanguageServerVersion
 from ai_gateway.code_suggestions.processing.base import ModelEngineOutput
 from ai_gateway.code_suggestions.processing.ops import lang_from_filename
 from ai_gateway.gitlab_features import GitLabFeatureCategory, GitLabUnitPrimitive
@@ -58,6 +58,8 @@ from ai_gateway.instrumentators.base import TelemetryInstrumentator
 from ai_gateway.internal_events import InternalEventsClient
 from ai_gateway.models import KindAnthropicModel, KindModelProvider
 from ai_gateway.models.base import TokensConsumptionMetadata
+from ai_gateway.prompts import BasePromptRegistry
+from ai_gateway.prompts.typing import ModelMetadata
 from ai_gateway.tracking import SnowplowEvent, SnowplowEventContext
 from ai_gateway.tracking.errors import log_exception
 from ai_gateway.tracking.instrumentator import SnowplowInstrumentator
@@ -85,8 +87,8 @@ COMPLETIONS_AGENT_ID = "code_suggestions/completions"
 GENERATIONS_AGENT_ID = "code_suggestions/generations"
 
 
-async def get_agent_registry():
-    yield get_container_application().pkg_agents.agent_registry()
+async def get_prompt_registry():
+    yield get_container_application().pkg_prompts.prompt_registry()
 
 
 @router.post("/completions")
@@ -96,7 +98,7 @@ async def completions(
     request: Request,
     payload: CompletionsRequestWithVersion,
     current_user: Annotated[GitLabUser, Depends(get_current_user)],
-    agent_registry: Annotated[BaseAgentRegistry, Depends(get_agent_registry)],
+    prompt_registry: Annotated[BasePromptRegistry, Depends(get_prompt_registry)],
     completions_legacy_factory: Factory[CodeCompletionsLegacy] = Depends(
         get_code_suggestions_completions_vertex_legacy_provider
     ),
@@ -160,12 +162,12 @@ async def completions(
                 provider="text-completion-openai",
             )
 
-            agent = agent_registry.get_on_behalf(
+            prompt = prompt_registry.get_on_behalf(
                 current_user, COMPLETIONS_AGENT_ID, None, model_metadata
             )
 
             code_completions = completions_agent_factory(
-                model__agent=agent,
+                model__prompt=prompt,
             )
         else:
             code_completions = completions_litellm_factory(
@@ -182,7 +184,10 @@ async def completions(
         if payload.choices_count > 0:
             kwargs.update({"candidate_count": payload.choices_count})
 
-        if payload.context:
+        language_server_version = LanguageServerVersion.from_string(
+            request.headers.get(X_GITLAB_LANGUAGE_SERVER_VERSION, None)
+        )
+        if language_server_version.supports_advanced_context() and payload.context:
             kwargs.update({"code_context": [ctx.content for ctx in payload.context]})
 
     suggestions = await _execute_code_completion(payload, code_completions, **kwargs)
@@ -210,7 +215,7 @@ async def generations(
     request: Request,
     payload: GenerationsRequestWithVersion,
     current_user: Annotated[GitLabUser, Depends(get_current_user)],
-    agent_registry: Annotated[BaseAgentRegistry, Depends(get_agent_registry)],
+    prompt_registry: Annotated[BasePromptRegistry, Depends(get_prompt_registry)],
     generations_vertex_factory: Factory[CodeGenerations] = Depends(
         get_code_suggestions_generations_vertex_provider
     ),
@@ -263,9 +268,9 @@ async def generations(
         api_key="*" * len(payload.model_api_key) if payload.model_api_key else None,
     )
 
-    if payload.agent_id:
-        code_generations = _resolve_agent_code_generations(
-            payload, current_user, agent_registry, generations_agent_factory
+    if payload.prompt_id:
+        code_generations = _resolve_prompt_code_generations(
+            payload, current_user, prompt_registry, generations_agent_factory
         )
     elif payload.model_provider == KindModelProvider.ANTHROPIC:
         if payload.prompt_version == 3:
@@ -345,10 +350,10 @@ def _resolve_code_generations_anthropic_chat(
     )
 
 
-def _resolve_agent_code_generations(
+def _resolve_prompt_code_generations(
     payload: SuggestionsRequest,
     current_user: GitLabUser,
-    agent_registry: BaseAgentRegistry,
+    prompt_registry: BasePromptRegistry,
     generations_agent_factory: Factory[CodeGenerations],
 ) -> CodeGenerations:
     model_metadata = ModelMetadata(
@@ -358,11 +363,11 @@ def _resolve_agent_code_generations(
         provider="openai",
     )
 
-    agent = agent_registry.get_on_behalf(
-        current_user, payload.agent_id, None, model_metadata
+    prompt = prompt_registry.get_on_behalf(
+        current_user, payload.prompt_id, None, model_metadata
     )
 
-    return generations_agent_factory(model__agent=agent)
+    return generations_agent_factory(model__prompt=prompt)
 
 
 def _completion_suggestion_choices(
