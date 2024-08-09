@@ -25,10 +25,13 @@ ingest:dev:
   script:
     - cd /app && make ingest
   environment: ingest/dev
+  # rules:
+  #   - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+  #     when: never
+  #   - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_TYPE == "ingest"
+  # Testing (DO NOT MERGE)
   rules:
-    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
-      when: never
-    - if: $CI_PIPELINE_SOURCE == "schedule" && $SCHEDULE_TYPE == "ingest"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 ingest:prod:
   stage: ingest
