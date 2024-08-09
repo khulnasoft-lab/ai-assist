@@ -23,6 +23,7 @@ ingest:dev:
     GCP_OIDC_WORKLOAD_ID_POOL_PROVIDER_NAME: $INGEST_WORKLOAD_IDENTITY_PROVIDER
     GCP_OIDC_SERVICE_ACCOUNT_EMAIL: $INGEST_SERVICE_ACCOUNT
   script:
+    - env
     - cd /app && make ingest
   environment: ingest/dev
   # rules:
