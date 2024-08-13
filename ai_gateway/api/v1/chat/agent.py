@@ -62,7 +62,9 @@ CHAT_INVOKABLES = [
 
 path_unit_primitive_map = {ci.name: ci.unit_primitive for ci in CHAT_INVOKABLES}
 
-
+# tgao
+# "#{BASE_ENDPOINT}/#{unit_primitive}"
+# ENDPOINT  v1/chat/agent
 @router.post(
     "/{chat_invokable}", response_model=ChatResponse, status_code=status.HTTP_200_OK
 )
@@ -79,6 +81,7 @@ async def chat(
     litellm_factory: Factory = Depends(get_chat_litellm_factory_provider),
     internal_event_client: InternalEventsClient = Depends(get_internal_event_client),
 ):
+    breakpoint()
     prompt_component = chat_request.prompt_components[0]
     payload = prompt_component.payload
 
