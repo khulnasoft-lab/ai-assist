@@ -99,7 +99,6 @@ async def completions(
     payload: CompletionsRequestWithVersion,
     current_user: Annotated[GitLabUser, Depends(get_current_user)],
     prompt_registry: Annotated[BasePromptRegistry, Depends(get_prompt_registry)],
-    agent_registry: Annotated[BaseAgentRegistry, Depends(get_agent_registry)],
     # search for tgao completions_legacy_factory
     completions_legacy_factory: Factory[CodeCompletionsLegacy] = Depends(
         get_code_suggestions_completions_vertex_legacy_provider
@@ -342,7 +341,6 @@ async def generations(
             lang=suggestion.lang,
         ),
         choices=_generation_suggestion_choices(suggestion.text),
-
     )
 
 
