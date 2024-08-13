@@ -40,7 +40,8 @@ router = APIRouter()
 async def get_gl_agent_remote_executor():
     yield get_container_application().chat.gl_agent_remote_executor()
 
-
+# tgao
+# CHAT_V2_ENDPOINT
 @router.post("/agent")
 @feature_category(GitLabFeatureCategory.DUO_CHAT)
 async def chat(
