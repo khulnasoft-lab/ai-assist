@@ -100,6 +100,12 @@ class ConfigAbuseDetection(BaseModel):
     sampling_rate: float = 0.1  # 1/10 of requests are sampled
 
 
+class ConfigFeatureFlag(BaseModel):
+    enabled: bool = False
+    url: str = ""
+    instance_id: str = ""
+
+
 class ConfigModelKeys(BaseModel):
     mistral_api_key: Optional[str] = None
 
@@ -205,6 +211,9 @@ class Config(BaseSettings):
     abuse_detection: Annotated[
         ConfigAbuseDetection, Field(default_factory=ConfigAbuseDetection)
     ] = ConfigAbuseDetection()
+    feature_flag: Annotated[
+        ConfigFeatureFlag, Field(default_factory=ConfigFeatureFlag)
+    ] = ConfigFeatureFlag()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

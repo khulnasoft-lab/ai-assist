@@ -27,6 +27,7 @@ from ai_gateway.api.v3 import api_router as http_api_router_v3
 from ai_gateway.auth import CompositeProvider, GitLabOidcProvider, LocalAuthProvider
 from ai_gateway.config import Config
 from ai_gateway.container import ContainerApplication
+from ai_gateway.feature_flags import init_feature_flag_client
 from ai_gateway.instrumentators.threads import monitor_threads
 from ai_gateway.models import ModelAPIError
 from ai_gateway.profiling import setup_profiling
@@ -115,6 +116,7 @@ def create_fast_api_server(config: Config):
     setup_prometheus_fastapi_instrumentator(fastapi_app)
     setup_profiling(config.google_cloud_profiler)
     setup_gcp_service_account(config)
+    setup_feature_flag_client(config)
 
     return fastapi_app
 
@@ -185,3 +187,12 @@ def setup_gcp_service_account(config: Config):
                 "/tmp/gcp-service-account.json"
             )
             # pylint: enable=direct-environment-variable-reference
+
+
+def setup_feature_flag_client(config: Config):
+    init_feature_flag_client(
+        enabled=config.feature_flag.enabled,
+        url=config.feature_flag.url,
+        app_name=config.environment,
+        instance_id=config.feature_flag.instance_id,
+    )

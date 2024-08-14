@@ -4,6 +4,7 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from starlette.responses import StreamingResponse
 
+import ai_gateway.feature_flags as feature_flags
 from ai_gateway.api.feature_category import feature_category
 from ai_gateway.api.v2.chat.typing import AgentRequest, AgentStreamResponseEvent
 from ai_gateway.async_dependency_resolver import (
@@ -51,6 +52,12 @@ async def chat(
     ] = Depends(get_gl_agent_remote_executor),
     internal_event_client: InternalEventsClient = Depends(get_internal_event_client),
 ):
+    # Demo: DO NOT MERGE
+    if feature_flags.is_enabled("sm_test_ff"):
+        print("OK")
+    else:
+        print("NG")
+
     async def _stream_handler(stream_actions: AsyncIterator[TypeReActAgentAction]):
         async for action in stream_actions:
             event_type = (
