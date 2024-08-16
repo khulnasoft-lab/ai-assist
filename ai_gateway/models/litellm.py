@@ -317,7 +317,6 @@ class LiteLlmTextGenModel(TextGenModelBase):
     ):
         completion_args = {
             "model": self.metadata.name,
-            "messages": [{"content": prefix, "role": Role.USER}],
             "max_tokens": self.specifications.get("max_tokens", max_output_tokens),
             "temperature": self.specifications.get("temperature", temperature),
             "top_p": top_p,
@@ -335,9 +334,11 @@ class LiteLlmTextGenModel(TextGenModelBase):
             completion_args["api_base"] = self.endpoint
 
         if self._use_text_completion():
+            completion_args["prompt"] = prefix
             completion_args["suffix"] = suffix
             return await atext_completion(**completion_args)
 
+        completion_args["messages"] = [{"content": prefix, "role": Role.USER}]
         return await acompletion(**completion_args)
 
     def _is_vertex(self):

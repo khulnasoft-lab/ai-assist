@@ -170,9 +170,6 @@ async def completions(
     ):
         code_completions = _resolve_code_completions_vertex_codestral(
             payload=payload,
-            current_user=current_user,
-            prompt_registry=prompt_registry,
-            completions_agent_factory=completions_agent_factory,
             completions_litellm_factory=completions_litellm_factory,
         )
     else:
@@ -398,9 +395,6 @@ def _resolve_code_completions_litellm(
 
 def _resolve_code_completions_vertex_codestral(
     payload: SuggestionsRequest,
-    current_user: GitLabUser,
-    prompt_registry: BasePromptRegistry,
-    completions_agent_factory: Factory[CodeCompletions],
     completions_litellm_factory: Factory[CodeCompletions],
 ) -> CodeCompletions:
     if payload.prompt_version == 2 and payload.prompt is not None:

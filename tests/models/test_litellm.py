@@ -515,7 +515,7 @@ class TestLiteLlmTextGenModel:
 
         mock_litellm_atext_completion.assert_called_with(
             model="vertex_ai/codestral@2405",
-            messages=[{"content": "func hello(name){", "role": Role.USER}],
+            prompt="func hello(name){",
             suffix="}",
             vertex_ai_location="us-central1",
             max_tokens=128,
