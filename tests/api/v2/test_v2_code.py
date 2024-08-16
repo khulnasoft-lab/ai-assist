@@ -588,8 +588,8 @@ class TestCodeCompletions:
                 "codestral@2405",
                 None,
                 None,
-                False,
                 True,
+                False,
                 200,
                 [
                     {
@@ -606,8 +606,8 @@ class TestCodeCompletions:
                 "codestral@2405",
                 None,
                 None,
-                False,
                 True,
+                False,
                 200,
                 [
                     {
@@ -909,37 +909,6 @@ class TestCodeCompletions:
         )
 
         assert response.status_code == expected_status_code
-
-    def test_vertex_codestral(
-        self, mock_client, mock_agent_model: Mock, mock_registry_get: Mock
-    ):
-        params = {
-            "prompt_version": 1,
-            "project_path": "gitlab-org/gitlab",
-            "project_id": 278964,
-            "current_file": {
-                "file_name": "main.py",
-                "content_above_cursor": "foo",
-                "content_below_cursor": "\n",
-            },
-            "prompt": None,
-            "model_provider": "vertex-ai",
-            "model_name": "codestral@2405",
-        }
-
-        response = self._send_code_completions_request(mock_client, params)
-
-        mock_registry_get.assert_called_with(
-            "code_suggestions/completions",
-            None,
-            ModelMetadata(
-                name="codestral@2405",
-                provider="vertex_ai",
-            ),
-        )
-        assert mock_agent_model.called
-
-        assert response.status_code == 200
 
     def test_vertex_codestral_with_prompt(self, mock_client, mock_agent_model: Mock):
         params = {

@@ -173,6 +173,7 @@ async def completions(
             current_user=current_user,
             prompt_registry=prompt_registry,
             completions_agent_factory=completions_agent_factory,
+            completions_litellm_factory=completions_litellm_factory,
         )
     else:
         code_completions = completions_legacy_factory()
@@ -400,6 +401,7 @@ def _resolve_code_completions_vertex_codestral(
     current_user: GitLabUser,
     prompt_registry: BasePromptRegistry,
     completions_agent_factory: Factory[CodeCompletions],
+    completions_litellm_factory: Factory[CodeCompletions],
 ) -> CodeCompletions:
     if payload.prompt_version == 2 and payload.prompt is not None:
         raise HTTPException(
@@ -407,18 +409,11 @@ def _resolve_code_completions_vertex_codestral(
             detail="You cannot specify a prompt with the given provider and model combination",
         )
 
-    # the Agent class uses model_metadata.provider as the `custom_llm_provider` to be passed on to litellm
-    # since litellm sdk uses 'vertex_ai' as the provider key for Vertex, we need to explicitly 'vertex_ai' here
-    model_metadata = ModelMetadata(
-        name=payload.model_name,
-        provider="vertex_ai",
-    )
-
-    return _resolve_agent_code_completions(
-        model_metadata=model_metadata,
-        current_user=current_user,
-        prompt_registry=prompt_registry,
-        completions_agent_factory=completions_agent_factory,
+    return completions_litellm_factory(
+        model__name=payload.model_name,
+        model__provider=payload.model_provider,
+        model__api_key=payload.model_api_key,
+        model__endpoint=payload.model_endpoint,
     )
 
 
