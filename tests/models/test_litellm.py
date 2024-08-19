@@ -305,6 +305,10 @@ class TestLiteLlmTextGenModel:
         return "specified-api-key"
 
     @pytest.fixture
+    def provider_keys(self):
+        return {"mistral_api_key": "codestral-api-key"}
+
+    @pytest.fixture
     def lite_llm_text_model(self, endpoint, api_key):
         return LiteLlmTextGenModel.from_model_name(
             name="codegemma",
@@ -454,17 +458,32 @@ class TestLiteLlmTextGenModel:
             "model_name",
             "provider",
             "custom_models_enabled",
+            "model_completion_args",
         ),
         [
             (
                 "codegemma",
                 KindModelProvider.LITELLM,
                 True,
+                {
+                    "model": "text-completion-openai/codegemma",
+                    "stop": [
+                        "<|fim_prefix|>",
+                        "<|fim_suffix|>",
+                        "<|fim_middle|>",
+                        "<|file_separator|>",
+                    ],
+                },
             ),
             (
                 "codestral",
                 KindModelProvider.MISTRALAI,
                 True,
+                {
+                    "model": "text-completion-codestral/codestral",
+                    "stop": [],
+                    "api_key": "codestral-api-key",
+                },
             ),
         ],
     )
@@ -473,8 +492,10 @@ class TestLiteLlmTextGenModel:
         model_name,
         provider,
         custom_models_enabled,
+        model_completion_args,
         endpoint,
         api_key,
+        provider_keys,
         mock_litellm_acompletion: Mock,
         mock_litellm_atext_completion: Mock,
     ):
@@ -484,14 +505,26 @@ class TestLiteLlmTextGenModel:
             endpoint=endpoint,
             api_key=api_key,
             custom_models_enabled=custom_models_enabled,
-            provider_keys={},
+            provider_keys=provider_keys,
         )
 
         output = await litellm_model.generate(
             prefix="def hello_world():",
         )
 
-        assert mock_litellm_acompletion.called
+        expected_completion_args = {
+            "max_tokens": 16,
+            "temperature": 0.95,
+            "top_p": 0.95,
+            "stream": False,
+            "timeout": 30.0,
+            "api_key": api_key,
+            "api_base": endpoint,
+            "messages": [{"content": "def hello_world():", "role": Role.USER}],
+        }
+        expected_completion_args.update(model_completion_args)
+
+        mock_litellm_acompletion.assert_called_with(**expected_completion_args)
         assert not mock_litellm_atext_completion.called
 
         assert isinstance(output, TextGenModelOutput)

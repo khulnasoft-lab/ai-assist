@@ -85,6 +85,12 @@ MODEL_SPECIFICATIONS = {
         "max_tokens": 128,
         "timeout": 60,
         "vertex_location": "us-central1",
+    },
+    "default": {
+        "stop": [],
+        "temperature": 0.95,
+        "max_tokens": 16,
+        "timeout": 30.0,
     }
 }
 
@@ -260,8 +266,8 @@ class LiteLlmTextGenModel(TextGenModelBase):
         prefix: str,
         suffix: Optional[str] = "",
         stream: bool = False,
-        temperature: float = 0.95,
-        max_output_tokens: int = 16,
+        temperature: float | None = None,
+        max_output_tokens: int | None = None,
         top_p: float = 0.95,
         top_k: int = 40,
         code_context: Optional[Sequence[str]] = None,
@@ -317,12 +323,12 @@ class LiteLlmTextGenModel(TextGenModelBase):
     ):
         completion_args = {
             "model": self.metadata.name,
-            "max_tokens": self.specifications.get("max_tokens", max_output_tokens),
-            "temperature": self.specifications.get("temperature", temperature),
+            "max_tokens": self._get_specification("max_tokens", max_output_tokens),
+            "temperature": self._get_specification("temperature", temperature),
             "top_p": top_p,
             "stream": stream,
-            "timeout": self.specifications.get("timeout", 30.0),
-            "stop": self.specifications.get("stop", self.stop_tokens),
+            "timeout": self._get_specification("timeout", 30.0),
+            "stop": self._get_specification("stop", self.stop_tokens),
         }
 
         if self._is_vertex():
@@ -340,6 +346,9 @@ class LiteLlmTextGenModel(TextGenModelBase):
 
         completion_args["messages"] = [{"content": prefix, "role": Role.USER}]
         return await acompletion(**completion_args)
+
+    def _get_specification(self, key, input):
+        return input or self.specifications.get(key, None) or MODEL_SPECIFICATIONS["default"].get(key)
 
     def _is_vertex(self):
         return self.provider == KindModelProvider.VERTEX_AI
