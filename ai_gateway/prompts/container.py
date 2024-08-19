@@ -25,5 +25,6 @@ class ContainerPrompts(containers.DeclarativeContainer):
             ),
             ModelClassProvider.LITE_LLM: providers.Factory(models.lite_llm_chat_fn),
         },
+        routers=config.routers,
         custom_models_enabled=config.custom_models.enabled,
     )

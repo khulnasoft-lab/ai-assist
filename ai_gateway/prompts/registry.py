@@ -1,3 +1,4 @@
+import random
 from pathlib import Path
 from typing import Any, NamedTuple, Optional, Type
 
@@ -22,10 +23,12 @@ class LocalPromptRegistry(BasePromptRegistry):
         self,
         prompts_registered: dict[str, PromptRegistered],
         model_factories: dict[ModelClassProvider, TypeModelFactory],
+        routers: dict[str, Any],
         custom_models_enabled: bool,
     ):
         self.prompts_registered = prompts_registered
         self.model_factories = model_factories
+        self.routers = routers
         self.custom_models_enabled = custom_models_enabled
 
     def _resolve_id(
@@ -54,22 +57,42 @@ class LocalPromptRegistry(BasePromptRegistry):
             )
 
         prompt_id = self._resolve_id(prompt_id, model_metadata)
-        klass, config = self.prompts_registered[prompt_id]
-        model_class_provider = config.model.params.model_class_provider
-        model_factory = self.model_factories.get(model_class_provider, None)
 
-        if not model_factory:
-            raise ValueError(
-                f"unrecognized model class provider `{model_class_provider}`."
-            )
+        klass, config = self.prompts_registered[prompt_id]
+
+        model_factory, model_name = self._get_model_info()
+
+        print("----------------")
+        print(model_factory)
+        print(model_name)
+        print("----------------")
+
+        config.name = model_name
 
         return klass(model_factory, config, model_metadata, options)
+
+    def _get_model_info(self):
+        router = self.routers["default"]
+        model_config = self._select_model(router)
+        model_factory = self.model_factories.get(model_config["provider"], None)
+
+        return model_factory, model_config["model"]
+
+    def _select_model(self, router):
+        rand = random.randint(1, 100)
+
+        cumulative_percentage = 0
+        for model in router["models"]:
+            cumulative_percentage += model["router_params"]["percentage"]
+            if rand <= cumulative_percentage:
+                return model
 
     @classmethod
     def from_local_yaml(
         cls,
         class_overrides: dict[str, Type[Prompt]],
         model_factories: dict[ModelClassProvider, TypeModelFactory],
+        routers: dict[str, Any],
         custom_models_enabled: bool = False,
     ) -> "LocalPromptRegistry":
         """Iterate over all prompt definition files matching [usecase]/[type].yml,
@@ -95,4 +118,4 @@ class LocalPromptRegistry(BasePromptRegistry):
                     klass=klass, config=PromptConfig(**yaml.safe_load(fp))
                 )
 
-        return cls(prompts_registered, model_factories, custom_models_enabled)
+        return cls(prompts_registered, model_factories, routers, custom_models_enabled)

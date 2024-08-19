@@ -1,0 +1,13 @@
+---
+routers:
+  default:
+    type: percentage
+    models:
+      - model: claude-3-5-sonnet@20240620
+        provider: anthropic
+        router_params:
+          percentage: 40
+      - model: vertex_ai/claude-3-5-sonnet@20240620
+        provider: litellm
+        router_params:
+          percentage: 60

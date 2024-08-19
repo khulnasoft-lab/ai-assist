@@ -1,9 +1,14 @@
 import os
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Type, Tuple, List, Any
 
 from dotenv import find_dotenv
 from pydantic import BaseModel, Field, RootModel
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    YamlConfigSettingsSource,
+    SettingsConfigDict,
+)
 
 __all__ = [
     "Config",
@@ -98,6 +103,18 @@ class ConfigCustomModels(BaseModel):
 class ConfigAbuseDetection(BaseModel):
     enabled: bool = False
     sampling_rate: float = 0.1  # 1/10 of requests are sampled
+
+
+class ConfigRouters(RootModel):
+    class ConfigRouter(BaseModel):
+        class ConfigRouterModel(BaseModel):
+            model: str
+            provider: str
+            router_params: dict[str, Any]
+        type: str
+        models: List[ConfigRouterModel]
+
+    root: dict[str, ConfigRouter] = {}
 
 
 class ConfigModelKeys(BaseModel):
@@ -205,6 +222,18 @@ class Config(BaseSettings):
     abuse_detection: Annotated[
         ConfigAbuseDetection, Field(default_factory=ConfigAbuseDetection)
     ] = ConfigAbuseDetection()
+    routers: Annotated[
+        ConfigRouters, Field(default_factory=ConfigRouters)
+    ] = ConfigRouters()
+
+    @classmethod
+    def settings_customise_sources(
+        cls, settings_cls: Type[BaseSettings], **kwargs,
+    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        return (
+            *kwargs.values(),
+            YamlConfigSettingsSource(settings_cls, yaml_file="config.yml"),
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
