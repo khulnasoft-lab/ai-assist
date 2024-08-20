@@ -268,7 +268,7 @@ class AnthropicChatModel(ChatModelBase):
 
         with self.instrumentator.watch(stream=stream) as watcher:
             try:
-                suggestion = await self.client.messages.create(
+                suggestion = await self.client.beta.prompt_caching.messages.create(
                     model=self.metadata.name,
                     stream=stream,
                     **model_messages,
@@ -287,6 +287,9 @@ class AnthropicChatModel(ChatModelBase):
                     watcher.finish,
                     watcher.register_error,
                 )
+
+        log.debug(f"caching created: {suggestion.usage.cache_creation_input_tokens}")
+        log.debug(f"caching used: {suggestion.usage.cache_read_input_tokens}")
 
         return TextGenModelOutput(
             text=suggestion.content[0].text,

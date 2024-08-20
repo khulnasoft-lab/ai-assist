@@ -43,7 +43,12 @@ class PromptBuilderBase(ABC):
         self, prompt: str | list[Message], ignore_exception: bool = False
     ) -> Prompt:
         if isinstance(prompt, list):
-            prompt_text = "".join(m.content for m in prompt)
+            prompt_text = ""
+            for m in prompt:
+              if (isinstance(m.content, list)):
+                prompt_text += "".join(s.get('text') for s in m.content)
+              else:
+                prompt_text += m.content
         else:
             prompt_text = prompt
         token_length = self.tkn_strategy.estimate_length(prompt_text)[0]

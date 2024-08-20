@@ -22,7 +22,7 @@ class Role(str, Enum):
 
 class Message(BaseModel):
     role: Role
-    content: Annotated[str, StringConstraints(max_length=400000)]
+    content: Annotated[list | str, StringConstraints(max_length=400000)]
 
 
 class ChatModelBase(ModelBase, ABC):
