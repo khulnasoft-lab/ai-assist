@@ -1,12 +1,7 @@
 from contextlib import contextmanager
 from pathlib import Path
-<<<<<<< HEAD
-from typing import Any, AsyncIterator, Type
-from unittest.mock import AsyncMock, Mock, patch
-=======
 from typing import Any, AsyncIterator, Optional, Type
-from unittest.mock import Mock, patch
->>>>>>> c54a996d (feat: add Codestral on Vertex for Code Completions)
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -340,6 +335,7 @@ def mock_litellm_atext_completion():
         yield mock_acompletion
 
 
+@pytest.fixture
 def mock_registry_get(request, prompt_class: Optional[Type[Prompt]]):
     with patch("ai_gateway.prompts.registry.LocalPromptRegistry.get") as mock:
         if prompt_class:

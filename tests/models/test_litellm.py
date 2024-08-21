@@ -11,7 +11,6 @@ from ai_gateway.models.litellm import LiteLlmTextGenModel
 
 
 @pytest.fixture
-<<<<<<< HEAD
 def mock_vertex_ai_location():
     with patch("ai_gateway.models.litellm.Config") as mock:
         mock.return_value = Mock(vertex_text_model=Mock(location="mock-location"))
@@ -27,29 +26,6 @@ def mock_vertex_ai_location_in_europe():
         )
 
         yield mock
-=======
-def mock_litellm_acompletion():
-    with patch("ai_gateway.models.litellm.acompletion") as mock_acompletion:
-        mock_acompletion.return_value = AsyncMock(
-            choices=[
-                AsyncMock(message=AsyncMock(content="Test response")),
-            ]
-        )
-
-        yield mock_acompletion
-
-
-@pytest.fixture
-def mock_litellm_atext_completion():
-    with patch("ai_gateway.models.litellm.atext_completion") as mock_acompletion:
-        mock_acompletion.return_value = AsyncMock(
-            choices=[
-                AsyncMock(text="Test text completion response"),
-            ]
-        )
-
-        yield mock_acompletion
->>>>>>> c54a996d (feat: add Codestral on Vertex for Code Completions)
 
 
 class TestKindLiteLlmModel:

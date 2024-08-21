@@ -223,7 +223,6 @@ def prompts_registered():
                 name="Codestral-on-Vertex Code Completions",
                 model=ModelConfig(
                     name="codestral@2405",
-                    provider="litellm",
                     params=ChatLiteLLMParams(
                         model_class_provider=ModelClassProvider.LITE_LLM,
                         custom_llm_provider="vertex_ai",

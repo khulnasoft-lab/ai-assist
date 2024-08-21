@@ -588,8 +588,8 @@ class TestCodeCompletions:
                 "codestral@2405",
                 None,
                 None,
-                True,
                 False,
+                True,
                 200,
                 [
                     {
@@ -606,8 +606,8 @@ class TestCodeCompletions:
                 "codestral@2405",
                 None,
                 None,
-                True,
                 False,
+                True,
                 200,
                 [
                     {
@@ -911,7 +911,11 @@ class TestCodeCompletions:
         assert response.status_code == expected_status_code
 
     def test_vertex_codestral(
-        self, mock_client: Mock, mock_litellm_atext_completion: Mock
+        self,
+        mock_client: Mock,
+        mock_registry_get: Mock,
+        mock_litellm_atext_completion: Mock,
+        mock_agent_model: Mock,
     ):
         params = {
             "prompt_version": 2,
@@ -928,9 +932,17 @@ class TestCodeCompletions:
 
         self._send_code_completions_request(mock_client, params)
 
-        _args, kwargs = mock_litellm_atext_completion.call_args
-        assert kwargs["temperature"] == 0.7
-        assert kwargs["max_tokens"] == 128
+        mock_registry_get.assert_called_with(
+            'code_suggestions/completions',
+            None,
+            ModelMetadata(
+                name='codestral@2405',
+                provider='vertex_ai',
+                endpoint=None,
+                api_key='<api-key>'
+            ),
+        )
+        assert mock_agent_model.called
 
     def test_vertex_codestral_with_prompt(self, mock_client, mock_agent_model: Mock):
         params = {
@@ -949,7 +961,7 @@ class TestCodeCompletions:
 
         response = self._send_code_completions_request(mock_client, params)
 
-        assert not mock_agent_model.called
+        assert mock_agent_model.called
         assert response.status_code == 400
 
         body = response.json()
