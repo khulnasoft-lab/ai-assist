@@ -21,5 +21,6 @@ def get_config() -> Config:
 
 
 def get_app() -> FastAPI:
+    # tgao config 2 getapp
     app = create_fast_api_server(config)
     return app

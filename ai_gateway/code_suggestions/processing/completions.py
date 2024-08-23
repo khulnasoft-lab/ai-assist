@@ -186,6 +186,7 @@ class ModelEngineCompletions(ModelEngineBase):
         super().__init__(model, tokenization_strategy)
         self.experiment_registry = experiment_registry
 
+    # completions_legacy_factory engine tgao
     async def _generate(
         self,
         prefix: str,
@@ -197,6 +198,7 @@ class ModelEngineCompletions(ModelEngineBase):
         **kwargs: Any,
     ) -> ModelEngineOutput:
 
+        print("completion tgao5 build prompt");breakpoint()
         prompt = await self._build_prompt(
             prefix, file_name, suffix, lang_id, kwargs.get("code_context")
         )
@@ -226,6 +228,8 @@ class ModelEngineCompletions(ModelEngineBase):
 
                 watch_container.register_lang(lang_id, editor_lang)
 
+                print("completion tgao4");breakpoint()
+                # search for tgao vertex_code_gecko
                 if responses := await self.model.generate(
                     prompt.prefix, prompt.suffix, **kwargs
                 ):
@@ -311,6 +315,7 @@ class ModelEngineCompletions(ModelEngineBase):
         lang_id: Optional[LanguageId] = None,
         code_context: Optional[list] = None,
     ) -> Prompt:
+        print("completion tgao6 build prompt");breakpoint()
         imports = await self._get_imports(prefix, lang_id)
         prompt_len_imports_max = int(
             self.model.MAX_MODEL_LEN * self.MAX_TOKENS_IMPORTS_PERCENT
@@ -415,6 +420,7 @@ class ModelEngineCompletions(ModelEngineBase):
             comment_converter = COMMENT_GENERATOR[lang_id]
             contents = [comment_converter(content) for content in contents]
 
+        # search tokenization strategy
         content_lengths = self.tokenization_strategy.estimate_length(contents)
 
         code_contents = [

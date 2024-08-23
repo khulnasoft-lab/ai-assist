@@ -177,6 +177,7 @@ class Config(BaseSettings):
     instrumentator: Annotated[
         ConfigInstrumentator, Field(default_factory=ConfigInstrumentator)
     ] = ConfigInstrumentator()
+    # tgao config 5 Config
     f: Annotated[FFlags, Field(default_factory=FFlags)] = FFlags()
     snowplow: Annotated[ConfigSnowplow, Field(default_factory=ConfigSnowplow)] = (
         ConfigSnowplow()

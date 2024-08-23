@@ -68,6 +68,7 @@ class ModelEngineBase(ABC):
             model.metadata.engine, model.metadata.name
         )
 
+    # completions_legacy_factory engine tgao
     async def generate(
         self,
         prefix: str,

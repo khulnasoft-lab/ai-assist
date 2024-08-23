@@ -26,6 +26,9 @@ def _init_vertex_grpc_client(
     mock_model_responses: bool,
     custom_models_enabled: bool,
 ) -> PredictionServiceAsyncClient | None:
+
+    # tgao vertex client
+    print("vertex client tgao1");breakpoint()
     if mock_model_responses or custom_models_enabled:
         return None
 
@@ -78,6 +81,7 @@ class ContainerModels(containers.DeclarativeContainer):
 
     grpc_client_vertex = providers.Singleton(
         _init_vertex_grpc_client,
+        # tgao vertex client
         endpoint=config.vertex_text_model.endpoint,
         mock_model_responses=config.mock_model_responses,
         custom_models_enabled=config.custom_models.enabled,
@@ -123,8 +127,10 @@ class ContainerModels(containers.DeclarativeContainer):
 
     vertex_code_gecko = providers.Selector(
         _mock_selector,
+        # tgao vertex_code_gecko
         original=providers.Factory(
             PalmCodeGeckoModel.from_model_name,
+            # tgao vertex client
             client=grpc_client_vertex,
             project=config.vertex_text_model.project,
             location=config.vertex_text_model.location,
@@ -151,6 +157,7 @@ class ContainerModels(containers.DeclarativeContainer):
 
     litellm = providers.Selector(
         _mock_selector,
+        # tgao litellm model
         original=providers.Factory(
             LiteLlmTextGenModel.from_model_name,
             custom_models_enabled=config.custom_models.enabled,

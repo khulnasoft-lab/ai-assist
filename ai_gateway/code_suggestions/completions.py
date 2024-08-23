@@ -56,6 +56,9 @@ class CodeCompletionsLegacy:
         editor_lang: str,
         **kwargs: Any,
     ) -> ModelEngineOutput:
+        # tgao completions_legacy_factory execute
+        print("completion tgao2");breakpoint()
+        # search completions_legacy_factory engine tgao
         responses = await self.engine.generate(
             prefix, suffix, file_name, editor_lang, **kwargs
         )
@@ -162,6 +165,7 @@ class CodeCompletions:
         stream: bool = False,
         **kwargs: Any,
     ) -> Union[CodeSuggestionsOutput, AsyncIterator[CodeSuggestionsChunk]]:
+        # tgao litellm code completion execute
         lang_id = resolve_lang_id(file_name, editor_lang)
         increment_lang_counter(file_name, lang_id, editor_lang)
 

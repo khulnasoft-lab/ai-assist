@@ -290,6 +290,7 @@ class LiteLlmTextGenModel(TextGenModelBase):
     def specifications(self):
         return MODEL_SPECIFICATIONS.get(self.model_name, {})
 
+    # tgao litellm model
     async def generate(
         self,
         prefix: str,
@@ -418,7 +419,7 @@ class LiteLlmTextGenModel(TextGenModelBase):
             kind_model = KindLiteLlmModel(name)
         except ValueError:
             raise ValueError(f"no model found by the name '{name}'")
-
+        # tgao litellm model
         return cls(
             model_name=kind_model, endpoint=endpoint, api_key=api_key, provider=provider
         )

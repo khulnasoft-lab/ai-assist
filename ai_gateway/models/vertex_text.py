@@ -172,6 +172,10 @@ class PalmCodeGenBaseModel(TextGenModelBase):
 
         with self.instrumentator.watch():
             try:
+                # tgao vertex_code_gecko
+                print("completion tgao3");breakpoint()
+
+                # search tgao vertex client
                 response = await self.client.predict(
                     endpoint=self.endpoint,
                     instances=instances,
@@ -372,6 +376,8 @@ class PalmCodeGeckoModel(PalmCodeGenBaseModel):
         stop_sequences: Optional[Sequence[str]] = None,
         code_context: Optional[list[str]] = None,
     ) -> Optional[TextGenModelOutput | list[TextGenModelOutput]]:
+        # tgao vertex_code_gecko
+        print("completion tgao5");breakpoint()
         model_input = CodeGeckoModelInput(prompt, suffix)
 
         if not stop_sequences:
