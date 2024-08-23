@@ -557,6 +557,7 @@ async def _execute_code_completion(
 ) -> any:
     with TelemetryInstrumentator().watch(payload.telemetry):
         # search tgao completions_legacy_factory execute
+        # search tgao agent execute
         output = await code_completions.execute(
             prefix=payload.current_file.content_above_cursor,
             suffix=payload.current_file.content_below_cursor,

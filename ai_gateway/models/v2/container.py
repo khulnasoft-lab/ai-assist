@@ -22,9 +22,11 @@ class ContainerModels(containers.DeclarativeContainer):
 
     http_async_client_anthropic = providers.Singleton(_init_anthropic_client)
 
+    # tgao model factories
     anthropic_claude_chat_fn = providers.Factory(
         ChatAnthropic,
         async_client=http_async_client_anthropic,
     )
 
+    # tgao model factories
     lite_llm_chat_fn = providers.Factory(ChatLiteLLM)

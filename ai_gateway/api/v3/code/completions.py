@@ -91,6 +91,26 @@ async def code_completion(
     ],
     code_context: list[CodeContextPayload] = None,
 ):
+    #################################### code generation
+    if payload.prompt:
+        code_generations = _resolve_code_generations_anthropic_chat(
+          payload,
+          generations_anthropic_chat_factory,
+        )
+    else:
+        prompt_registry: Annotated[BasePromptRegistry, Depends(get_prompt_registry)],
+        agent = prompt_registry.get_on_behalf(current_user, GENERATIONS_AGENT_ID)
+        code_generations = generations_agent_factory(model__agent=agent)
+
+    suggestion = await code_generations.execute(
+        prefix=payload.current_file.content_above_cursor,
+        file_name=payload.current_file.file_name,
+        editor_lang=payload.current_file.language_identifier,
+        model_provider=payload.model_provider,
+        stream=payload.stream,
+    )
+    ########################################
+
     if payload.model_provider == ModelProvider.ANTHROPIC:
         engine = completions_anthropic_factory()
     else:

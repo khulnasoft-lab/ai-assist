@@ -14,11 +14,13 @@ class ContainerPrompts(containers.DeclarativeContainer):
     models = providers.DependenciesContainer()
 
     prompt_registry = providers.Singleton(
+        # tgao prompt_registry
         LocalPromptRegistry.from_local_yaml,
         class_overrides={
             "chat/react": chat.ReActAgent,
             "chat/react/vertex": chat.ReActAgent,
         },
+        # tgao model factories
         model_factories={
             ModelClassProvider.ANTHROPIC: providers.Factory(
                 models.anthropic_claude_chat_fn

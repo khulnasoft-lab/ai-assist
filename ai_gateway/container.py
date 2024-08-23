@@ -54,6 +54,7 @@ class ContainerApplication(containers.DeclarativeContainer):
     )
 
     # tgao container models
+    # model generate agent model
     pkg_models = providers.Container(
         ContainerModels,
         config=config,
@@ -71,6 +72,7 @@ class ContainerApplication(containers.DeclarativeContainer):
     code_suggestions = providers.Container(
         ContainerCodeSuggestions,
         # search tgao container models
+        # model generate agent model
         models=pkg_models,
         # seach for tgao config
         config=config.f.code_suggestions,

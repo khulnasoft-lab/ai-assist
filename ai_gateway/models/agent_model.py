@@ -21,6 +21,8 @@ class AgentModel(TextGenModelBase):
         self,
         prompt: Runnable,  # TODO: should be Prompt, but SafetyAttributes complain about model_class_provider from TypeModelParams
     ):
+        # tgao agent model
+        # model generate agent model real
         self.prompt = prompt
         self._metadata = ModelMetadata(
             name=prompt.name,
@@ -31,6 +33,7 @@ class AgentModel(TextGenModelBase):
     def metadata(self) -> ModelMetadata:
         return self._metadata
 
+    # model generate agent model
     async def generate(
         self,
         params: dict[str, Any],

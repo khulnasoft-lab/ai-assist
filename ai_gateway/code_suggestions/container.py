@@ -101,6 +101,7 @@ class ContainerCodeCompletions(containers.DeclarativeContainer):
 
     # tgao litellm model
     litellm = providers.Dependency(instance_of=TextGenModelBase)
+    # tgao agent model
     agent_model = providers.Dependency(instance_of=TextGenModelBase)
     snowplow_instrumentator = providers.Dependency(instance_of=SnowplowInstrumentator)
 
@@ -152,8 +153,10 @@ class ContainerCodeCompletions(containers.DeclarativeContainer):
         ),
     )
 
+    # tgao agent factory
     agent_factory = providers.Factory(
         CodeCompletions,
+        # model generate agent model
         model=providers.Factory(agent_model),
         tokenization_strategy=providers.Factory(
             TokenizerTokenStrategy, tokenizer=tokenizer
@@ -162,6 +165,7 @@ class ContainerCodeCompletions(containers.DeclarativeContainer):
 
 
 class ContainerCodeSuggestions(containers.DeclarativeContainer):
+    # tgao agent model
     models = providers.DependenciesContainer()
 
     config = providers.Configuration(strict=True)
@@ -188,6 +192,8 @@ class ContainerCodeSuggestions(containers.DeclarativeContainer):
         anthropic_claude=models.anthropic_claude,
         # tgao litellm model
         litellm=models.litellm,
+        # tgao agent model
+        # model generate agent model
         agent_model=models.agent_model,
         config=config,
         snowplow_instrumentator=snowplow.instrumentator,
