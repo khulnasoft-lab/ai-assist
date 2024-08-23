@@ -302,7 +302,6 @@ class LiteLlmTextGenModel(TextGenModelBase):
         top_k: int = 40,
         code_context: Optional[Sequence[str]] = None,
     ) -> Union[TextGenModelOutput, AsyncIterator[TextGenModelChunk]]:
-
         with self.instrumentator.watch(stream=stream) as watcher:
             suggestion = await self._get_suggestion(
                 prefix=prefix,
