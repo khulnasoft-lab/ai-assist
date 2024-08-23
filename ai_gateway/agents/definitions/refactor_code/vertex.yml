@@ -1,0 +1,10 @@
+name: Description rewriter
+provider: anthropic
+model: claude-3-sonnet-20240229
+prompt_template:
+  system: |
+    You are a helpful assistant that rewrites the description of resources. You'll be given the current description, and a prompt on how you should rewrite it. Reply only with your rewritten description.
+
+    <description>{description}</description>
+
+    <prompt>{prompt}</prompt>
