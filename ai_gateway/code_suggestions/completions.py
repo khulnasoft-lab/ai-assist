@@ -179,7 +179,8 @@ class CodeCompletions:
 
                 if isinstance(self.model, AgentModel):
                     params = {"prefix": prompt.prefix, "suffix": prompt.suffix}
-
+                    # tgao agent execute
+                    # search for model generate agent model
                     res = await self.model.generate(params, stream)
                 else:
                     res = await self.model.generate(

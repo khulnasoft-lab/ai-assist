@@ -27,7 +27,7 @@ jinja_env = Environment(loader=BaseLoader())
 def _format_str(content: str, options: dict[str, Any]) -> str:
     return jinja_env.from_string(content).render(options)
 
-
+# tgao klass
 class Prompt(RunnableBinding[Input, Output]):
     name: str
     model: BaseChatModel
@@ -40,7 +40,15 @@ class Prompt(RunnableBinding[Input, Output]):
         model_metadata: Optional[ModelMetadata] = None,
         options: Optional[dict[str, Any]] = None,
     ):
+        # tgao prompt init ainvoke
+        # model_metadata = ModelMetadata(
+        #     name=payload.model_name,
+        #     endpoint=payload.model_endpoint,
+        #     api_key=payload.model_api_key,
+        #     provider="text-completion-openai",
+        # )
         model_kwargs = self._build_model_kwargs(config.params, model_metadata)
+        # tgao model factories
         model = self._build_model(model_factory, config.model)
         messages = self.build_messages(config.prompt_template, options or {})
         prompt = ChatPromptTemplate.from_messages(messages)
@@ -72,9 +80,11 @@ class Prompt(RunnableBinding[Input, Output]):
 
     def _build_model(
         self,
+        # tgao model factories
         model_factory: TypeModelFactory,
         config: ModelConfig,
     ) -> BaseChatModel:
+        # search for tgao model factory
         return model_factory(
             model=config.name,
             **config.params.model_dump(

@@ -176,6 +176,8 @@ class ContainerModels(containers.DeclarativeContainer):
         mocked=providers.Factory(mock.ChatModel),
     )
 
+    # tgao agent model
+    # model generate agent model
     agent_model = providers.Selector(
         _mock_selector,
         original=providers.Factory(AgentModel),

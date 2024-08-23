@@ -54,24 +54,63 @@ class LocalPromptRegistry(BasePromptRegistry):
             )
 
         prompt_id = self._resolve_id(prompt_id, model_metadata)
+        # eg, klass: Prompt . search for tgao klass/prompt registered
         klass, config = self.prompts_registered[prompt_id]
         model_class_provider = config.model.params.model_class_provider
+        # search for tgao model factories
+        # LocalPromptRegistry.from_local_yaml,
+        # class_overrides={
+        #     "chat/react": chat.ReActAgent,
+        #     "chat/react/vertex": chat.ReActAgent,
+        # },
+        # # tgao model factories
+        # model_factories={
+        #     ModelClassProvider.ANTHROPIC: providers.Factory(
+        #         models.anthropic_claude_chat_fn
+        #     ),
+        #     ModelClassProvider.LITE_LLM: providers.Factory(models.lite_llm_chat_fn),
+        # },
+        # custom_models_enabled=config.custom_models.enabled,
         model_factory = self.model_factories.get(model_class_provider, None)
 
         if not model_factory:
             raise ValueError(
                 f"unrecognized model class provider `{model_class_provider}`."
             )
-
+        # search for tgao klass
+        #             model_metadata = ModelMetadata(
+        #                 name=payload.model_name,
+        #                 endpoint=payload.model_endpoint,
+        #                 api_key=payload.model_api_key,
+        #                 provider="text-completion-openai",
+        #             )
+        # Prompt(providers.Factory(models.lite_llm_chat_fn), config, model_metadata, options)
+        # search for tgao prompt init ainvoke
         return klass(model_factory, config, model_metadata, options)
 
+    # tgao prompt_registry
     @classmethod
     def from_local_yaml(
         cls,
         class_overrides: dict[str, Type[Prompt]],
+        # tgao model factories
         model_factories: dict[ModelClassProvider, TypeModelFactory],
         custom_models_enabled: bool = False,
     ) -> "LocalPromptRegistry":
+        # LocalPromptRegistry.from_local_yaml,
+        # class_overrides={
+        #     "chat/react": chat.ReActAgent,
+        #     "chat/react/vertex": chat.ReActAgent,
+        # },
+        # # tgao model factories
+        # model_factories={
+        #     ModelClassProvider.ANTHROPIC: providers.Factory(
+        #         models.anthropic_claude_chat_fn
+        #     ),
+        #     ModelClassProvider.LITE_LLM: providers.Factory(models.lite_llm_chat_fn),
+        # },
+        # custom_models_enabled=config.custom_models.enabled,
+
         """Iterate over all prompt definition files matching [usecase]/[type].yml,
         and create a corresponding prompt for each one. The base Prompt class is
         used if no matching override is provided in `class_overrides`.
@@ -82,11 +121,18 @@ class LocalPromptRegistry(BasePromptRegistry):
 
         for path in prompts_definitions_dir.glob("**/*.yml"):
             # E.g., "chat/react/base", "generate_description/mistral", etc.
+            #ai_gateway/prompts/definitions/chat/react/base.yml
+            #ai_gateway/prompts/definitions/chat/react/vertex/base.yml
+            #ai_gateway/prompts/definitions/chat/react/with_mr_support/base.yml
+            #ai_gateway/prompts/definitions/chat/react/mistral.yml
+            #ai_gateway/prompts/definitions/chat/react/mixtral.yml
+            #ai_gateway/prompts/definitions/code_suggestions/completions/codestral.yml
             prompt_id_with_model_name = path.relative_to(
                 prompts_definitions_dir
             ).with_suffix("")
 
             with open(path, "r") as fp:
+                # tgao klass/prompt registered
                 # Remove model name, for example: to receive "chat/react" from "chat/react/mistral"
                 klass = class_overrides.get(
                     str(prompt_id_with_model_name.parent), Prompt
@@ -94,5 +140,5 @@ class LocalPromptRegistry(BasePromptRegistry):
                 prompts_registered[str(prompt_id_with_model_name)] = PromptRegistered(
                     klass=klass, config=PromptConfig(**yaml.safe_load(fp))
                 )
-
+        # tgao model factories
         return cls(prompts_registered, model_factories, custom_models_enabled)
