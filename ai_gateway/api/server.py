@@ -42,6 +42,7 @@ _SKIP_ENDPOINTS = ["/monitoring/healthz", "/monitoring/ready", "/metrics"]
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     config = app.extra["extra"]["config"]
+    # tgao config 1 lifespan
     container_application = ContainerApplication()
     container_application.config.from_dict(config.model_dump())
 
@@ -106,6 +107,7 @@ def create_fast_api_server(config: Config):
             ),
             MiddlewareModelTelemetry(skip_endpoints=_SKIP_ENDPOINTS),
         ],
+        # tgao config 2 lifespan
         extra={"config": config},
     )
 

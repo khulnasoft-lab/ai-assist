@@ -99,6 +99,8 @@ async def completions(
     payload: CompletionsRequestWithVersion,
     current_user: Annotated[GitLabUser, Depends(get_current_user)],
     prompt_registry: Annotated[BasePromptRegistry, Depends(get_prompt_registry)],
+    agent_registry: Annotated[BaseAgentRegistry, Depends(get_agent_registry)],
+    # search for tgao completions_legacy_factory
     completions_legacy_factory: Factory[CodeCompletionsLegacy] = Depends(
         get_code_suggestions_completions_vertex_legacy_provider
     ),
@@ -116,6 +118,8 @@ async def completions(
     ),
     internal_event_client: InternalEventsClient = Depends(get_internal_event_client),
 ):
+    print("completion tgao1");breakpoint()
+    #####################
     if not current_user.can(GitLabUnitPrimitive.CODE_SUGGESTIONS):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -145,6 +149,7 @@ async def completions(
         stream=payload.stream,
     )
 
+    ##################### tgao completion anthropic deprecated, maybe we can remove this?
     kwargs = {}
     if payload.model_provider == KindModelProvider.ANTHROPIC:
         code_completions = completions_anthropic_factory()
@@ -152,10 +157,13 @@ async def completions(
         # We support the prompt version 2 only with the Anthropic models
         if payload.prompt_version == 2:
             kwargs.update({"raw_prompt": payload.prompt})
+
+    #####################
     elif payload.model_provider in (
         KindModelProvider.LITELLM,
         KindModelProvider.MISTRALAI,
     ):
+#         print("completion tgao1 LITELLM/MISTRALAI");breakpoint()
         code_completions = _resolve_code_completions_litellm(
             payload=payload,
             current_user=current_user,
@@ -186,6 +194,8 @@ async def completions(
         #     https://gitlab.com/gitlab-org/modelops/applied-ml/code-suggestions/ai-assist/-/merge_requests/1172#note_2048354501
         kwargs.update({"temperature": 0.7, "max_output_tokens": 128})
     else:
+        print("completion tgao1 legacy");breakpoint()
+        # search for tgao completions_legacy_factory
         code_completions = completions_legacy_factory()
         if payload.choices_count > 0:
             kwargs.update({"candidate_count": payload.choices_count})
@@ -196,6 +206,8 @@ async def completions(
         if language_server_version.supports_advanced_context() and payload.context:
             kwargs.update({"code_context": [ctx.content for ctx in payload.context]})
 
+    ###################### tgao execute code completion
+    ###################### search tgao litellm code completion execute
     suggestions = await _execute_code_completion(payload, code_completions, **kwargs)
 
     if isinstance(suggestions[0], AsyncIterator):
@@ -242,6 +254,7 @@ async def generations(
     ),
     internal_event_client: InternalEventsClient = Depends(get_internal_event_client),
 ):
+    print("code generation tgao1");breakpoint()
     if not current_user.can(
         GitLabUnitPrimitive.CODE_SUGGESTIONS,
         disallowed_issuers=[SELF_SIGNED_TOKEN_ISSUER],
@@ -329,6 +342,7 @@ async def generations(
             lang=suggestion.lang,
         ),
         choices=_generation_suggestion_choices(suggestion.text),
+
     )
 
 
@@ -544,6 +558,7 @@ async def _execute_code_completion(
     **kwargs: dict,
 ) -> any:
     with TelemetryInstrumentator().watch(payload.telemetry):
+        # search tgao completions_legacy_factory execute
         output = await code_completions.execute(
             prefix=payload.current_file.content_above_cursor,
             suffix=payload.current_file.content_below_cursor,

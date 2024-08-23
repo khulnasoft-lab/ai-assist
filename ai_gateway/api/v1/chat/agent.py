@@ -81,7 +81,11 @@ async def chat(
     litellm_factory: Factory = Depends(get_chat_litellm_factory_provider),
     internal_event_client: InternalEventsClient = Depends(get_internal_event_client),
 ):
+<<<<<<< Updated upstream
     breakpoint()
+=======
+    print("chattgao1");breakpoint()
+>>>>>>> Stashed changes
     prompt_component = chat_request.prompt_components[0]
     payload = prompt_component.payload
 

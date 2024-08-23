@@ -31,6 +31,7 @@ class TokenizerTokenStrategy(TokenStrategyBase):
             length_tokens=len(tokens["input_ids"]),
         )
 
+    # tokenization strategy
     def estimate_length(self, text: str | list[str]) -> list[int]:
         return self.tokenizer(
             text,

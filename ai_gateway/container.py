@@ -53,6 +53,7 @@ class ContainerApplication(containers.DeclarativeContainer):
         ContainerInternalEvent, config=config.internal_event
     )
 
+    # tgao container models
     pkg_models = providers.Container(
         ContainerModels,
         config=config,
@@ -69,7 +70,9 @@ class ContainerApplication(containers.DeclarativeContainer):
 
     code_suggestions = providers.Container(
         ContainerCodeSuggestions,
+        # search tgao container models
         models=pkg_models,
+        # seach for tgao config
         config=config.f.code_suggestions,
         snowplow=snowplow,
     )

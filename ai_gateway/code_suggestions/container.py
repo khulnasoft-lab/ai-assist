@@ -98,19 +98,25 @@ class ContainerCodeCompletions(containers.DeclarativeContainer):
     tokenizer = providers.Dependency(instance_of=PreTrainedTokenizerFast)
     vertex_code_gecko = providers.Dependency(instance_of=TextGenModelBase)
     anthropic_claude = providers.Dependency(instance_of=TextGenModelBase)
+
+    # tgao litellm model
     litellm = providers.Dependency(instance_of=TextGenModelBase)
     agent_model = providers.Dependency(instance_of=TextGenModelBase)
     snowplow_instrumentator = providers.Dependency(instance_of=SnowplowInstrumentator)
 
     config = providers.Configuration(strict=True)
 
+    # tgao completions_legacy_factory
     vertex_legacy = providers.Factory(
         CodeCompletionsLegacy,
+        # completions_legacy_factory engine tgao
         engine=providers.Factory(
             ModelEngineCompletions,
             model=providers.Factory(
+                # search for tgao vertex_code_gecko
                 vertex_code_gecko, name=KindVertexTextModel.CODE_GECKO_002
             ),
+            # tokenization strategy
             tokenization_strategy=providers.Factory(
                 TokenizerTokenStrategy, tokenizer=tokenizer
             ),
@@ -136,8 +142,10 @@ class ContainerCodeCompletions(containers.DeclarativeContainer):
         ),
     )
 
+    # tgao
     litellm_factory = providers.Factory(
         CodeCompletions,
+        # tgao litellm model
         model=providers.Factory(litellm),
         tokenization_strategy=providers.Factory(
             TokenizerTokenStrategy, tokenizer=tokenizer
@@ -178,6 +186,7 @@ class ContainerCodeSuggestions(containers.DeclarativeContainer):
         tokenizer=tokenizer,
         vertex_code_gecko=models.vertex_code_gecko,
         anthropic_claude=models.anthropic_claude,
+        # tgao litellm model
         litellm=models.litellm,
         agent_model=models.agent_model,
         config=config,
