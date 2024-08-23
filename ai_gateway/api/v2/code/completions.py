@@ -341,7 +341,6 @@ async def generations(
             lang=suggestion.lang,
         ),
         choices=_generation_suggestion_choices(suggestion.text),
-
     )
 
 
