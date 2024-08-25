@@ -162,11 +162,12 @@ async def completions(
         KindModelProvider.LITELLM,
         KindModelProvider.MISTRALAI,
     ):
-#         print("completion tgao1 LITELLM/MISTRALAI");breakpoint()
+        # print("completion tgao1 LITELLM/MISTRALAI");breakpoint()
         code_completions = _resolve_code_completions_litellm(
             payload=payload,
             current_user=current_user,
             prompt_registry=prompt_registry,
+            # search for model generate agent model
             completions_agent_factory=completions_agent_factory,
             completions_litellm_factory=completions_litellm_factory,
         )
@@ -446,6 +447,7 @@ def _resolve_agent_code_completions(
         current_user, COMPLETIONS_AGENT_ID, None, model_metadata
     )
 
+    # search for model generate agent model
     return completions_agent_factory(
         model__prompt=prompt,
     )
