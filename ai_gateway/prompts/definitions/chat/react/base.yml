@@ -101,7 +101,7 @@ prompt_template:
         <type> {{ added_context.type }} </type>
         <name> {{ added_context.name }} </name>
         <content>
-        {{ added_context.content }}
+        {% raw %}{{ added_context.content }}{% endraw %}
         </content>
     </additional_context>
     {%- endfor %}
