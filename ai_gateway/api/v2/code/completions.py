@@ -443,10 +443,12 @@ def _resolve_agent_code_completions(
     prompt_registry: BasePromptRegistry,
     completions_agent_factory: Factory[CodeCompletions],
 ) -> CodeCompletions:
+    # tgao prompt_registry
     prompt = prompt_registry.get_on_behalf(
         current_user, COMPLETIONS_AGENT_ID, None, model_metadata
     )
 
+    # model generate agent model real
     # search for model generate agent model
     return completions_agent_factory(
         model__prompt=prompt,

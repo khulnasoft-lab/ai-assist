@@ -164,6 +164,7 @@ class LiteLlmChatModel(ChatModelBase):
         top_k: int = 40,
         code_context: Optional[Sequence[str]] = None,
     ) -> Union[TextGenModelOutput, AsyncIterator[TextGenModelChunk]]:
+        # tgao litellmchat model
         if isinstance(messages, str):
             messages = [Message(content=messages, role=Role.USER)]
 

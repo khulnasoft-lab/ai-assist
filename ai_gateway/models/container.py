@@ -169,6 +169,7 @@ class ContainerModels(containers.DeclarativeContainer):
     litellm_chat = providers.Selector(
         _mock_selector,
         original=providers.Factory(
+            # tgao litellmchat model
             LiteLlmChatModel.from_model_name,
             custom_models_enabled=config.custom_models.enabled,
             provider_keys=config.model_keys,

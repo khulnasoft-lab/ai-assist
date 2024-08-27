@@ -183,6 +183,7 @@ class CodeCompletions:
                     # search for model generate agent model
                     res = await self.model.generate(params, stream)
                 else:
+                    # search for tgao litellmchat model
                     res = await self.model.generate(
                         prompt.prefix, prompt.suffix, stream, **kwargs
                     )
