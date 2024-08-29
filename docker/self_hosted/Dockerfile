@@ -54,7 +54,6 @@ RUN pip install langchain langchain_text_splitters
 RUN poetry run python index_docs_as_sqlite.py -o "./tmp/docs.db" -v ${TAG##self-hosted-}
 
 ENV AIGW_CUSTOM_MODELS__ENABLED=true
-ENV AIGW_AUTH__BYPASS_EXTERNAL=true
 ENV AIGW_FASTAPI__API_PORT=5052
 ENV AIGW_FASTAPI__OPENAPI_URL="/openapi.json"
 ENV AIGW_FASTAPI__DOCS_URL="/docs"
