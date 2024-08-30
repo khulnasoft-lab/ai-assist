@@ -395,27 +395,34 @@ def _resolve_code_completions_litellm(
     completions_agent_factory: Factory[CodeCompletions],
     completions_litellm_factory: Factory[CodeCompletions],
 ) -> CodeCompletions:
-    if payload.prompt_version == 2 and not payload.prompt:
-        model_metadata = ModelMetadata(
-            name=payload.model_name,
-            endpoint=payload.model_endpoint,
-            api_key=payload.model_api_key,
-            provider="text-completion-openai",
-        )
+    try:
+        if payload.prompt_version == 2 and not payload.prompt:
+            model_metadata = ModelMetadata(
+                name=payload.model_name,
+                endpoint=payload.model_endpoint,
+                api_key=payload.model_api_key,
+                provider="text-completion-openai",
+            )
 
-        return _resolve_agent_code_completions(
-            model_metadata=model_metadata,
-            current_user=current_user,
-            prompt_registry=prompt_registry,
-            completions_agent_factory=completions_agent_factory,
-        )
+            return _resolve_agent_code_completions(
+                model_metadata=model_metadata,
+                current_user=current_user,
+                prompt_registry=prompt_registry,
+                completions_agent_factory=completions_agent_factory,
+            )
 
-    return completions_litellm_factory(
-        model__name=payload.model_name,
-        model__endpoint=payload.model_endpoint,
-        model__api_key=payload.model_api_key,
-        model__provider=payload.model_provider,
-    )
+        return completions_litellm_factory(
+            model__name=payload.model_name,
+            model__endpoint=payload.model_endpoint,
+            model__api_key=payload.model_api_key,
+            model__provider=payload.model_provider,
+        )
+    except Exception as e:
+        log_exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Invalid payload provided for code completion request",
+        )
 
 
 def _resolve_code_completions_vertex_codestral(
