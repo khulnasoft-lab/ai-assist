@@ -1,3 +1,7 @@
+# Indexes gitlab documentation to create embeddable search for self-hosted
+# AIGW instances. This was initially added to GitLab-rails repository, but it
+# is only used when building the docker image here.
+
 import argparse
 import glob
 import json
