@@ -93,20 +93,7 @@ def build_row_corpus(row: dict):
     return corpus
 
 
-# Function to process documents and create the database
-def create_database(path: str, output_path: str):
-    files = Path(path).glob("doc/**/*.md")
-    if not files:
-        execution_error("No markdown files found")
-
-    documents = []
-
-    # Read all the files
-    for file in files:
-        with file.open("r") as f:
-            doc = Document(page_content=f.read(), metadata={"filename": file.name})
-            documents.append(doc)
-
+def extract_rows(document: Document) -> list:
     # Split content into chunks by its header
     headers_to_split_on = [
         ("#", "Header1"),
@@ -120,20 +107,47 @@ def create_database(path: str, output_path: str):
     )
     rows_to_insert = []
 
-    for d in documents:
-        md_header_splits = markdown_splitter.split_text(d.page_content)
-        for chunk in md_header_splits:
-            metadata = {**chunk.metadata, **d.metadata}
-            rows_to_insert.append({"content": chunk.page_content, "metadata": metadata})
+    md_header_splits = markdown_splitter.split_text(document.page_content)
+    for chunk in md_header_splits:
+        metadata = {**chunk.metadata, **document.metadata}
+        rows_to_insert.append({"content": chunk.page_content, "metadata": metadata})
 
-    for r in rows_to_insert:
-        r["processed"] = build_row_corpus(r)
+    return rows_to_insert
 
-    sql_tuples = [
-        (r["processed"], r["content"], json.dumps(r["metadata"]))
-        for r in rows_to_insert
-        if r["processed"]
+
+def process_rows(rows: list):
+    for row in rows:
+        row["processed"] = build_row_corpus(row)
+
+    return [
+        (row["processed"], row["content"], json.dumps(row["metadata"]))
+        for row in rows
+        if row["processed"]
     ]
+
+
+def read_documents(path: Path):
+    logger.info("Processing documents")
+    files = path.glob("doc/**/*.md")
+    if not files:
+        execution_error("No markdown files found")
+
+    tuples = []
+    # Read all the files
+    for file in files:
+        with file.open("r") as f:
+            doc = Document(page_content=f.read(), metadata={"filename": file.name})
+            doc_rows = extract_rows(doc)
+            processed_rows = process_rows(doc_rows)
+            tuples.extend(processed_rows)
+
+    logger.info("Done")
+
+    return tuples
+
+
+def create_database(output_path: str, sql_tuples: list):
+    logger.info("Creating database at %s", output_path)
 
     Path(output_path).unlink(True)
 
@@ -159,7 +173,7 @@ if __name__ == "__main__":
 
     if not docs_path:
         execution_error("Fetching documents failed")
-
     output_path = args.output_path
-    create_database(docs_path, output_path)
+    sql_tuples = read_documents(docs_path)
+    create_database(output_path, sql_tuples)
     logger.info("Database created at %s", output_path)
