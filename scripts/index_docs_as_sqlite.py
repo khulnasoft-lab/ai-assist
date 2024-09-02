@@ -3,14 +3,13 @@
 # is only used when building the docker image here.
 
 import argparse
-import glob
 import json
 import logging
-import os
 import re
 import sqlite3
 import sys
 import tempfile
+from pathlib import Path
 from zipfile import ZipFile
 
 import requests
@@ -53,18 +52,15 @@ def fetch_documents(version_tag: str):
         )
 
     tmpdirname = tempfile.mkdtemp()
-    zip_path = os.path.join(tmpdirname, "docs.zip")
+    zip_path = Path(tmpdirname) / "docs.zip"
+
     with open(zip_path, "wb") as f:
         f.write(response.content)
     with ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(tmpdirname)
 
     # Find the directory that was extracted
-    extracted_dirs = [
-        os.path.join(tmpdirname, name)
-        for name in os.listdir(tmpdirname)
-        if os.path.isdir(os.path.join(tmpdirname, name))
-    ]
+    extracted_dirs = [path for path in Path(tmpdirname).iterdir() if path.is_dir()]
     if not extracted_dirs:
         execution_error("No directory found after extraction. Exiting.")
 
@@ -99,16 +95,16 @@ def build_row_corpus(row: dict):
 
 # Function to process documents and create the database
 def create_database(path: str, output_path: str):
-    files = glob.glob(os.path.join(path, "doc/**/*.md"), recursive=True)
+    files = Path(path).glob("doc/**/*.md")
     if not files:
         execution_error("No markdown files found")
 
     documents = []
 
     # Read all the files
-    for filename in files:
-        with open(filename, "r") as f:
-            doc = Document(page_content=f.read(), metadata={"filename": filename})
+    for file in files:
+        with file.open("r") as f:
+            doc = Document(page_content=f.read(), metadata={"filename": file.name})
             documents.append(doc)
 
     # Split content into chunks by its header
@@ -132,16 +128,14 @@ def create_database(path: str, output_path: str):
 
     for r in rows_to_insert:
         r["processed"] = build_row_corpus(r)
-    # sql_tuples = [(r['processed'], r['content'], r['metadata']['filename']) for r in rows_to_insert if r['processed']]
+
     sql_tuples = [
         (r["processed"], r["content"], json.dumps(r["metadata"]))
         for r in rows_to_insert
         if r["processed"]
     ]
 
-    if os.path.exists(output_path):
-        os.remove(output_path)
-        logger.info("Deleted existing file at %s", output_path)
+    Path(output_path).unlink(True)
 
     # Create the database
     conn = sqlite3.connect(output_path)
