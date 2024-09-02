@@ -35,13 +35,13 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def execution_error(error_message):
+def execution_error(error_message: str):
     logger.error(error_message)
     sys.exit(1)
 
 
 # Function to fetch documents from GitLab
-def fetch_documents(version_tag):
+def fetch_documents(version_tag: str):
     docs_url = f"https://gitlab.com/gitlab-org/gitlab/-/archive/{version_tag}/gitlab-{version_tag}.zip?path=doc"
     print(docs_url)
 
@@ -74,7 +74,7 @@ def fetch_documents(version_tag):
     return extracted_dir
 
 
-def build_row_corpus(row):
+def build_row_corpus(row: dict):
     corpus = row["content"]
     # Remove the preamble
     preamble_start = corpus.find("---")
@@ -98,7 +98,7 @@ def build_row_corpus(row):
 
 
 # Function to process documents and create the database
-def create_database(path, output_path):
+def create_database(path: str, output_path: str):
     files = glob.glob(os.path.join(path, "doc/**/*.md"), recursive=True)
     if not files:
         execution_error("No markdown files found")
