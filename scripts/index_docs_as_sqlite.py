@@ -10,6 +10,7 @@ import sqlite3
 import sys
 import tempfile
 from pathlib import Path
+from shutil import rmtree
 from zipfile import ZipFile
 
 import requests
@@ -63,7 +64,7 @@ def fetch_documents(version_tag: str):
     extracted_dirs = [path for path in Path(tmpdirname).iterdir() if path.is_dir()]
     if not extracted_dirs:
         execution_error("No directory found after extraction. Exiting.")
-
+    zip_path.unlink()
     logger.info("Documents are fetched.")
     extracted_dir = extracted_dirs[0]
     logger.info("Extracted documents to %s", extracted_dir)
@@ -176,4 +177,5 @@ if __name__ == "__main__":
     output_path = args.output_path
     sql_tuples = read_documents(docs_path)
     create_database(output_path, sql_tuples)
+    rmtree(docs_path)
     logger.info("Database created at %s", output_path)
