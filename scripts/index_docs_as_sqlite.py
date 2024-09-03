@@ -9,6 +9,7 @@ import re
 import sqlite3
 import sys
 import tempfile
+from contextlib import closing
 from pathlib import Path
 from shutil import rmtree
 from zipfile import ZipFile
@@ -153,18 +154,17 @@ def create_database(output_path: str, sql_tuples: list):
     Path(output_path).unlink(True)
 
     # Create the database
-    conn = sqlite3.connect(output_path)
-    c = conn.cursor()
-    c.execute(
-        "CREATE VIRTUAL TABLE doc_index USING fts5(processed, content, metadata, tokenize='porter trigram');"
-    )
-    c.execute("PRAGMA user_version = 1;")
-    c.executemany(
-        "INSERT INTO doc_index (processed, content, metadata) VALUES (?,?,?)",
-        sql_tuples,
-    )
-    conn.commit()
-    conn.close()
+    with closing(sqlite3.connect(output_path)) as connection:
+        c = connection.cursor()
+        c.execute(
+            "CREATE VIRTUAL TABLE doc_index USING fts5(processed, content, metadata, tokenize='porter trigram');"
+        )
+        c.execute("PRAGMA user_version = 1;")
+        c.executemany(
+            "INSERT INTO doc_index (processed, content, metadata) VALUES (?,?,?)",
+            sql_tuples,
+        )
+        connection.commit()
 
 
 if __name__ == "__main__":
