@@ -196,6 +196,7 @@ class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
     def parse(self, text: str) -> Optional[TypeReActAgentAction]:
         return self.parse_result([Generation(text=text)])
 
+
 class ReActAgent(Prompt[ReActAgentInputs, TypeReActAgentAction]):
     class _StreamState(TypedDict):
         tool_action: Optional[ReActAgentToolAction]
