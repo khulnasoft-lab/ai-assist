@@ -130,6 +130,21 @@ class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
 
         return None
 
+    def _parse_final_answer_from_unformatted_response(
+        self, text: str
+    ) -> Optional[ReActAgentFinalAnswer]:
+        text = text.strip()
+        if not text:
+            return None
+
+        text = re.sub(r"^Thought:\s*", "", text)
+        text = re.sub(r"^Action:\s*(DirectAnswer)?\s*", "", text)
+
+        if text:
+            return ReActAgentFinalAnswer(thought="", text=text)
+
+        return None
+
     def _parse_agent_action(self, message: str) -> Optional[ReActAgentToolAction]:
         match_action = self.re_action.search(message)
         match_action_input = self.re_action_input.search(message)
@@ -154,6 +169,10 @@ class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
         elif agent_action := self._parse_agent_action(wrapped_text):
             message = agent_action
 
+        # If no structured output is found, try to parse as unformatted response
+        if message is None:
+            message = self._parse_final_answer_from_unformatted_response(text)
+
         if message is None:
             raise ValueError("incorrect `TypeReActAgentAction` schema output")
 
@@ -176,7 +195,6 @@ class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
 
     def parse(self, text: str) -> Optional[TypeReActAgentAction]:
         return self.parse_result([Generation(text=text)])
-
 
 class ReActAgent(Prompt[ReActAgentInputs, TypeReActAgentAction]):
     class _StreamState(TypedDict):
