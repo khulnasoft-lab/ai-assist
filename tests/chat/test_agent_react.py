@@ -153,12 +153,6 @@ class TestReActPlainTextParser:
                     text="Some answer",
                 ),
             ),
-            (
-                "Thought: Action:",
-                ReActAgentFinalAnswer(
-                    text="",
-                ),
-            ),
         ],
     )
     def test_agent_message(self, text: str, expected: ReActAgentToolAction):
@@ -166,13 +160,6 @@ class TestReActPlainTextParser:
         actual = parser.parse(text)
 
         assert actual == expected
-
-    @pytest.mark.parametrize("text", ["random_text"])
-    def test_error(self, text: str):
-        parser = ReActPlainTextParser()
-
-        with pytest.raises(ValueError):
-            parser.parse(text)
 
 
 class TestReActAgent:

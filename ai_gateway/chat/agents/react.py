@@ -160,8 +160,7 @@ class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
         return None
 
     def _parse(self, text: str) -> TypeReActAgentAction:
-        text = f"Thought: {text}"
-        wrapped_text = f"<message>{text}</message>"
+        wrapped_text = f"<message>Thought: {text}</message>"
 
         message: Optional[TypeReActAgentAction] = None
         if final_answer := self._parse_final_answer(wrapped_text):
