@@ -271,9 +271,7 @@ class TestReActAgent:
                 ],
                 "Thought: I'm thinking...\nFinal Answer: Bar",
                 [
-                    ReActAgentFinalAnswer(
-                        text="B",
-                    ),
+                    ReActAgentFinalAnswer(text="B"),
                     ReActAgentFinalAnswer(text="a"),
                     ReActAgentFinalAnswer(text="r"),
                 ],
