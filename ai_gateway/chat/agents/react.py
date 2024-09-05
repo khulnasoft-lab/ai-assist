@@ -135,9 +135,7 @@ class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
                 if not message.startswith(key):
                     match_thought = self.re_thought.search(message)
 
-                    if not match_thought:
-                        return None
-                    else:
+                    if match_thought:
                         return ReActAgentFinalAnswer(
                             thought="",
                             text=match_thought.group(1),
