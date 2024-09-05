@@ -112,6 +112,8 @@ def agent_scratchpad_plain_text_renderer(
 
 
 class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
+    KEY_WORDS = ["Action:", "Action Input:", "Observation", "Thought:", "Final Answer:"]
+
     re_thought = re.compile(
         r"<message>Thought:\s*([\s\S]*?)\s*(?:Action|Final Answer):"
     )
@@ -127,6 +129,19 @@ class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
                 thought=match_thought.group(1) if match_thought else "",
                 text=match_answer.group(1),
             )
+
+        if len(message) > 12:
+            for key in self.KEY_WORDS:
+                if not message.startswith(key):
+                    match_thought = self.re_thought.search(message)
+
+                    if not match_thought:
+                        return None
+                    else:
+                        return ReActAgentFinalAnswer(
+                            thought="",
+                            text=match_thought.group(1),
+                        )
 
         return None
 
