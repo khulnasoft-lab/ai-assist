@@ -141,6 +141,18 @@ class TestReActPlainTextParser:
                     text="final answer",
                 ),
             ),
+            (
+                    "Some unformatted answer",
+                    ReActAgentFinalAnswer(
+                        text="Some unformatted answer",
+                    ),
+            ),
+            (
+                    "Action: DirectAnswer Some answer",
+                    ReActAgentFinalAnswer(
+                        text="Some answer",
+                    ),
+            ),
         ],
     )
     def test_agent_message(self, text: str, expected: ReActAgentToolAction):

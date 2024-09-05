@@ -120,9 +120,11 @@ class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
     re_action = re.compile(r"Action:\s*([\s\S]*?)\s*Action", re.DOTALL)
     re_action_input = re.compile(r"Action Input:\s*([\s\S]*?)\s*</message>")
     re_final_answer = re.compile(r"Final Answer:\s*([\s\S]*?)\s*</message>")
+    re_direct_answer = re.compile(r"Action: DirectAnswer\s*([\s\S]*?)\s*</message>")
 
     def _parse_final_answer(self, message: str) -> Optional[ReActAgentFinalAnswer]:
-        if match_answer := self.re_final_answer.search(message):
+
+        if match_answer := (self.re_final_answer.search(message) or self.re_direct_answer.search(message)):
             match_thought = self.re_thought.search(message)
 
             return ReActAgentFinalAnswer(
@@ -130,16 +132,26 @@ class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
                 text=match_answer.group(1),
             )
 
-        if len(message) > 12:
-            for key in self.KEY_WORDS:
-                if not message.startswith(key):
-                    match_thought = self.re_thought.search(message)
+        print(f"WWWWWWWWWWWWWWWW========================IIIIIIIIOOOOOOOOOOOO")
+        print(f"WWWWWWWhey message: {message}")
+        if len(message) > 13:
+            print(f"hey message: {message}")
+            is_final = False
 
-                    if match_thought:
-                        return ReActAgentFinalAnswer(
-                            thought="",
-                            text=match_thought.group(1),
-                        )
+            for key in self.KEY_WORDS:
+                if message.startswith(key):
+                    print(f"it starts with {key}")
+                    is_final = True
+
+            if is_final:
+                match_thought = self.re_thought.search(message)
+                print(f"what is the thought: {match_thought}")
+
+                if match_thought:
+                    return ReActAgentFinalAnswer(
+                        thought="",
+                        text=match_thought.group(1),
+                    )
 
         return None
 
