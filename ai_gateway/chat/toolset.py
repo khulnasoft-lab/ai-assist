@@ -1,5 +1,5 @@
 from ai_gateway.auth import GitLabUser
-from ai_gateway.chat.base import BaseToolsRegistry, UnitPrimitiveToolset
+from ai_gateway.chat.base import BaseToolsRegistry, Toolset
 from ai_gateway.chat.tools import BaseTool
 from ai_gateway.chat.tools.gitlab import (
     CiEditorAssistant,
@@ -7,19 +7,19 @@ from ai_gateway.chat.tools.gitlab import (
     GitlabDocumentation,
     IssueReader,
 )
-from ai_gateway.gitlab_features import GitLabUnitPrimitive, WrongUnitPrimitives
+from ai_gateway.gitlab_features import GitLabUnitPrimitive
 
 __all__ = ["DuoChatToolsRegistry"]
 
 
 class DuoChatToolsRegistry(BaseToolsRegistry):
     @property
-    def toolsets(self) -> list[UnitPrimitiveToolset]:
+    def toolsets(self) -> list[Toolset]:
         # We can also read the list of tools and associated unit primitives from the file
         # similar to what we implemented for the Prompt Registry
         return [
-            UnitPrimitiveToolset(
-                name=GitLabUnitPrimitive.DUO_CHAT,
+            Toolset(
+                required_unit_primitive=GitLabUnitPrimitive.DUO_CHAT,
                 min_required_gl_version=None,
                 tools=[
                     CiEditorAssistant(),
@@ -27,27 +27,19 @@ class DuoChatToolsRegistry(BaseToolsRegistry):
                     EpicReader(),
                 ],
             ),
-            UnitPrimitiveToolset(
-                name=GitLabUnitPrimitive.DOCUMENTATION_SEARCH,
+            Toolset(
+                required_unit_primitive=GitLabUnitPrimitive.DOCUMENTATION_SEARCH,
                 min_required_gl_version=None,
                 tools=[GitlabDocumentation()],
             ),
         ]
 
-    def get_on_behalf(
-        self, user: GitLabUser, gl_version: str, raise_exception: bool = True
-    ) -> list[BaseTool]:
+    def get_on_behalf(self, user: GitLabUser, gl_version: str) -> list[BaseTool]:
         tools = []
-        user_unit_primitives = user.unit_primitives
 
         for toolset in self.toolsets:
-            if toolset.is_available_for(user_unit_primitives, gl_version):
+            if toolset.is_available_for(user, gl_version):
                 tools.extend(toolset.tools)
-
-        if len(tools) == 0 and raise_exception:
-            raise WrongUnitPrimitives(
-                "user doesn't have access to any of the unit primitives"
-            )
 
         return tools
 

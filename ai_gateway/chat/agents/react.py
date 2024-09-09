@@ -4,9 +4,11 @@ from typing import Any, AsyncIterator, Optional
 from langchain_core.exceptions import OutputParserException
 from langchain_core.output_parsers import BaseCumulativeTransformOutputParser
 from langchain_core.outputs import Generation
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable, RunnableConfig
 from pydantic import BaseModel
 
+from ai_gateway.auth import GitLabUser
 from ai_gateway.chat.agents.typing import (
     AdditionalContext,
     AgentFinalAnswer,
@@ -18,7 +20,9 @@ from ai_gateway.chat.agents.typing import (
     TypeAgentEvent,
 )
 from ai_gateway.chat.tools.base import BaseTool
-from ai_gateway.prompts import Prompt
+from ai_gateway.chat.toolset import DuoChatToolsRegistry
+from ai_gateway.models.base_chat import Message
+from ai_gateway.prompts import Prompt, LocalPromptRegistry
 from ai_gateway.prompts.typing import ModelMetadata
 
 __all__ = [
@@ -32,12 +36,16 @@ class ReActAgentInputs(BaseModel):
     question: str
     chat_history: str | list[str]
     agent_scratchpad: list[AgentStep]
+    user: GitLabUser
+    gl_version: str
     context: Optional[Context] = None
     current_file: Optional[CurrentFile] = None
     model_metadata: Optional[ModelMetadata] = None
     additional_context: Optional[list[AdditionalContext]] = None
     unavailable_resources: Optional[list[str]] = [
-        "Merge Requests, Pipelines, Vulnerabilities"
+        "Merge Requests",
+        "Pipelines",
+        "Vulnerabilities",
     ]
     tools: Optional[list[BaseTool]] = None
 
@@ -48,7 +56,6 @@ class ReActInputParser(Runnable[ReActAgentInputs, dict]):
     ) -> dict:
         final_inputs = {
             "additional_context": input.additional_context,
-            "chat_history": chat_history_plain_text_renderer(input.chat_history),
             "context_type": "",
             "context_content": "",
             "question": input.question,
@@ -59,6 +66,15 @@ class ReActInputParser(Runnable[ReActAgentInputs, dict]):
             "unavailable_resources": input.unavailable_resources,
             "tools": input.tools,
         }
+
+        if isinstance(input.chat_history, list) and isinstance(
+            input.chat_history[0], Message
+        ):
+            final_inputs["chat_history"] = input.chat_history
+        else:
+            final_inputs["chat_history"] = chat_history_plain_text_renderer(
+                input.chat_history
+            )
 
         if context := input.context:
             final_inputs.update(
@@ -164,21 +180,34 @@ class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
         return self.parse_result([Generation(text=text)])
 
 
-class ReActAgent(Prompt[ReActAgentInputs, TypeAgentEvent]):
+class ReActAgent:
+    def __init__(self, prompt_registry: LocalPromptRegistry, tools_registry: DuoChatToolsRegistry):
+        self.chain = chain
+        self.tools_registry = tools_registry
+
     @staticmethod
     def _build_chain(
         chain: Runnable[ReActAgentInputs, TypeAgentEvent]
     ) -> Runnable[ReActAgentInputs, TypeAgentEvent]:
         return ReActInputParser() | chain | ReActPlainTextParser()
 
-    async def astream(
-        self,
-        input: ReActAgentInputs,
-        config: Optional[RunnableConfig] = None,
-        **kwargs: Optional[Any],
-    ) -> AsyncIterator[TypeAgentEvent]:
+    @classmethod
+    def build_prompt(cls, prompt_template: dict[str, str]) -> ChatPromptTemplate:
+        messages = []
+
+        for role, template in cls._prompt_template_to_messages(prompt_template):
+            messages.append((role, template))
+
+        prompt = ChatPromptTemplate.from_messages(messages, template_format="jinja2")
+
+        return prompt
+
+    async def astream(self, input: ReActAgentInputs) -> AsyncIterator[TypeAgentEvent]:
         events = []
-        astream = super().astream(input, config=config, **kwargs)
+
+        self._tools = self.tools_registry.get_on_behalf(input.user, input.gl_version)
+
+        astream = self.chain.astream(input, config=config, **kwargs)
         len_final_answer = 0
 
         async for event in astream:

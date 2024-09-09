@@ -9,26 +9,24 @@ from ai_gateway.chat.tools import BaseTool
 from ai_gateway.gitlab_features import GitLabUnitPrimitive
 
 __all__ = [
-    "UnitPrimitiveToolset",
+    "Toolset",
     "BaseToolsRegistry",
 ]
 
 
-class UnitPrimitiveToolset(BaseModel):
+class Toolset(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    name: GitLabUnitPrimitive
+    required_unit_primitive: GitLabUnitPrimitive
     tools: list[BaseTool]
 
     # Minimum required GitLab version to use the tools.
     # If it's not set, the tools are available for all GitLab versions.
     min_required_gl_version: Optional[str] = None
 
-    def is_available_for(
-        self, unit_primitives: list[GitLabUnitPrimitive], gl_version: str
-    ):
-        if self.name not in unit_primitives:
+    def is_available_for(self, user: GitLabUser, gl_version: str):
+        if not user.can(self.name):
             return False
 
         if not self.min_required_gl_version:
@@ -45,9 +43,7 @@ class UnitPrimitiveToolset(BaseModel):
 
 class BaseToolsRegistry(ABC):
     @abstractmethod
-    def get_on_behalf(
-        self, user: GitLabUser, gl_version: str, raise_exception: bool = True
-    ) -> list[BaseTool]:
+    def get_on_behalf(self, user: GitLabUser, gl_version: str) -> list[BaseTool]:
         pass
 
     @abstractmethod

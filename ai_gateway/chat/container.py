@@ -15,13 +15,13 @@ __all__ = [
 ]
 
 
-def _react_agent_factory(
-    prompt_registry: "BasePromptRegistry",
-) -> TypeAgentFactory[ReActAgentInputs, TypeAgentEvent]:
-    def _fn(model_metadata: ModelMetadata) -> ReActAgent:
-        return prompt_registry.get("chat/react", model_metadata)
+# def _react_agent_factory(
+#     prompt_registry: "BasePromptRegistry",
+# ) -> TypeAgentFactory[ReActAgentInputs, TypeReActAgentEvent]:
+#     def _fn(model_metadata: ModelMetadata) -> ReActAgent:
+#         return prompt_registry.get("chat/react", model_metadata)
 
-    return _fn
+#     return _fn
 
 
 class ContainerChat(containers.DeclarativeContainer):
@@ -33,10 +33,10 @@ class ContainerChat(containers.DeclarativeContainer):
     _anthropic_claude_llm_factory = providers.Factory(models.anthropic_claude)
     _anthropic_claude_chat_factory = providers.Factory(models.anthropic_claude_chat)
 
-    _react_agent_factory = providers.Factory(
-        _react_agent_factory,
-        prompt_registry=prompts.prompt_registry,
-    )
+    # _react_agent_factory = providers.Factory(
+    #     _react_agent_factory,
+    #     prompt_registry=prompts.prompt_registry,
+    # )
 
     # We need to resolve the model based on model name provided in request payload
     # Hence, `models._anthropic_claude` and `models._anthropic_claude_chat_factory` are only partially applied here.
@@ -46,8 +46,18 @@ class ContainerChat(containers.DeclarativeContainer):
 
     litellm_factory = providers.Factory(models.litellm_chat)
 
-    gl_agent_remote_executor = providers.Factory(
-        GLAgentRemoteExecutor,
-        agent_factory=_react_agent_factory,
-        tools_registry=DuoChatToolsRegistry(),
+    # gl_agent_remote_executor = providers.Factory(
+    #     GLAgentRemoteExecutor,
+    #     agent_factory=_react_agent_factory,
+    #     tools_registry=DuoChatToolsRegistry(),
+    # )
+
+    tools_registry = providers.Factory(
+        DuoChatToolsRegistry
+    )
+
+    react_agent = providers.Factory(
+        ReActAgent,
+        tools_registry=tools_registry,
+        prompt_registry=prompts.prompt_registry,
     )
