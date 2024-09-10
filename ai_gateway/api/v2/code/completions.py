@@ -1,12 +1,12 @@
 from time import time
 from typing import Annotated, AsyncIterator, Optional, Tuple, Union
 
-from litellm.exceptions import InternalServerError, APIConnectionError
 import anthropic
-from pydantic import ValidationError
 import structlog
 from dependency_injector.providers import Factory
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
+from litellm.exceptions import APIConnectionError, InternalServerError
+from pydantic import ValidationError
 
 from ai_gateway.api.feature_category import feature_category
 from ai_gateway.api.middleware import X_GITLAB_LANGUAGE_SERVER_VERSION
@@ -55,7 +55,7 @@ from ai_gateway.models import (
     KindLiteLlmModel,
     KindModelProvider,
     LiteLlmAPIConnectionError,
-    LiteLlmInternalServerError
+    LiteLlmInternalServerError,
 )
 from ai_gateway.models.base import TokensConsumptionMetadata
 from ai_gateway.prompts import BasePromptRegistry
@@ -174,7 +174,9 @@ async def completions(
                 )
 
                 if payload.context:
-                    kwargs.update({"code_context": [ctx.content for ctx in payload.context]})
+                    kwargs.update(
+                        {"code_context": [ctx.content for ctx in payload.context]}
+                    )
             elif (
                 payload.model_provider == KindModelProvider.VERTEX_AI
                 and payload.model_name == KindLiteLlmModel.CODESTRAL_2405
@@ -200,8 +202,13 @@ async def completions(
                 language_server_version = LanguageServerVersion.from_string(
                     request.headers.get(X_GITLAB_LANGUAGE_SERVER_VERSION, None)
                 )
-                if language_server_version.supports_advanced_context() and payload.context:
-                    kwargs.update({"code_context": [ctx.content for ctx in payload.context]})
+                if (
+                    language_server_version.supports_advanced_context()
+                    and payload.context
+                ):
+                    kwargs.update(
+                        {"code_context": [ctx.content for ctx in payload.context]}
+                    )
 
         suggestions = await _execute_code_completion(
             payload=payload,
@@ -212,7 +219,9 @@ async def completions(
 
         if isinstance(suggestions[0], AsyncIterator):
             return await _handle_stream(suggestions[0])
-        choices, tokens_consumption_metadata = _completion_suggestion_choices(suggestions)
+        choices, tokens_consumption_metadata = _completion_suggestion_choices(
+            suggestions
+        )
         return SuggestionsResponse(
             id="id",
             created=int(time()),
@@ -226,14 +235,14 @@ async def completions(
             choices=choices,
         )
     except ValidationError as ex:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"Invalid data",
-            )
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid data",
+        )
     except InternalServerError as ex:
-            raise LiteLlmInternalServerError.from_exception(ex)
+        raise LiteLlmInternalServerError.from_exception(ex)
     except APIConnectionError as ex:
-            raise LiteLlmAPIConnectionError.from_exception(ex)  
+        raise LiteLlmAPIConnectionError.from_exception(ex)
 
 
 @router.post("/code/generations")

@@ -5,7 +5,12 @@ from litellm import CustomStreamWrapper, ModelResponse, acompletion
 from litellm.exceptions import APIConnectionError, InternalServerError
 
 from ai_gateway.config import Config
-from ai_gateway.models.base import KindModelProvider, ModelMetadata, SafetyAttributes, ModelAPIError
+from ai_gateway.models.base import (
+    KindModelProvider,
+    ModelAPIError,
+    ModelMetadata,
+    SafetyAttributes,
+)
 from ai_gateway.models.base_chat import ChatModelBase, Message, Role
 from ai_gateway.models.base_text import (
     TextGenModelBase,
@@ -29,14 +34,15 @@ class LiteLlmAPIConnectionError(ModelAPIError):
     @classmethod
     def from_exception(cls, ex: APIConnectionError):
         wrapper = cls(ex.message, errors=(ex,))
-        
+
         return wrapper
+
 
 class LiteLlmInternalServerError(ModelAPIError):
     @classmethod
     def from_exception(cls, ex: InternalServerError):
         wrapper = cls(ex.message, errors=(ex,))
-        
+
         return wrapper
 
 
