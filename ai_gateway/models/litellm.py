@@ -2,9 +2,10 @@ from enum import StrEnum
 from typing import AsyncIterator, Callable, Optional, Sequence, Union
 
 from litellm import CustomStreamWrapper, ModelResponse, acompletion
+from litellm.exceptions import APIConnectionError, InternalServerError
 
 from ai_gateway.config import Config
-from ai_gateway.models.base import KindModelProvider, ModelMetadata, SafetyAttributes
+from ai_gateway.models.base import KindModelProvider, ModelMetadata, SafetyAttributes, ModelAPIError
 from ai_gateway.models.base_chat import ChatModelBase, Message, Role
 from ai_gateway.models.base_text import (
     TextGenModelBase,
@@ -17,9 +18,26 @@ __all__ = [
     "LiteLlmChatModel",
     "LiteLlmTextGenModel",
     "KindLiteLlmModel",
+    "LiteLlmAPIConnectionError",
+    "LiteLlmInternalServerError",
 ]
 
 STUBBED_API_KEY = "stubbed-api-key"
+
+
+class LiteLlmAPIConnectionError(ModelAPIError):
+    @classmethod
+    def from_exception(cls, ex: APIConnectionError):
+        wrapper = cls(ex.message, errors=(ex,))
+        
+        return wrapper
+
+class LiteLlmInternalServerError(ModelAPIError):
+    @classmethod
+    def from_exception(cls, ex: InternalServerError):
+        wrapper = cls(ex.message, errors=(ex,))
+        
+        return wrapper
 
 
 class KindLiteLlmModel(StrEnum):

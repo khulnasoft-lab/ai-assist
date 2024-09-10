@@ -1,7 +1,9 @@
 from time import time
 from typing import Annotated, AsyncIterator, Optional, Tuple, Union
 
+from litellm.exceptions import InternalServerError, APIConnectionError
 import anthropic
+from pydantic import ValidationError
 import structlog
 from dependency_injector.providers import Factory
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
@@ -48,7 +50,13 @@ from ai_gateway.code_suggestions.processing.ops import lang_from_filename
 from ai_gateway.gitlab_features import GitLabFeatureCategory, GitLabUnitPrimitive
 from ai_gateway.instrumentators.base import TelemetryInstrumentator
 from ai_gateway.internal_events import InternalEventsClient
-from ai_gateway.models import KindAnthropicModel, KindLiteLlmModel, KindModelProvider
+from ai_gateway.models import (
+    KindAnthropicModel,
+    KindLiteLlmModel,
+    KindModelProvider,
+    LiteLlmAPIConnectionError,
+    LiteLlmInternalServerError
+)
 from ai_gateway.models.base import TokensConsumptionMetadata
 from ai_gateway.prompts import BasePromptRegistry
 from ai_gateway.prompts.typing import ModelMetadata
@@ -108,114 +116,124 @@ async def completions(
     ),
     internal_event_client: InternalEventsClient = Depends(get_internal_event_client),
 ):
-    if not current_user.can(GitLabUnitPrimitive.CODE_SUGGESTIONS):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Unauthorized to access code completions",
-        )
-
-    internal_event_client.track_event(
-        f"request_{GitLabUnitPrimitive.CODE_SUGGESTIONS}",
-        category=__name__,
-    )
-
-    snowplow_event_context = None
     try:
-        language = lang_from_filename(payload.current_file.file_name)
-        language_name = language.name if language else ""
-        snowplow_event_context = get_snowplow_code_suggestion_context(
-            req=request,
-            prefix=payload.current_file.content_above_cursor,
-            suffix=payload.current_file.content_below_cursor,
-            language=language_name,
-            global_user_id=current_user.global_user_id,
+        if not current_user.can(GitLabUnitPrimitive.CODE_SUGGESTIONS):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Unauthorized to access code completions",
+            )
+
+        internal_event_client.track_event(
+            f"request_{GitLabUnitPrimitive.CODE_SUGGESTIONS}",
+            category=__name__,
         )
-        snowplow_instrumentator.watch(SnowplowEvent(context=snowplow_event_context))
-    except Exception as e:
-        log_exception(e)
 
-    log.debug(
-        "code completion input:",
-        model_name=payload.model_name,
-        model_provider=payload.model_provider,
-        prompt=payload.prompt if hasattr(payload, "prompt") else None,
-        prefix=payload.current_file.content_above_cursor,
-        suffix=payload.current_file.content_below_cursor,
-        current_file_name=payload.current_file.file_name,
-        stream=payload.stream,
-    )
+        snowplow_event_context = None
+        try:
+            language = lang_from_filename(payload.current_file.file_name)
+            language_name = language.name if language else ""
+            snowplow_event_context = get_snowplow_code_suggestion_context(
+                req=request,
+                prefix=payload.current_file.content_above_cursor,
+                suffix=payload.current_file.content_below_cursor,
+                language=language_name,
+                global_user_id=current_user.global_user_id,
+            )
+            snowplow_instrumentator.watch(SnowplowEvent(context=snowplow_event_context))
+        except Exception as e:
+            log_exception(e)
 
-    kwargs = {}
-    if payload.model_provider == KindModelProvider.ANTHROPIC:
-        code_completions = completions_anthropic_factory()
+            log.debug(
+                "code completion input:",
+                model_name=payload.model_name,
+                model_provider=payload.model_provider,
+                prompt=payload.prompt if hasattr(payload, "prompt") else None,
+                prefix=payload.current_file.content_above_cursor,
+                suffix=payload.current_file.content_below_cursor,
+                current_file_name=payload.current_file.file_name,
+                stream=payload.stream,
+            )
 
-        # We support the prompt version 2 only with the Anthropic models
-        if payload.prompt_version == 2:
-            kwargs.update({"raw_prompt": payload.prompt})
-    elif payload.model_provider in (
-        KindModelProvider.LITELLM,
-        KindModelProvider.MISTRALAI,
-    ):
-        code_completions = _resolve_code_completions_litellm(
+            kwargs = {}
+            if payload.model_provider == KindModelProvider.ANTHROPIC:
+                code_completions = completions_anthropic_factory()
+
+                # We support the prompt version 2 only with the Anthropic models
+                if payload.prompt_version == 2:
+                    kwargs.update({"raw_prompt": payload.prompt})
+            elif payload.model_provider in (
+                KindModelProvider.LITELLM,
+                KindModelProvider.MISTRALAI,
+            ):
+                code_completions = _resolve_code_completions_litellm(
+                    payload=payload,
+                    current_user=current_user,
+                    prompt_registry=prompt_registry,
+                    completions_agent_factory=completions_agent_factory,
+                    completions_litellm_factory=completions_litellm_factory,
+                )
+
+                if payload.context:
+                    kwargs.update({"code_context": [ctx.content for ctx in payload.context]})
+            elif (
+                payload.model_provider == KindModelProvider.VERTEX_AI
+                and payload.model_name == KindLiteLlmModel.CODESTRAL_2405
+            ):
+                code_completions = _resolve_code_completions_vertex_codestral(
+                    payload=payload,
+                    completions_litellm_factory=completions_litellm_factory,
+                )
+
+            # We need to pass this here since litellm.LiteLlmTextGenModel
+            # sets the default temperature and max_output_tokens in the `generate` function signature
+            # To override those values, the kwargs passed to `generate` is updated here
+            # For further details, see:
+            #     https://gitlab.com/gitlab-org/modelops/applied-ml/code-suggestions/ai-assist/-/merge_requests/1172#note_2060587592
+            #
+            # The temperature value is taken from Mistral's docs: https://docs.mistral.ai/api/#operation/createFIMCompletion
+            kwargs.update({"temperature": 0.7, "max_output_tokens": 64})
+        else:
+            code_completions = completions_legacy_factory()
+            if payload.choices_count > 0:
+                kwargs.update({"candidate_count": payload.choices_count})
+
+                language_server_version = LanguageServerVersion.from_string(
+                    request.headers.get(X_GITLAB_LANGUAGE_SERVER_VERSION, None)
+                )
+                if language_server_version.supports_advanced_context() and payload.context:
+                    kwargs.update({"code_context": [ctx.content for ctx in payload.context]})
+
+        suggestions = await _execute_code_completion(
             payload=payload,
-            current_user=current_user,
-            prompt_registry=prompt_registry,
-            completions_agent_factory=completions_agent_factory,
-            completions_litellm_factory=completions_litellm_factory,
+            code_completions=code_completions,
+            snowplow_event_context=snowplow_event_context,
+            **kwargs,
         )
 
-        if payload.context:
-            kwargs.update({"code_context": [ctx.content for ctx in payload.context]})
-    elif (
-        payload.model_provider == KindModelProvider.VERTEX_AI
-        and payload.model_name == KindLiteLlmModel.CODESTRAL_2405
-    ):
-        code_completions = _resolve_code_completions_vertex_codestral(
-            payload=payload,
-            completions_litellm_factory=completions_litellm_factory,
+        if isinstance(suggestions[0], AsyncIterator):
+            return await _handle_stream(suggestions[0])
+        choices, tokens_consumption_metadata = _completion_suggestion_choices(suggestions)
+        return SuggestionsResponse(
+            id="id",
+            created=int(time()),
+            model=SuggestionsResponse.Model(
+                engine=suggestions[0].model.engine,
+                name=suggestions[0].model.name,
+                lang=suggestions[0].lang,
+                tokens_consumption_metadata=tokens_consumption_metadata,
+            ),
+            experiments=suggestions[0].metadata.experiments,
+            choices=choices,
         )
-
-        # We need to pass this here since litellm.LiteLlmTextGenModel
-        # sets the default temperature and max_output_tokens in the `generate` function signature
-        # To override those values, the kwargs passed to `generate` is updated here
-        # For further details, see:
-        #     https://gitlab.com/gitlab-org/modelops/applied-ml/code-suggestions/ai-assist/-/merge_requests/1172#note_2060587592
-        #
-        # The temperature value is taken from Mistral's docs: https://docs.mistral.ai/api/#operation/createFIMCompletion
-        kwargs.update({"temperature": 0.7, "max_output_tokens": 64})
-    else:
-        code_completions = completions_legacy_factory()
-        if payload.choices_count > 0:
-            kwargs.update({"candidate_count": payload.choices_count})
-
-        language_server_version = LanguageServerVersion.from_string(
-            request.headers.get(X_GITLAB_LANGUAGE_SERVER_VERSION, None)
-        )
-        if language_server_version.supports_advanced_context() and payload.context:
-            kwargs.update({"code_context": [ctx.content for ctx in payload.context]})
-
-    suggestions = await _execute_code_completion(
-        payload=payload,
-        code_completions=code_completions,
-        snowplow_event_context=snowplow_event_context,
-        **kwargs,
-    )
-
-    if isinstance(suggestions[0], AsyncIterator):
-        return await _handle_stream(suggestions[0])
-    choices, tokens_consumption_metadata = _completion_suggestion_choices(suggestions)
-    return SuggestionsResponse(
-        id="id",
-        created=int(time()),
-        model=SuggestionsResponse.Model(
-            engine=suggestions[0].model.engine,
-            name=suggestions[0].model.name,
-            lang=suggestions[0].lang,
-            tokens_consumption_metadata=tokens_consumption_metadata,
-        ),
-        experiments=suggestions[0].metadata.experiments,
-        choices=choices,
-    )
+    except ValidationError as ex:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid data",
+            )
+    except InternalServerError as ex:
+            raise LiteLlmInternalServerError.from_exception(ex)
+    except APIConnectionError as ex:
+            raise LiteLlmAPIConnectionError.from_exception(ex)  
 
 
 @router.post("/code/generations")
@@ -395,7 +413,6 @@ def _resolve_code_completions_litellm(
     completions_agent_factory: Factory[CodeCompletions],
     completions_litellm_factory: Factory[CodeCompletions],
 ) -> CodeCompletions:
-    try:
         if payload.prompt_version == 2 and not payload.prompt:
             model_metadata = ModelMetadata(
                 name=payload.model_name,
@@ -416,12 +433,6 @@ def _resolve_code_completions_litellm(
             model__endpoint=payload.model_endpoint,
             model__api_key=payload.model_api_key,
             model__provider=payload.model_provider,
-        )
-    except Exception as e:
-        log_exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Invalid payload provided for code completion request",
         )
 
 
