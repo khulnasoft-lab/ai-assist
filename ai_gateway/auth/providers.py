@@ -1,3 +1,5 @@
+import json
+import os
 import urllib.parse
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -16,6 +18,7 @@ __all__ = [
     "AuthProvider",
     "GitLabOidcProvider",
     "CompositeProvider",
+    "DiskKeyProvider",
     "LocalAuthProvider",
     "JwksProvider",
 ]
@@ -104,6 +107,7 @@ class CompositeProvider(AuthProvider):
         for provider in self.providers:
             try:
                 provider_jwks = provider.jwks()
+                print("Provider JWKS:", "provider=", provider, "; jwks=", provider_jwks)
                 jwks["keys"] += provider_jwks["keys"]
             except Exception as e:
                 log_exception(e)
@@ -114,6 +118,37 @@ class CompositeProvider(AuthProvider):
     def _cache_jwks(self, jwks):
         exp = datetime.now() + timedelta(seconds=self.expiry_seconds)
         self.cache.set(self.CACHE_KEY, jwks, exp)
+
+
+class DiskKeyProvider(JwksProvider):
+    ALGORITHM = CompositeProvider.RS256_ALGORITHM
+
+    def __init__(self) -> None:
+        self.jwks = defaultdict(list)
+        self.jwks["keys"] = []
+
+        try:
+            # read key files from .cloud-connector local directory
+            keys_dir = os.path.abspath("/app/.cloud-connector/keys")
+            if not os.path.exists(keys_dir):
+                raise Exception(".cloud-connector/keys not found")
+
+            # iterate all key files in the keys directory
+            for key_file in os.listdir(keys_dir):
+                print("processing file:", key_file)
+                # read key file into string
+
+                with open(os.path.join(keys_dir, key_file), "r") as f:
+                    # Parse the key content as JSON
+                    key_data = json.loads(f.read())
+                    print(key_data)
+                    key = jwk.construct(key_data, algorithm=self.ALGORITHM)
+                    self.jwks["keys"].append(key)
+        except JWKError as e:
+            log_exception(e)
+
+    def jwks(self) -> dict:
+        return self.jwks
 
 
 class LocalAuthProvider(JwksProvider):
