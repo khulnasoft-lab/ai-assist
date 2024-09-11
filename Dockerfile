@@ -34,7 +34,10 @@ RUN poetry install --no-interaction --no-ansi --no-cache --no-root --only main
 ##
 ## Final image copies dependencies from install-image
 ##
+FROM mk-cc-poc AS cloud-connector
 FROM base-image AS final
+
+COPY --from=cloud-connector /config .cloud-connector/
 
 COPY --from=install-image /opt/venv /opt/venv
 
