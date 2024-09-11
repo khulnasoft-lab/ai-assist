@@ -396,6 +396,7 @@ def _resolve_prompt_code_generations(
         name=payload.model_name,
         endpoint=payload.model_endpoint,
         api_key=payload.model_api_key,
+        served_model_name=payload.served_model_name,
         provider="custom_openai",
     )
 
@@ -418,6 +419,7 @@ def _resolve_code_completions_litellm(
             name=payload.model_name,
             endpoint=payload.model_endpoint,
             api_key=payload.model_api_key,
+            served_model_name=payload.served_model_name,
             provider="text-completion-openai",
         )
 

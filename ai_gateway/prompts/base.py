@@ -75,22 +75,18 @@ class Prompt(RunnableBinding[Input, Output]):
 
         if model_metadata:
             kwargs.update(
-                api_base=str(model_metadata.endpoint),
+                api_base=str(model_metadata.endpoint).removesuffix("/"),
                 api_key=model_metadata.api_key,
             )
 
             if model_metadata.served_model_name:
                 kwargs.update(
                     model=model_metadata.served_model_name,
-                    api_base=str(model_metadata.endpoint),
-                    api_key=model_metadata.api_key,
                 )
             else:
                 kwargs.update(
                     model=model_metadata.name,
-                    api_base=str(model_metadata.endpoint),
                     custom_llm_provider=model_metadata.provider,
-                    api_key=model_metadata.api_key,
                 )
 
         return kwargs

@@ -160,11 +160,13 @@ class LiteLlmChatModel(ChatModelBase):
         model_name: KindLiteLlmModel = KindLiteLlmModel.MISTRAL,
         endpoint: Optional[str] = None,
         api_key: Optional[str] = None,
+        served_model_name: Optional[str] = None,
         provider: Optional[KindModelProvider] = KindModelProvider.LITELLM,
     ):
         if not api_key:
             api_key = STUBBED_API_KEY
 
+        self.served_model_name = served_model_name
         self.api_key = api_key
         self.endpoint = endpoint
         self.provider = provider
@@ -193,8 +195,13 @@ class LiteLlmChatModel(ChatModelBase):
         litellm_messages = [message.model_dump(mode="json") for message in messages]
 
         with self.instrumentator.watch(stream=stream) as watcher:
+            if self.served_model_name:
+              model_name = self.served_model_name
+            else:
+              model_name = self.metadata.name
+
             suggestion = await acompletion(
-                self.metadata.name,
+                model_name,
                 messages=litellm_messages,
                 stream=stream,
                 temperature=temperature,
@@ -259,7 +266,7 @@ class LiteLlmChatModel(ChatModelBase):
             raise ValueError(f"no model found by the name '{name}'")
 
         return cls(
-            model_name=kind_model, endpoint=endpoint, api_key=api_key, provider=provider
+            model_name=kind_model, endpoint=endpoint, api_key=api_key, provider=provider, served_model_name=served_model_name
         )
 
 
@@ -290,11 +297,13 @@ class LiteLlmTextGenModel(TextGenModelBase):
         model_name: KindLiteLlmModel = KindLiteLlmModel.CODEGEMMA_2B,
         endpoint: Optional[str] = None,
         api_key: Optional[str] = None,
+        served_model_name: Optional[str] = None,
         provider: Optional[KindModelProvider] = KindModelProvider.LITELLM,
     ):
         if not api_key:
             api_key = STUBBED_API_KEY
 
+        self.served_model_name = served_model_name
         self.api_key = api_key
         self.endpoint = endpoint
         self.provider = provider
@@ -377,8 +386,13 @@ class LiteLlmTextGenModel(TextGenModelBase):
         top_p: float,
         suffix: Optional[str] = "",
     ) -> Union[ModelResponse, CustomStreamWrapper]:
+        if self.served_model_name:
+          model_name = self.served_model_name
+        else:
+          model_name = self.metadata.name
+
         completion_args = {
-            "model": self.metadata.name,
+            "model": model_name,
             "messages": [{"content": prefix, "role": Role.USER}],
             "max_tokens": max_output_tokens,
             "temperature": temperature,
@@ -474,5 +488,5 @@ class LiteLlmTextGenModel(TextGenModelBase):
             raise ValueError(f"no model found by the name '{name}'")
 
         return cls(
-            model_name=kind_model, endpoint=endpoint, api_key=api_key, provider=provider
+            model_name=kind_model, endpoint=endpoint, api_key=api_key, provider=provider, served_model_name=served_model_name
         )
