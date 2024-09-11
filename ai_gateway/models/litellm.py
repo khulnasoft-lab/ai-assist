@@ -243,6 +243,7 @@ class LiteLlmChatModel(ChatModelBase):
         endpoint: Optional[str] = None,
         api_key: Optional[str] = None,
         provider: Optional[KindModelProvider] = KindModelProvider.LITELLM,
+        served_model_name: Optional[str] = None,
         provider_keys: Optional[dict] = None,
     ):
         if not custom_models_enabled and provider == KindModelProvider.LITELLM:
@@ -453,6 +454,7 @@ class LiteLlmTextGenModel(TextGenModelBase):
         endpoint: Optional[str] = None,
         api_key: Optional[str] = None,
         provider: Optional[KindModelProvider] = KindModelProvider.LITELLM,
+        served_model_name: Optional[str] = None,
         provider_keys: Optional[dict] = None,
     ):
         if endpoint is not None or api_key is not None:
