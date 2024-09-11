@@ -64,6 +64,7 @@ USE_CASES_MODELS_MAP = {
         KindLiteLlmModel.MIXTRAL_TEXT,
         KindLiteLlmModel.MIXTRAL_8X22B,
         KindLiteLlmModel.MIXTRAL_8X22B_TEXT,
+        KindLiteLlmModel.ANTHROPIC,
     },
     KindUseCase.CODE_GENERATIONS: {
         KindAnthropicModel.CLAUDE_2_0,
@@ -80,6 +81,7 @@ USE_CASES_MODELS_MAP = {
         KindLiteLlmModel.MIXTRAL,
         KindLiteLlmModel.MIXTRAL_8X22B,
         KindLiteLlmModel.DEEPSEEKCODER,
+        KindLiteLlmModel.ANTHROPIC,
     },
 }
 

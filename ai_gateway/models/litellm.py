@@ -29,6 +29,9 @@ __all__ = [
 
 STUBBED_API_KEY = "stubbed-api-key"
 
+import litellm
+
+litellm.set_verbose = True
 
 class LiteLlmAPIConnectionError(ModelAPIError):
     @classmethod
@@ -61,6 +64,7 @@ class KindLiteLlmModel(StrEnum):
     MISTRAL_TEXT = "mistral_text"
     MIXTRAL_TEXT = "mixtral_text"
     MIXTRAL_8X22B_TEXT = "mixtral_8x22b_text"
+    ANTHROPIC = "anthropic"
 
     def _chat_provider_prefix(self, provider):
         # Chat models hosted behind openai proxies should be prefixed with "openai/":
