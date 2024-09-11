@@ -1,0 +1,4 @@
+[settings]
+# This is needed to workaround the virtualenv always-copy option:
+# https://github.com/mise-plugins/mise-poetry/issues/16
+python_compile = true
