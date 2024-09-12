@@ -27,10 +27,10 @@ class GLAgentRemoteExecutor(Generic[TypeAgentInputs, TypeAgentEvent]):
     def __init__(
         self,
         *,
-        agent_factory: TypeAgentFactory,
+        chain_factory: TypeAgentFactory,
         tools_registry: BaseToolsRegistry,
     ):
-        self.agent_factory = agent_factory
+        self.chain_factory = chain_factory
         self.tools_registry = tools_registry
         self._tools: list[BaseTool] | None = None
 
@@ -54,15 +54,13 @@ class GLAgentRemoteExecutor(Generic[TypeAgentInputs, TypeAgentEvent]):
         return await agent.ainvoke(inputs)
 
     async def stream(self, *, inputs: TypeAgentInputs) -> AsyncIterator[TypeAgentEvent]:
-        agent, inputs = self._process_inputs(inputs)
+        chain, inputs = self._compose_chain(inputs)
 
-        async for action in agent.astream(inputs):
+        async for action in chain.astream(inputs):
             yield action
 
-    def _process_inputs(
-        self, inputs: TypeAgentInputs
-    ) -> tuple[Prompt, TypeAgentInputs]:
-        prompt = self.agent_factory(model_metadata=inputs.model_metadata)
+    def _compose_chain(self, inputs: TypeAgentInputs) -> tuple[Prompt, TypeAgentInputs]:
+        chain = self.chain_factory(model_metadata=inputs.model_metadata)
         inputs.tools = self.tools
 
-        return prompt, inputs
+        return chain, inputs

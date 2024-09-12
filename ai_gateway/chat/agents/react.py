@@ -4,6 +4,7 @@ from typing import Any, AsyncIterator, Optional
 from langchain_core.exceptions import OutputParserException
 from langchain_core.output_parsers import BaseCumulativeTransformOutputParser
 from langchain_core.outputs import Generation
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable, RunnableConfig
 from pydantic import BaseModel
 
@@ -18,7 +19,9 @@ from ai_gateway.chat.agents.typing import (
     TypeAgentEvent,
 )
 from ai_gateway.chat.tools.base import BaseTool
-from ai_gateway.prompts import Prompt
+from ai_gateway.models.base_chat import Message
+from ai_gateway.prompts import Prompt, jinja2_formatter
+from ai_gateway.prompts.config.base import PromptConfig
 from ai_gateway.prompts.typing import ModelMetadata
 
 __all__ = [
@@ -44,11 +47,14 @@ class ReActAgentInputs(BaseModel):
 
 class ReActInputParser(Runnable[ReActAgentInputs, dict]):
     def invoke(
-        self, input: ReActAgentInputs, config: Optional[RunnableConfig] = None
+        self, input: ReActAgentInputs, prompt_config: PromptConfig, config: Optional[RunnableConfig] = None
     ) -> dict:
+        print(f"input: {input}")
+        print(f"prompt_config: {prompt_config}")
+        print(f"config: {config}")
+
         final_inputs = {
             "additional_context": input.additional_context,
-            "chat_history": chat_history_plain_text_renderer(input.chat_history),
             "context_type": "",
             "context_content": "",
             "question": input.question,
@@ -59,6 +65,15 @@ class ReActInputParser(Runnable[ReActAgentInputs, dict]):
             "unavailable_resources": input.unavailable_resources,
             "tools": input.tools,
         }
+
+        if isinstance(input.chat_history, list) and all(isinstance(input.chat_history, Message)):
+            final_inputs.update(
+                {"chat_history": input.chat_history}
+            )
+        else:
+            final_inputs.update(
+                {"chat_history": chat_history_plain_text_renderer(input.chat_history)}
+            )
 
         if context := input.context:
             final_inputs.update(
@@ -97,6 +112,25 @@ def agent_scratchpad_plain_text_renderer(
     ]
 
     return "\n".join(steps)
+
+
+class ReActBuildPrompt(Runnable[dict, ChatPromptTemplate]):
+    def invoke(self, input: dict, prompt_config: PromptConfig, config: Optional[RunnableConfig] = None) -> dict:
+        messages = []
+
+        print(f"input: {input}")
+
+        # for role, template in cls._prompt_template_to_messages(prompt_template):
+        #     messages.append((role, template))
+
+        system_message = jinja2_formatter("chat/react/base.jinja", input)
+
+        print(f"system_message: {system_message}")
+
+        # prompt = ChatPromptTemplate.from_messages(messages, template_format="jinja2")
+        prompt = ChatPromptTemplate.from_messages(messages)
+
+        return prompt
 
 
 class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
@@ -165,11 +199,10 @@ class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
 
 
 class ReActAgent(Prompt[ReActAgentInputs, TypeAgentEvent]):
-    @staticmethod
     def _build_chain(
-        chain: Runnable[ReActAgentInputs, TypeAgentEvent]
+        self, chain: Runnable[ReActAgentInputs, TypeAgentEvent]
     ) -> Runnable[ReActAgentInputs, TypeAgentEvent]:
-        return ReActInputParser() | chain | ReActPlainTextParser()
+        return ReActInputParser(prompt_config=self.prompt_config) | ReActBuildPrompt(prompt_config=self.prompt_config) | chain | ReActPlainTextParser()
 
     async def astream(
         self,

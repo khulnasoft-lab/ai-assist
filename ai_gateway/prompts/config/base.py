@@ -1,4 +1,5 @@
 from pydantic import BaseModel, ConfigDict
+from typing import Optional
 
 from ai_gateway.gitlab_features import GitLabUnitPrimitive
 from ai_gateway.prompts.config.models import TypeModelParams
@@ -30,5 +31,5 @@ class PromptConfig(BaseModel):
     name: str
     model: ModelConfig
     unit_primitives: list[GitLabUnitPrimitive]
-    prompt_template: dict[str, str]
+    prompt_template: Optional[dict[str, str]] = None
     params: PromptParams | None = None

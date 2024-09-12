@@ -18,6 +18,7 @@ from ai_gateway.prompts.typing import ModelMetadata, TypeModelFactory
 __all__ = [
     "Prompt",
     "BasePromptRegistry",
+    "jinja2_formatter",
 ]
 
 Input = TypeVar("Input")
@@ -49,13 +50,19 @@ class Prompt(RunnableBinding[Input, Output]):
     ):
         model_kwargs = self._build_model_kwargs(config.params, model_metadata)
         model = self._build_model(model_factory, config.model)
-        messages = self.build_messages(config.prompt_template)
-        prompt = ChatPromptTemplate.from_messages(messages, template_format="jinja2")
-        chain = self._build_chain(
-            cast(Runnable[Input, Output], prompt | model.bind(**model_kwargs))
-        )
 
-        super().__init__(name=config.name, model=model, unit_primitives=config.unit_primitives, bound=chain)  # type: ignore[call-arg]
+        if config.prompt_template:
+            messages = self.build_messages(config.prompt_template)
+            prompt = ChatPromptTemplate.from_messages(messages, template_format="jinja2")
+            chain = self._build_chain(
+                cast(Runnable[Input, Output], prompt | model.bind(**model_kwargs))
+            )
+        else:
+            chain = self._build_chain(
+                cast(Runnable[Input, Output], model.bind(**model_kwargs))
+            )
+
+        super().__init__(name=config.name, model=model, unit_primitives=config.unit_primitives, prompt_config=config, bound=chain)  # type: ignore[call-arg]
 
     def _build_model_kwargs(
         self,
@@ -123,8 +130,7 @@ class Prompt(RunnableBinding[Input, Output]):
             await watcher.afinish()
 
     # Subclasses can override this method to add steps at either side of the chain
-    @staticmethod
-    def _build_chain(chain: Runnable[Input, Output]) -> Runnable[Input, Output]:
+    def _build_chain(self, chain: Runnable[Input, Output]) -> Runnable[Input, Output]:
         return chain
 
     # Assume that the prompt template keys map to roles. Subclasses can

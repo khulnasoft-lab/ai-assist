@@ -48,6 +48,6 @@ class ContainerChat(containers.DeclarativeContainer):
 
     gl_agent_remote_executor = providers.Factory(
         GLAgentRemoteExecutor,
-        agent_factory=_react_agent_factory,
+        chain_factory=_react_agent_factory,
         tools_registry=DuoChatToolsRegistry(),
     )

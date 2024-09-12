@@ -11,12 +11,10 @@ model:
 unit_primitives:
   - duo_chat
 prompt_template:
+  # WARN: Do NOT construct prompts here. ReAct agent prompts are dynamically composed as per request.
+  # TODO: Remove the `prompt_template` section.
   system: |
     {% include 'chat/react/system.jinja' %}
-  user: |
-    {% include 'chat/react/user.jinja' %}
-  assistant: |
-    {% include 'chat/react/assistant.jinja' %}
 params:
   # Overriding the `AIGW_GOOGLE_CLOUD_PLATFORM__PROJECT` config, since Sonnet 3.5
   # is only available in a handful of regions. See
