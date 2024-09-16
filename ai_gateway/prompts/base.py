@@ -35,11 +35,11 @@ def jinja2_formatter(template: str, /, **kwargs: Any) -> str:
 # Override LangChain's jinja2 formatter so we can specify a loader with access to all our templates
 DEFAULT_FORMATTER_MAPPING["jinja2"] = jinja2_formatter
 
-
 class Prompt(RunnableBinding[Input, Output]):
     name: str
     model: BaseChatModel
     unit_primitives: list[GitLabUnitPrimitive]
+    prmpt: ChatPromptTemplate # TODO: remove this, it's to print rendered prompt in pdb
 
     def __init__(
         self,
@@ -48,6 +48,8 @@ class Prompt(RunnableBinding[Input, Output]):
         model_metadata: Optional[ModelMetadata] = None,
         **kwargs,
     ):
+        import pdb;pdb.set_trace()
+
         model_kwargs = self._build_model_kwargs(config.params, model_metadata)
         model = self._build_model(model_factory, config.model)
         messages = self.build_messages(config.prompt_template, **kwargs)
@@ -56,7 +58,14 @@ class Prompt(RunnableBinding[Input, Output]):
             cast(Runnable[Input, Output], prompt | model.bind(**model_kwargs))
         )
 
-        super().__init__(name=config.name, model=model, unit_primitives=config.unit_primitives, bound=chain)  # type: ignore[call-arg]
+
+        super().__init__(
+          name=config.name,
+          model=model,
+          unit_primitives=config.unit_primitives,
+          prmpt=prompt,  # TODO: remove this, it's to print rendered prompt in pdb
+          bound=chain
+        )  # type: ignore[call-arg]
 
     def _build_model_kwargs(
         self,

@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Annotated, List, Literal, Optional, Union
+from typing import Annotated, List, Literal, Optional, Union, Any
 
 from fastapi import Body
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
@@ -38,10 +38,13 @@ class EditorContentPayload(BaseModel):
     language_identifier: Optional[Annotated[str, StringConstraints(max_length=255)]] = (
         None
     )
+    prompt_id: Optional[str] = None
     model_provider: Optional[
         Literal[ModelProvider.VERTEX_AI, ModelProvider.ANTHROPIC]
     ] = None
+    model_name: Optional[str] = None
     stream: Optional[bool] = False
+    model_endpoint: Optional[str] = None
 
 
 class EditorContentCompletionPayload(EditorContentPayload):
@@ -50,6 +53,7 @@ class EditorContentCompletionPayload(EditorContentPayload):
 
 class EditorContentGenerationPayload(EditorContentPayload):
     prompt: Optional[Annotated[str, StringConstraints(max_length=400000)]] = None
+    prompt_enhancer: Optional[dict[str, Any]] = None
 
 
 class CodeEditorCompletion(BaseModel):

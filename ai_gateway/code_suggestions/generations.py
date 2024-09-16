@@ -90,6 +90,7 @@ class CodeGenerations:
         model_provider: Optional[str] = None,
         stream: bool = False,
         snowplow_event_context: Optional[SnowplowEventContext] = None,
+        prompt_enhancer: Optional[dict] = None,
         **kwargs: Any,
     ) -> Union[CodeSuggestionsOutput, AsyncIterator[CodeSuggestionsChunk]]:
         lang_id = resolve_lang_id(file_name, editor_lang)
@@ -112,6 +113,7 @@ class CodeGenerations:
             try:
                 watch_container.register_lang(lang_id, editor_lang)
 
+                import pdb;pdb.set_trace()
                 if isinstance(self.model, AgentModel):
                     # The prefix variable here is content-above-cursor, it'll appear as `prefix` field in the template
                     # The prompt.prefix field is the pre-processed prompt and contains the user's instruction
@@ -121,6 +123,9 @@ class CodeGenerations:
                         "language": editor_lang,
                         "file_name": file_name,
                     }
+
+                    if prompt_enhancer:
+                        params.update(prompt_enhancer)
 
                     res = await self.model.generate(params, stream)
                 elif isinstance(self.model, ChatModelBase):

@@ -38,6 +38,7 @@ class LocalPromptRegistry(BasePromptRegistry):
         prompt_id: str,
         model_metadata: Optional[ModelMetadata] = None,
     ) -> str:
+        import pdb;pdb.set_trace()
         if model_metadata:
             return f"{prompt_id}/{model_metadata.name}"
 
@@ -50,6 +51,7 @@ class LocalPromptRegistry(BasePromptRegistry):
         model_metadata: Optional[ModelMetadata] = None,
         **kwargs,
     ) -> Prompt:
+        import pdb; pdb.set_trace()
         if (
             model_metadata
             and model_metadata.endpoint
@@ -68,8 +70,7 @@ class LocalPromptRegistry(BasePromptRegistry):
             raise ValueError(
                 f"unrecognized model class provider `{model_class_provider}`."
             )
-
-        return klass(model_factory, config, model_metadata, **kwargs)
+        return klass(model_factory, config, model_metadata)
 
     @classmethod
     def from_local_yaml(
@@ -83,15 +84,19 @@ class LocalPromptRegistry(BasePromptRegistry):
         and create a corresponding prompt for each one. The base Prompt class is
         used if no matching override is provided in `class_overrides`.
         """
-
         prompts_definitions_dir = Path(__file__).parent / "definitions"
         prompts_registered = {}
+
 
         for path in prompts_definitions_dir.glob("**/*.yml"):
             # E.g., "chat/react/base", "generate_description/mistral", etc.
             prompt_id_with_model_name = path.relative_to(
                 prompts_definitions_dir
             ).with_suffix("")
+
+            if str(prompt_id_with_model_name)=="code_suggestions/generations/anthropic/base":
+              import pdb;pdb.set_trace()
+
 
             with open(path, "r") as fp:
                 # Remove model name, for example: to receive "chat/react" from "chat/react/mistral"

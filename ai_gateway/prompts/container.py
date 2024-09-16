@@ -1,6 +1,7 @@
 from dependency_injector import containers, providers
 
 from ai_gateway.chat import agents as chat
+from ai_gateway.code_suggestions.agents import anthropic
 from ai_gateway.prompts.config import ModelClassProvider
 from ai_gateway.prompts.registry import LocalPromptRegistry
 
@@ -18,6 +19,7 @@ class ContainerPrompts(containers.DeclarativeContainer):
         class_overrides={
             "chat/react": chat.ReActAgent,
             "chat/react/vertex": chat.ReActAgent,
+            # "code_suggestions/generations/anthropic": anthropic.AnthropicAgent
         },
         model_factories={
             ModelClassProvider.ANTHROPIC: providers.Factory(
