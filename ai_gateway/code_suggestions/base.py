@@ -64,6 +64,10 @@ USE_CASES_MODELS_MAP = {
         KindLiteLlmModel.MIXTRAL_TEXT,
         KindLiteLlmModel.MIXTRAL_8X22B,
         KindLiteLlmModel.MIXTRAL_8X22B_TEXT,
+        KindLiteLlmModel.LLAMA3,
+        KindLiteLlmModel.LLAMA3_TEXT,
+        KindLiteLlmModel.LLAMA3_70B,
+        KindLiteLlmModel.LLAMA3_70B_TEXT,
     },
     KindUseCase.CODE_GENERATIONS: {
         KindAnthropicModel.CLAUDE_2_0,
