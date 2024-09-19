@@ -32,6 +32,12 @@ INFERENCE_COUNTER = Counter(
     INFERENCE_DETAILS,
 )
 
+INFERENCE_HTTP_STATUS = Counter(
+    "model_inference_http_status_total",
+    "The total number of HTTP status codes returned by model inferences",
+    METRIC_LABELS + ["status_code"],
+)
+
 INFERENCE_DURATION_S = Histogram(
     "inference_request_duration_seconds",
     "Duration of the inference request in seconds",
@@ -47,12 +53,14 @@ class ModelRequestInstrumentator:
             labels: dict[str, str],
             concurrency_limit: Optional[int],
             streaming: bool,
+            status_code: str,
         ):
             self.labels = labels
             self.concurrency_limit = concurrency_limit
             self.error = False
             self.streaming = streaming
             self.start_time = None
+            self.status_code = status_code
 
         def start(self):
             """Register the start of the inference request. Sets the start time to be used for
@@ -80,6 +88,7 @@ class ModelRequestInstrumentator:
 
             INFERENCE_COUNTER.labels(**detail_labels).inc()
             INFERENCE_DURATION_S.labels(**detail_labels).observe(duration)
+            INFERENCE_HTTP_STATUS.labels(**detail_labels, status_code=self.status_code).inc()
 
         async def afinish(self):
             self.finish()
@@ -97,8 +106,10 @@ class ModelRequestInstrumentator:
         self,
         model_engine: str,
         model_name: str,
+        status_code: str,
         concurrency_limit: Optional[int],
     ):
+        self.status_code = status_code
         self.labels = {"model_engine": model_engine, "model_name": model_name}
         self.concurrency_limit = concurrency_limit
 
@@ -108,6 +119,7 @@ class ModelRequestInstrumentator:
             labels=self.labels,
             concurrency_limit=self.concurrency_limit,
             streaming=stream,
+            status_code=self.status_code,
         )
         watcher.start()
         try:
