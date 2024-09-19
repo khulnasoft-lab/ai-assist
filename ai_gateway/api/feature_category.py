@@ -15,6 +15,7 @@ X_GITLAB_UNIT_PRIMITIVE = "x-gitlab-unit-primitive"
 _CATEGORY_CONTEXT_KEY = "meta.feature_category"
 _UNIT_PRIMITIVE_CONTEXT_KEY = "meta.unit_primitive"
 _UNKNOWN_FEATURE_CATEGORY = "unknown"
+_UNKOWN_STATUS_CODE = "unknown"
 
 
 def feature_category(name: GitLabFeatureCategory):
@@ -148,3 +149,15 @@ def current_feature_category() -> str:
         return feature_category
 
     return _UNKNOWN_FEATURE_CATEGORY
+
+def status_code() -> str:
+    """
+    Gets the status code of the current request.
+    """
+    if context.exists():
+        status_code = context.get("status_code")
+        print(status_code)
+    
+        return status_code
+    
+    return _UNKOWN_STATUS_CODE

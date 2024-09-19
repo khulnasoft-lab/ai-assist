@@ -4,7 +4,7 @@ from typing import Optional
 
 from prometheus_client import Counter, Gauge, Histogram
 
-from ai_gateway.api.feature_category import current_feature_category
+from ai_gateway.api.feature_category import current_feature_category, status_code
 from ai_gateway.tracking.errors import log_exception
 
 METRIC_LABELS = ["model_engine", "model_name"]
@@ -35,7 +35,7 @@ INFERENCE_COUNTER = Counter(
 INFERENCE_HTTP_STATUS = Counter(
     "model_inference_http_status_total",
     "The total number of HTTP status codes returned by model inferences",
-    METRIC_LABELS + ["status_code"],
+    INFERENCE_DETAILS,
 )
 
 INFERENCE_DURATION_S = Histogram(
@@ -88,7 +88,7 @@ class ModelRequestInstrumentator:
 
             INFERENCE_COUNTER.labels(**detail_labels).inc()
             INFERENCE_DURATION_S.labels(**detail_labels).observe(duration)
-            INFERENCE_HTTP_STATUS.labels(**detail_labels, status_code=self.status_code).inc()
+            INFERENCE_HTTP_STATUS.labels(**detail_labels).inc()
 
         async def afinish(self):
             self.finish()
@@ -99,6 +99,7 @@ class ModelRequestInstrumentator:
                 "error": "yes" if self.error else "no",
                 "streaming": "yes" if self.streaming else "no",
                 "feature_category": current_feature_category(),
+                "status_code": status_code(),
             }
             return {**self.labels, **detail_labels}
 
