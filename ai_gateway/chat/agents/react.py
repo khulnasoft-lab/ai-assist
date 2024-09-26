@@ -58,9 +58,7 @@ class ReActInputParser(Runnable[ReActAgentInputs, dict]):
             "context_type": "",
             "context_content": "",
             "question": input.question,
-            "agent_scratchpad": agent_scratchpad_plain_text_renderer(
-                input.agent_scratchpad
-            ),
+            "agent_scratchpad": input.agent_scratchpad,
             "current_file": input.current_file,
             "unavailable_resources": input.unavailable_resources,
             "tools": input.tools,
@@ -94,68 +92,39 @@ def chat_history_plain_text_renderer(chat_history: list | str) -> str:
     return chat_history
 
 
-def agent_scratchpad_plain_text_renderer(
-    scratchpad: list[AgentStep],
-) -> str:
-    tpl = (
-        "Thought: {thought}\n"
-        "Action: {action}\n"
-        "Action Input: {action_input}\n"
-        "Observation: {observation}"
-    )
-
-    steps = [
-        tpl.format(
-            thought=pad.action.thought,
-            action=pad.action.tool,
-            action_input=pad.action.tool_input,
-            observation=pad.observation,
-        )
-        for pad in scratchpad
-        if isinstance(pad.action, AgentToolAction)
-    ]
-
-    return "\n".join(steps)
-
-
 class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
-    re_thought = re.compile(
-        r"<message>Thought:\s*([\s\S]*?)\s*(?:Action|Final Answer):"
-    )
-    re_action = re.compile(r"Action:\s*([\s\S]*?)\s*Action", re.DOTALL)
-    re_action_input = re.compile(r"Action Input:\s*([\s\S]*?)\s*</message>")
-    re_final_answer = re.compile(r"Final Answer:\s*([\s\S]*?)\s*</message>")
+    re_thought = re.compile(r"<thinking>\s*([\s\S]*?)\s*</thinking>")
+    re_action = re.compile(r"<action>\s*([\s\S]*?)\s*</action>")
+    re_tool = re.compile(r"<tool>\s*([\s\S]*?)\s*</tool>")
+    re_tool_input = re.compile(r"<tool_input>\s*([\s\S]*?)\s*</tool_input>")
+    re_answer = re.compile(r"<answer>\s*([\s\S]*)\s*")
 
-    def _parse_final_answer(self, message: str) -> Optional[AgentFinalAnswer]:
-        if match_answer := self.re_final_answer.search(message):
-            match_thought = self.re_thought.search(message)
-
-            return AgentFinalAnswer(
-                thought=match_thought.group(1) if match_thought else "",
-                text=match_answer.group(1),
-            )
+    def _parse_answer(self, message: str) -> Optional[AgentFinalAnswer]:
+        if match_answer := self.re_answer.search(message):
+            return AgentFinalAnswer(text=match_answer.group(1))
 
         return None
 
     def _parse_agent_action(self, message: str) -> Optional[AgentToolAction]:
         match_action = self.re_action.search(message)
-        match_action_input = self.re_action_input.search(message)
+        match_tool = self.re_tool.search(message)
+        match_tool_input = self.re_tool_input.search(message)
         match_thought = self.re_thought.search(message)
 
-        if match_action and match_action_input:
+        if match_tool and match_tool_input:
             return AgentToolAction(
                 tool=match_action.group(1),
-                tool_input=match_action_input.group(1),
+                tool_input=match_tool_input.group(1),
                 thought=match_thought.group(1) if match_thought else "",
             )
 
         return None
 
     def _parse(self, text: str) -> TypeAgentEvent:
-        wrapped_text = f"<message>Thought: {text}</message>"
+        wrapped_text = f"<thinking>{text}"
 
         event: Optional[TypeAgentEvent] = None
-        if final_answer := self._parse_final_answer(wrapped_text):
+        if final_answer := self._parse_answer(wrapped_text):
             event = final_answer
         elif agent_action := self._parse_agent_action(wrapped_text):
             event = agent_action

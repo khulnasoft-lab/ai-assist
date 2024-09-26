@@ -1,1 +1,7 @@
-{{agent_scratchpad}}
+{%- for step in agent_scratchpad %}
+<thinking>{{ step.action.thought }}</thinking>
+<action>{{ step.action.tool }}</action>
+<action_input>{{ step.action.tool_input }}</action_input>
+<observation>{{ step.observation }}</observation>
+{% endfor %}
+<thinking>

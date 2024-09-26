@@ -19,4 +19,5 @@ prompt_template:
 params:
   timeout: 30
   stop:
-    - "Observation:"
+    - "<observation>"
+    - "</answer>"

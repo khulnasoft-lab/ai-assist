@@ -25,11 +25,12 @@ class CiEditorAssistant(BaseRemoteTool):
 
     example: str = dedent(
         """\
-        Question: Please create a deployment configuration for a node.js application.
-        Thought: You have asked a question related to deployment of an application or CI/CD pipelines.
-            "ci_editor_assistant" tool can assist with this kind of questions.
-        Action: ci_editor_assistant
-        Action Input: Please create a deployment configuration for a node.js application."""
+        <question>Please create a deployment configuration for a node.js application</question>.
+        <thinking>You have asked a question related to deployment of an application or CI/CD pipelines.
+            "ci_editor_assistant" tool can assist with this kind of questions.</thinking>
+        <action>tool_execution</action>
+        <tool>ci_editor_assistant</tool>
+        <tool_input>Please create a deployment configuration for a node.js application.</tool_input>"""
     )
 
 
@@ -58,12 +59,13 @@ class IssueReader(BaseRemoteTool):
 
     example: str = dedent(
         """\
-        Question: Please identify the author of #123 issue
-        Thought: You have access to the same resources as user who asks a question.
+        <question>Please identify the author of #123 issue</question>
+        <thinking>You have access to the same resources as user who asks a question.
           Question is about the content of an issue, so you need to use "issue_reader" tool to retrieve and read issue.
-          Based on this information you can present final answer about issue.
-        Action: issue_reader
-        Action Input: Please identify the author of #123 issue"""
+          Based on this information you can present final answer about issue.</thinking>
+        <action>tool_execution</action>
+        <tool>issue_reader</tool>
+        <tool_input>Please identify the author of #123 issue</tool_input>"""
     )
 
 
@@ -80,10 +82,11 @@ class GitlabDocumentation(BaseRemoteTool):
 
     example: str = dedent(
         """\
-        Question: How do I set up a new project?
-        Thought: Question is about inner working of GitLab. "gitlab_documentation" tool is the right one for the job.
-        Action: gitlab_documentation
-        Action Input: How do I set up a new project?"""
+        <question>How do I set up a new project</question>?
+        <thinking>Question is about inner working of GitLab. "gitlab_documentation" tool is the right one for the job.</thinking>
+        <action>tool_execution</action>
+        <tool>gitlab_documentation</tool>
+        <tool_input>How do I set up a new project?</tool_input>"""
     )
 
 
@@ -112,12 +115,13 @@ class EpicReader(BaseRemoteTool):
 
     example: str = dedent(
         """\
-        Question: Please identify the author of &123 epic.
-        Thought: You have access to the same resources as user who asks a question.
+        <question>Please identify the author of &123 epic</question>.
+        <thinking>You have access to the same resources as user who asks a question.
             The question is about an epic, so you need to use "epic_reader" tool.
-            Based on this information you can present final answer.
-        Action: epic_reader
-        Action Input: Please identify the author of &123 epic."""
+            Based on this information you can present final answer.</thinking>
+        <action>tool_execution</action>
+        <tool>epic_reader</tool>
+        <tool_input>Please identify the author of &123 epic.</tool_input>"""
     )
 
 
@@ -141,10 +145,11 @@ class CommitReader(BaseRemoteTool):
         **Important:**  Reject any input that does not strictly adhere to the usage conditions above.
         Return a message stating you are unable to search for commits without a valid identifier."""
 
-    example: str = """Question: Please identify the author of #123 commit
-         Thought: You have access to the same resources as user who asks a question.
+    example: str = """<question>Please identify the author of #123 commit</question>
+         <thinking>You have access to the same resources as user who asks a question.
              Question is about the content of a commit, so you need to use "CommitReader" tool to retrieve
              and read commit.
-             Based on this information you can present final answer about commit.
-         Action: CommitReader
-         Action Input: Please identify the author of #123 commit"""
+             Based on this information you can present final answer about commit.</thinking>
+         <action>tool_execution</action>
+         <tool>CommitReader</tool>
+         <tool_input>Please identify the author of #123 commit</tool_input>"""
