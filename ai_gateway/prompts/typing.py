@@ -10,7 +10,7 @@ class ModelMetadata(BaseModel):
     name: Annotated[str, StringConstraints(max_length=100)]
     provider: Annotated[str, StringConstraints(max_length=100)]
     endpoint: Optional[Annotated[AnyUrl, UrlConstraints(max_length=100)]] = None
-    api_key: Optional[Annotated[str, StringConstraints(max_length=100)]] = None
+    api_key: Optional[Annotated[str, StringConstraints(max_length=1024)]] = None
     served_model_name: Optional[Annotated[str, StringConstraints(max_length=100)]] = None
 
     # OpenAI client requires api key to be set
