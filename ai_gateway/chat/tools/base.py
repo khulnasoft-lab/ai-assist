@@ -9,11 +9,19 @@ __all__ = [
 ]
 
 
+class BaseToolParameter(ABC, BaseModel, frozen=True):
+    name: str
+    description: str
+    required: bool = False
+    type: str
+
+
 class BaseTool(ABC, BaseModel, frozen=True):
     name: str
     description: str
     resource: Optional[str] = None
     example: Optional[str] = None
+    parameters: Optional[list[BaseToolParameter]] = None
 
 
 class BaseRemoteTool(BaseTool):
