@@ -1,0 +1,45 @@
+# https://gitlab-com.gitlab.io/gl-infra/platform/runway/runwayctl/manifest.schema.html
+apiVersion: runway/v1
+kind: RunwayService
+metadata:
+  name: ai_gateway
+  department: eng-dev
+  department_group: eng-dev-create-shared-infra
+  product_category: custom_models
+  owner_email_handle: sean_carroll
+spec:
+  image: "$CI_REGISTRY_IMAGE/model-gateway:${CI_COMMIT_SHORT_SHA}"
+  regions:
+    - us-east4
+    - asia-northeast3
+    - europe-west2
+    - europe-west3
+    - asia-northeast1
+    - europe-west9
+  request_timeout: 60
+  observability:
+    scrape_targets:
+      - "localhost:8082"
+  startup_probe:
+    path: "/monitoring/ready"
+    initial_delay_seconds: 20
+    # We have limited concurrency in staging, so picking a long period
+    timeout_seconds: 10
+    period_seconds: 17
+    failure_threshold: 24
+  liveness_probe:
+    path: "/monitoring/healthz"
+  scalability:
+    min_instances: 1
+    max_instances: 200
+    max_instance_request_concurrency: 40
+  resources:
+    startup_cpu_boost: true
+    limits:
+      cpu: 2000m
+      memory: 8G
+  network_policies:
+    cloudflare: true
+  load_balancing:
+    external_load_balancer:
+      backend_protocol: HTTPS

@@ -18,6 +18,7 @@ stages:
   - release
   - ingest
   - runway_staging
+  - runway_staging_ref
   - runway_production
 
 variables:
