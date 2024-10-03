@@ -214,7 +214,7 @@ class ReActAgent(Prompt[ReActAgentInputs, TypeAgentEvent]):
         ):
             for m in chat_history:
                 if m.role is Role.USER:
-                    messages.append(HumanMessage(m.content))
+                    messages.append(HumanMessage(f"{m.content}\<additional_context>{m.additional_context}</additional_context>"))
                 elif m.role is Role.ASSISTANT:
                     messages.append(AIMessage(m.content))
                 else:

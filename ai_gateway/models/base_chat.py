@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import StrEnum
-from typing import Annotated, AsyncIterator, Union
+from typing import Annotated, AsyncIterator, Optional, Union
 
 from pydantic import BaseModel, StringConstraints
 
@@ -19,11 +19,16 @@ class Role(StrEnum):
     USER = "user"
     ASSISTANT = "assistant"
 
+class AdditionalContext(BaseModel):
+    id: Optional[str] = None
+    category: Optional[str] = None
+    content: Optional[str] = None
+    metadata: Optional[dict] = None
 
 class Message(BaseModel):
     role: Role
     content: Annotated[str, StringConstraints(max_length=400000)]
-
+    additional_context: Optional[list[AdditionalContext]]
 
 class ChatModelBase(ModelBase, ABC):
     @abstractmethod
