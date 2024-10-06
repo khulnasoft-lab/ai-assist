@@ -1,7 +1,7 @@
 from typing import List, Optional, AsyncIterator, Union
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse, JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ValidationError
 import json
 import asyncio
 
@@ -21,19 +21,21 @@ from typing import List, Union, Optional, TypedDict, Literal, Dict
 router = APIRouter()
 
 
-class ChatHistoryMessage(BaseModel):
-    role: str  # 'user' or 'assistant'
-    content: str
-
-
 class AIContextItem(BaseModel):
     id: str
     category: str
     content: Optional[str] = None
 
 
+class ChatHistoryMessage(BaseModel):
+    role: str  # 'user' or 'assistant'
+    content: str
+    additional_context: Optional[List[AIContextItem]] = []
+    tool_used: bool = False
+
+
 def build_additional_context_prompt(
-    additional_context: Optional[List[AIContextItem]],
+    additional_context: Optional[List[AIContextItem]], tool_used: bool = False
 ) -> str:
     if not additional_context:
         return ""
@@ -44,7 +46,10 @@ def build_additional_context_prompt(
         if item.content:
             context_items.append(f"  Content: {item.content}")
 
-    return "User added additional context:\n" + "\n".join(context_items)
+    if tool_used:
+        return "Tool context:\n" + "\n".join(context_items)
+    else:
+        return "User added additional context:\n" + "\n".join(context_items)
 
 
 class EditorChatRequest(BaseModel):
@@ -53,6 +58,7 @@ class EditorChatRequest(BaseModel):
     openapi_schema: Optional[dict] = None
     history: Optional[List[ChatHistoryMessage]] = []
     additional_context: Optional[List[AIContextItem]] = []
+    tool_used: bool = False
 
 
 async def get_anthropic_chat_model() -> ChatAnthropic:
@@ -237,13 +243,19 @@ async def editor_chat(
         memory.chat_memory.messages.append(system_message)
 
         # Load conversation history into memory
-        for message in chat_request.history if chat_request.history else []:
-            if message.role == "user":
-                memory.chat_memory.add_user_message(
-                    HumanMessage(content=message.content)
+        for history_message in chat_request.history if chat_request.history else []:
+            if history_message.role == "user":
+                human_message = (
+                    history_message.content
+                    + build_additional_context_prompt(
+                        history_message.additional_context, history_message.tool_used
+                    )
                 )
-            elif message.role == "assistant":
-                memory.chat_memory.add_ai_message(AIMessage(content=message.content))
+                memory.chat_memory.add_user_message(HumanMessage(content=human_message))
+            elif history_message.role == "assistant":
+                memory.chat_memory.add_ai_message(
+                    AIMessage(content=history_message.content)
+                )
 
             # Convert tools to Anthropic format
         anthropic_tools = [
@@ -258,7 +270,7 @@ async def editor_chat(
 
         async def stream_agent_response() -> AsyncIterator[str]:
             prompt_message = chat_request.prompt + build_additional_context_prompt(
-                chat_request.additional_context
+                chat_request.additional_context, chat_request.tool_used
             )
             messages = memory.chat_memory.messages + [
                 HumanMessage(content=prompt_message)
@@ -318,4 +330,87 @@ async def editor_chat(
         )
     except Exception as e:
         print(f"Error in editor_chat: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+class ChatSummaryRequest(BaseModel):
+    history: List[ChatHistoryMessage]
+    max_title_length: int = Field(default=50, ge=1, le=100)
+    max_description_length: int = Field(default=200, ge=1, le=500)
+
+
+class ChatSummaryResponse(BaseModel):
+    title: str
+    description: str
+
+
+class ChatSummary(BaseModel):
+    """Summary of a chat conversation."""
+
+    title: str = Field(
+        ...,
+        description="A concise title summarizing the main topic of the conversation",
+    )
+    description: str = Field(
+        ...,
+        description="A brief description summarizing the key points of the conversation",
+    )
+
+
+@router.post("/chat/summary", response_model=ChatSummaryResponse)
+async def chat_summary(
+    summary_request: ChatSummaryRequest,
+    anthropic_chat_model: ChatAnthropic = Depends(get_anthropic_chat_model),
+):
+    try:
+        # Prepare the chat history
+        chat_history = []
+        for msg in summary_request.history:
+            role = "Human" if msg.role == "user" else "Assistant"
+            content = msg.content
+            if msg.additional_context:
+                content += "\n" + build_additional_context_prompt(
+                    msg.additional_context, msg.tool_used
+                )
+            chat_history.append(f"{role}: {content}")
+
+        # Create the prompt for summarization
+        prompt = (
+            "Based on the following chat history, generate a concise title and a brief description "
+            "that summarizes the main topic and key points of the conversation:\n\n"
+            f"Chat History:\n{chr(10).join(chat_history)}\n\n"
+            f"Please provide a title (max {summary_request.max_title_length} characters) and a description "
+            f"(max {summary_request.max_description_length} characters) that capture the essence of this conversation."
+        )
+
+        # Bind the ChatSummary tool to the model
+        llm_with_summary_tool = anthropic_chat_model.bind_tools([ChatSummary])
+
+        # Invoke the model with the prompt
+        response = await llm_with_summary_tool.ainvoke([HumanMessage(content=prompt)])
+
+        # Extract the summary from the response
+        tool_calls = response.tool_calls
+        if tool_calls and len(tool_calls) > 0:
+            summary = tool_calls[0].get("args", {})
+        else:
+            return JSONResponse(
+                content={"error": "No tool calls found in response"}, status_code=500
+            )
+
+        try:
+            parsed_summary = ChatSummary(**summary)
+        except ValidationError as e:
+            print(f"Validation error: {e}")
+            return JSONResponse(content={"error": str(e)}, status_code=400)
+
+        return ChatSummaryResponse(
+            title=parsed_summary.title[: summary_request.max_title_length],
+            description=parsed_summary.description[
+                : summary_request.max_description_length
+            ],
+        )
+
+    except Exception as e:
+        print(f"Error in chat_summary: {e}")
         return JSONResponse(content={"error": str(e)}, status_code=500)
