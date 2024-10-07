@@ -35,8 +35,8 @@ from ai_gateway.async_dependency_resolver import (
     get_internal_event_client,
     get_snowplow_instrumentator,
 )
+from ai_gateway.auth.gitlab_user import GitLabUser, get_current_user
 from ai_gateway.auth.self_signed_jwt import SELF_SIGNED_TOKEN_ISSUER
-from ai_gateway.auth.user import GitLabUser, get_current_user
 from ai_gateway.code_suggestions import (
     CodeCompletions,
     CodeCompletionsLegacy,

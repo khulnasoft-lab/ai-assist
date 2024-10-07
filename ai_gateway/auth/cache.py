@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import NamedTuple, Optional
 
-from ai_gateway.auth.user import User
+from ai_gateway.auth.gitlab_user import GitLabUser
 
 __all__ = [
     "AuthRecord",
@@ -12,7 +12,7 @@ __all__ = [
 
 
 class AuthRecord(NamedTuple):
-    value: User
+    value: GitLabUser
     exp: datetime
 
 
@@ -21,7 +21,7 @@ class BaseAuthCache(ABC):
         self.expiry_seconds = expiry_seconds
 
     @abstractmethod
-    def set(self, k: str, val: User, exp: datetime):
+    def set(self, k: str, val: GitLabUser, exp: datetime):
         pass
 
     @abstractmethod
@@ -38,7 +38,7 @@ class LocalAuthCache(BaseAuthCache):
         super().__init__()
         self.in_memory_cache = {}
 
-    def set(self, k: str, val: User, exp: datetime):
+    def set(self, k: str, val: GitLabUser, exp: datetime):
         self.in_memory_cache[k] = AuthRecord(
             value=val,
             exp=exp,

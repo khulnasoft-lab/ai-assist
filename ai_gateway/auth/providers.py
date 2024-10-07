@@ -8,7 +8,7 @@ from jose import JWTError, jwk, jwt
 from jose.exceptions import JWKError
 
 from ai_gateway.auth.cache import LocalAuthCache
-from ai_gateway.auth.user import User, UserClaims
+from ai_gateway.auth.gitlab_user import GitLabUser, UserClaims
 from ai_gateway.config import ConfigSelfSignedJwt
 from ai_gateway.tracking.errors import log_exception
 
@@ -25,7 +25,7 @@ REQUEST_TIMEOUT_SECONDS = 10
 
 class AuthProvider(ABC):
     @abstractmethod
-    def authenticate(self, *args, **kwargs) -> User:
+    def authenticate(self, *args, **kwargs) -> GitLabUser:
         pass
 
 
@@ -49,7 +49,7 @@ class CompositeProvider(AuthProvider):
         self.expiry_seconds = expiry_seconds
         self.cache = LocalAuthCache()
 
-    def authenticate(self, token: str) -> User:
+    def authenticate(self, token: str) -> GitLabUser:
         jwks = self._jwks()
         is_allowed = False
         gitlab_realm = ""
@@ -82,7 +82,7 @@ class CompositeProvider(AuthProvider):
         except JWTError as err:
             log_exception(err)
 
-        return User(
+        return GitLabUser(
             authenticated=is_allowed,
             claims=UserClaims(
                 gitlab_realm=gitlab_realm,

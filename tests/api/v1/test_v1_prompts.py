@@ -8,7 +8,7 @@ from langchain_core.messages import BaseMessage
 from pydantic_core import Url
 
 from ai_gateway.api.v1 import api_router
-from ai_gateway.auth import User, UserClaims
+from ai_gateway.auth import GitLabUser, UserClaims
 from ai_gateway.chat.agents import ReActAgent, ReActAgentInputs
 from ai_gateway.config import Config
 from ai_gateway.gitlab_features import GitLabUnitPrimitive
@@ -108,7 +108,7 @@ def unit_primitives():
 
 @pytest.fixture
 def auth_user(unit_primitives: list[GitLabUnitPrimitive]):
-    return User(authenticated=True, claims=UserClaims(scopes=unit_primitives))
+    return GitLabUser(authenticated=True, claims=UserClaims(scopes=unit_primitives))
 
 
 class TestPrompt:
@@ -227,7 +227,7 @@ class TestPrompt:
 class TestUnauthorizedScopes:
     @pytest.fixture
     def auth_user(self):
-        return User(
+        return GitLabUser(
             authenticated=True,
             claims=UserClaims(scopes=["unauthorized_scope"]),
         )

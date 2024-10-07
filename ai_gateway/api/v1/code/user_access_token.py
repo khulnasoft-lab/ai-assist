@@ -9,8 +9,8 @@ from ai_gateway.async_dependency_resolver import (
     get_internal_event_client,
     get_token_authority,
 )
+from ai_gateway.auth.gitlab_user import GitLabUser, get_current_user
 from ai_gateway.auth.self_signed_jwt import SELF_SIGNED_TOKEN_ISSUER, TokenAuthority
-from ai_gateway.auth.user import GitLabUser, get_current_user
 from ai_gateway.gitlab_features import GitLabFeatureCategory, GitLabUnitPrimitive
 from ai_gateway.internal_events import InternalEventsClient
 

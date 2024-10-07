@@ -5,7 +5,7 @@ from fastapi import BackgroundTasks, HTTPException, Request, status
 
 from ai_gateway.abuse_detection import AbuseDetector
 from ai_gateway.api.feature_category import X_GITLAB_UNIT_PRIMITIVE
-from ai_gateway.auth.user import GitLabUser
+from ai_gateway.auth.gitlab_user import GitLabUser
 from ai_gateway.gitlab_features import (
     UNIT_PRIMITIVE_AND_DESCRIPTION_MAPPING,
     GitLabUnitPrimitive,

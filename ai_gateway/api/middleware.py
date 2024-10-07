@@ -27,8 +27,8 @@ from uvicorn.protocols.utils import get_path_with_query_string
 
 from ai_gateway.api.timing import timing
 from ai_gateway.auth import AuthProvider, UserClaims
+from ai_gateway.auth.gitlab_user import GitLabUser
 from ai_gateway.auth.self_signed_jwt import SELF_SIGNED_TOKEN_ISSUER
-from ai_gateway.auth.user import GitLabUser
 from ai_gateway.cloud_connector.auth.validators import (
     X_GITLAB_DUO_SEAT_COUNT_HEADER,
     validate_duo_seat_count_header,

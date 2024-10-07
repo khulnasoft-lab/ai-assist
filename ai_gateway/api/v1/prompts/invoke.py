@@ -9,7 +9,7 @@ from ai_gateway.async_dependency_resolver import (
     get_container_application,
     get_internal_event_client,
 )
-from ai_gateway.auth.user import GitLabUser, get_current_user
+from ai_gateway.auth.gitlab_user import GitLabUser, get_current_user
 from ai_gateway.gitlab_features import GitLabFeatureCategory, WrongUnitPrimitives
 from ai_gateway.internal_events import InternalEventsClient
 from ai_gateway.prompts import BasePromptRegistry, Prompt

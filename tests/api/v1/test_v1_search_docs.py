@@ -12,7 +12,7 @@ from ai_gateway.api.v1.search.typing import (
     SearchResponseMetadata,
     SearchResult,
 )
-from ai_gateway.auth import User, UserClaims
+from ai_gateway.auth import GitLabUser, UserClaims
 from ai_gateway.config import Config
 from ai_gateway.internal_events import InternalEventAdditionalProperties
 
@@ -24,7 +24,7 @@ def fast_api_router():
 
 @pytest.fixture
 def auth_user():
-    return User(
+    return GitLabUser(
         authenticated=True,
         claims=UserClaims(scopes=["documentation_search"]),
     )

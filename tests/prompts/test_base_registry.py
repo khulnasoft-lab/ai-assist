@@ -1,6 +1,6 @@
 import pytest
 
-from ai_gateway.auth.user import GitLabUser, UserClaims
+from ai_gateway.auth.gitlab_user import GitLabUser, UserClaims
 from ai_gateway.gitlab_features import GitLabUnitPrimitive, WrongUnitPrimitives
 from ai_gateway.prompts import BasePromptRegistry, Prompt
 

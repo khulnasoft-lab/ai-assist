@@ -5,7 +5,7 @@ from starlette.authentication import BaseUser
 
 from ai_gateway.gitlab_features import GitLabUnitPrimitive
 
-__all__ = ["User", "UserClaims", "GitLabUser"]
+__all__ = ["UserClaims", "GitLabUser", "get_current_user"]
 
 
 class UserClaims(NamedTuple):
@@ -15,11 +15,6 @@ class UserClaims(NamedTuple):
     issuer: str = ""
     duo_seat_count: str = ""
     gitlab_instance_id: str = ""
-
-
-class User(NamedTuple):
-    authenticated: bool
-    claims: UserClaims
 
 
 class GitLabUser(BaseUser):
@@ -49,6 +44,10 @@ class GitLabUser(BaseUser):
 
     @property
     def is_authenticated(self) -> bool:
+        return self._authenticated
+
+    @property
+    def authenticated(self) -> bool:
         return self._authenticated
 
     @property

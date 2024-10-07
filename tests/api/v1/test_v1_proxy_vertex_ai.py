@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 
 from ai_gateway.api.v1 import api_router
-from ai_gateway.auth import User, UserClaims
+from ai_gateway.auth import GitLabUser, UserClaims
 from ai_gateway.gitlab_features import GitLabUnitPrimitive
 from ai_gateway.internal_events import InternalEventAdditionalProperties
 
@@ -15,7 +15,7 @@ def fast_api_router():
 
 @pytest.fixture
 def auth_user():
-    return User(
+    return GitLabUser(
         authenticated=True,
         claims=UserClaims(
             scopes=[
@@ -60,7 +60,7 @@ class TestProxyVertexAI:
 class TestUnauthorizedScopes:
     @pytest.fixture
     def auth_user(self):
-        return User(
+        return GitLabUser(
             authenticated=True,
             claims=UserClaims(scopes=["unauthorized_scope"]),
         )

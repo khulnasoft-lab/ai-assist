@@ -5,7 +5,7 @@ from dependency_injector import containers
 from fastapi.testclient import TestClient
 
 from ai_gateway.api.v3 import api_router
-from ai_gateway.auth import User, UserClaims
+from ai_gateway.auth import GitLabUser, UserClaims
 from ai_gateway.tracking import SnowplowEventContext
 
 
@@ -16,7 +16,7 @@ def fast_api_router():
 
 @pytest.fixture
 def auth_user():
-    return User(
+    return GitLabUser(
         authenticated=True,
         claims=UserClaims(
             scopes=["code_suggestions"], subject="1234", gitlab_realm="self-managed"
@@ -808,7 +808,7 @@ class TestEditorContentGeneration:
 class TestUnauthorizedScopes:
     @pytest.fixture
     def auth_user(self):
-        return User(
+        return GitLabUser(
             authenticated=True,
             claims=UserClaims(
                 scopes=["unauthorized_scope"],
@@ -941,7 +941,7 @@ class TestIncomingRequest:
 class TestUnauthorizedIssuer:
     @pytest.fixture
     def auth_user(self):
-        return User(
+        return GitLabUser(
             authenticated=True,
             claims=UserClaims(
                 scopes=["code_suggestions"],

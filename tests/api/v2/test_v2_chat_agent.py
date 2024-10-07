@@ -8,7 +8,7 @@ from starlette.testclient import TestClient
 
 from ai_gateway.api.v2 import api_router
 from ai_gateway.api.v2.chat.typing import AgentRequestOptions, ReActAgentScratchpad
-from ai_gateway.auth import GitLabUser, User, UserClaims
+from ai_gateway.auth import GitLabUser, UserClaims
 from ai_gateway.chat.agents import (
     AgentBaseEvent,
     AgentStep,
@@ -30,7 +30,7 @@ def fast_api_router():
 
 @pytest.fixture
 def auth_user():
-    return User(
+    return GitLabUser(
         authenticated=True,
         claims=UserClaims(scopes=["duo_chat"]),
     )
@@ -217,11 +217,11 @@ class TestReActAgentStream:
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "auth_user",
-        [(User(authenticated=True, claims=UserClaims(scopes="wrong_scope")))],
+        [(GitLabUser(authenticated=True, claims=UserClaims(scopes="wrong_scope")))],
     )
     async def test_exception_403(
         self,
-        auth_user: User,
+        auth_user: GitLabUser,
         mock_client: TestClient,
         mocked_on_behalf: Mock,
     ):

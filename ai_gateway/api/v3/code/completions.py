@@ -21,8 +21,8 @@ from ai_gateway.api.v3.code.typing import (
     StreamSuggestionsResponse,
 )
 from ai_gateway.async_dependency_resolver import get_container_application
+from ai_gateway.auth.gitlab_user import GitLabUser, get_current_user
 from ai_gateway.auth.self_signed_jwt import SELF_SIGNED_TOKEN_ISSUER
-from ai_gateway.auth.user import GitLabUser, get_current_user
 from ai_gateway.code_suggestions import (
     CodeCompletions,
     CodeCompletionsLegacy,

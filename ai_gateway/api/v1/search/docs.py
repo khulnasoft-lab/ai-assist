@@ -17,7 +17,7 @@ from ai_gateway.async_dependency_resolver import (
     get_internal_event_client,
     get_search_factory_provider,
 )
-from ai_gateway.auth.user import GitLabUser, get_current_user
+from ai_gateway.auth.gitlab_user import GitLabUser, get_current_user
 from ai_gateway.gitlab_features import GitLabFeatureCategory, GitLabUnitPrimitive
 from ai_gateway.internal_events import InternalEventsClient
 from ai_gateway.searches import Searcher

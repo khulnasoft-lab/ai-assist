@@ -144,7 +144,7 @@ You can get a currently authenticated user and check if the user has permission 
 This is useful to granularly switch the business logic per user permissions. Example:
 
 ```python
-from ai_gateway.auth.user import GitLabUser, get_current_user
+from ai_gateway.auth.gitlab_user import GitLabUser, get_current_user
 
 @router.post("/awesome_feature")
 async def awesome_feature(

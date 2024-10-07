@@ -7,8 +7,7 @@ from starlette.responses import JSONResponse
 from structlog.testing import capture_logs
 
 from ai_gateway.api.middleware import MiddlewareAuthentication
-from ai_gateway.auth import User, UserClaims
-from ai_gateway.auth.user import GitLabUser, get_current_user
+from ai_gateway.auth.gitlab_user import GitLabUser, UserClaims, get_current_user
 
 router = APIRouter(
     prefix="",
@@ -93,7 +92,7 @@ invalid_authentication_token_type_error = {
             None,
             None,
             401,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(scopes=["feature1", "feature3"]),
             ),
@@ -104,7 +103,7 @@ invalid_authentication_token_type_error = {
             {"Authorization": "invalid"},
             None,
             401,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(scopes=["feature1", "feature3"]),
             ),
@@ -115,7 +114,7 @@ invalid_authentication_token_type_error = {
             {"Authorization": "Bearer 12345"},
             None,
             401,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(scopes=["feature1", "feature3"]),
             ),
@@ -131,7 +130,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             200,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(
                     scopes=["feature1", "feature3"],
@@ -156,7 +155,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             200,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(
                     scopes=["feature2", "feature3"],
@@ -181,7 +180,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             200,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(
                     scopes=["feature1", "feature2", "feature3"],
@@ -207,7 +206,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             403,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(subject="1234", gitlab_realm="self-managed"),
             ),
@@ -224,7 +223,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             403,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(
                     scopes=["feature1"],
@@ -246,7 +245,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             403,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(
                     scopes=["feature3"],
@@ -268,7 +267,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             403,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(
                     scopes=["unsupported_scope"],
@@ -290,7 +289,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             401,
-            User(
+            GitLabUser(
                 authenticated=False,
                 claims=UserClaims(
                     scopes=["feature1", "feature3"],
@@ -316,7 +315,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             401,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(
                     scopes=["feature1", "feature3"],
@@ -342,7 +341,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             401,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(
                     scopes=["feature1", "feature3"],
@@ -369,7 +368,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             200,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(
                     scopes=["feature1", "feature3"],
@@ -393,7 +392,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             401,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(
                     scopes=["feature1", "feature3"],
@@ -421,7 +420,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             200,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(
                     scopes=["feature1", "feature3"],
@@ -449,7 +448,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             401,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(
                     scopes=["feature1", "feature3"],
@@ -480,7 +479,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             401,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(
                     scopes=["feature1", "feature3"],
@@ -511,7 +510,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             200,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(
                     scopes=["feature1", "feature3"],
@@ -540,7 +539,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             401,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(
                     scopes=["feature1", "feature3"],
@@ -571,7 +570,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             401,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(
                     scopes=["feature1", "feature3"],
@@ -602,7 +601,7 @@ invalid_authentication_token_type_error = {
             },
             None,
             200,
-            User(
+            GitLabUser(
                 authenticated=True,
                 claims=UserClaims(
                     scopes=["feature1", "feature3"],
