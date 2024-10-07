@@ -16,6 +16,7 @@ from langchain_core.messages.human import HumanMessage
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.base import BaseMessageChunk
 from typing import List, Union, Optional, TypedDict, Literal, Dict
+from langchain_core.messages.ai import AIMessageChunk
 
 
 router = APIRouter()
@@ -285,12 +286,16 @@ async def editor_chat(
 
             tool_selection_tracker = ToolSelectionTracker()
 
+            total_tokens = 0
             async for raw_chunk in stream:
-                print(raw_chunk, "shayon", type(raw_chunk))
                 chunk = handle_stream_chunk(raw_chunk)
+                if isinstance(raw_chunk, AIMessageChunk):
+                    usage_metadata = raw_chunk.usage_metadata
+                    if usage_metadata:
+                        total_tokens += usage_metadata.get("input_tokens", 0)
+                        total_tokens += usage_metadata.get("output_tokens", 0)
                 if chunk:
                     if isinstance(chunk, TextContentChunk):
-                        print("text content chunk", chunk)
                         message = build_sse_message(
                             json.dumps(
                                 {"event_type": "message_chunk", "content": chunk.text}
@@ -309,7 +314,6 @@ async def editor_chat(
                         )
 
             for selection in tool_selection_tracker.get_all_selections():
-                print("selection", selection)
                 yield build_sse_message(
                     json.dumps(
                         {
@@ -320,7 +324,9 @@ async def editor_chat(
                         }
                     )
                 )
-            print("full_message", full_message)
+            yield build_sse_message(
+                json.dumps({"event_type": "tokens_count", "total_tokens": total_tokens})
+            )
             yield build_sse_message(
                 json.dumps({"event_type": "full_message", "content": full_message})
             )
