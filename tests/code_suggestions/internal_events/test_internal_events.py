@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import pytest
 from snowplow_tracker import SelfDescribingJson, Snowplow, StructuredEvent
+from structlog.testing import capture_logs
 
 from ai_gateway.internal_events.client import InternalEventsClient
 from ai_gateway.internal_events.context import (
@@ -88,11 +89,12 @@ class TestInternalEventsClient:
                 thread_count=2,
             )
 
-            client.track_event(
-                event_name=event_name,
-                additional_properties=additional_properties,
-                category=category,
-            )
+            with capture_logs() as cap_logs:
+                client.track_event(
+                    event_name=event_name,
+                    additional_properties=additional_properties,
+                    category=category,
+                )
 
             mock_track.assert_called_once()
             mock_structured_event_init.assert_called_once()
@@ -107,3 +109,7 @@ class TestInternalEventsClient:
             context = event_init_args["context"][0]
             assert isinstance(context, SelfDescribingJson)
             assert context.to_json()["schema"] == client.STANDARD_CONTEXT_SCHEMA
+
+            assert cap_logs[0]["event"] == "track_internal_event"
+            assert cap_logs[0]["internal_events.event_name"] == event_name
+            assert cap_logs[0]["internal_events.category"] == category

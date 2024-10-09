@@ -1,5 +1,6 @@
 from typing import Optional
 
+import structlog
 from snowplow_tracker import AsyncEmitter, SelfDescribingJson, StructuredEvent, Tracker
 
 from ai_gateway.internal_events.context import (
@@ -9,6 +10,8 @@ from ai_gateway.internal_events.context import (
 )
 
 __all__ = ["InternalEventsClient"]
+
+log = structlog.stdlib.get_logger("internal_events")
 
 
 class InternalEventsClient:
@@ -75,3 +78,10 @@ class InternalEventsClient:
         )
 
         self.snowplow_tracker.track(structured_event)
+        log.info(
+            "track_internal_event",
+            **{
+                "internal_events.event_name": event_name,
+                "internal_events.category": category,
+            }
+        )
