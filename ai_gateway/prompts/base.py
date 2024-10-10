@@ -89,6 +89,10 @@ class Prompt(RunnableBinding[Input, Output]):
                 else:
                     kwargs["custom_llm_provider"] = splits[0]
                     kwargs["model"] = splits[1]
+
+                    if splits[0] == "bedrock":
+                        del kwargs["api_base"]
+
             else:
                 kwargs["model"] = model_metadata.name
                 kwargs["custom_llm_provider"] = model_metadata.provider
