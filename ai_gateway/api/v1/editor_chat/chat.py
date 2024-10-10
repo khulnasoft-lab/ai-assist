@@ -75,12 +75,14 @@ async def get_anthropic_chat_model() -> ChatAnthropic:
 
 
 def convert_to_anthropic_tool(base_tool: BaseTool) -> dict:
-    # Convert BaseTool to Anthropic's tool schema
-    properties = {
-        param.name: {"type": param.type, "description": param.description}
-        for param in base_tool.parameters
-        if param is not None
-    }
+    properties = {}
+    for param in base_tool.parameters:
+        if param is not None:
+            param_info = {"type": param.type, "description": param.description}
+            if param.type == "array" and hasattr(param, "items"):
+                param_info["items"] = param.items
+            properties[param.name] = param_info
+
     return {
         "name": base_tool.name,
         "description": base_tool.description,
@@ -262,6 +264,7 @@ async def editor_chat(
         anthropic_tools = [
             convert_to_anthropic_tool(tool) for tool in chat_request.tools
         ]
+        print("anthropic_tools", anthropic_tools)
 
         # Bind tools to the Anthropic model
         anthropic_chat_model = anthropic_chat_model.bind_tools(anthropic_tools)
@@ -341,6 +344,7 @@ async def editor_chat(
 
 class ChatSummaryRequest(BaseModel):
     history: List[ChatHistoryMessage]
+    type: Optional[Literal["summary", "questions"]] = "summary"
     max_title_length: int = Field(default=50, ge=1, le=100)
     max_description_length: int = Field(default=200, ge=1, le=500)
 
@@ -348,6 +352,10 @@ class ChatSummaryRequest(BaseModel):
 class ChatSummaryResponse(BaseModel):
     title: str
     description: str
+
+
+class ChatQuestionsResponse(BaseModel):
+    questions: List[str]
 
 
 class ChatSummary(BaseModel):
@@ -363,7 +371,18 @@ class ChatSummary(BaseModel):
     )
 
 
-@router.post("/chat/summary", response_model=ChatSummaryResponse)
+class ChatQuestions(BaseModel):
+    """Questions from a chat conversation."""
+
+    questions: List[str] = Field(
+        ...,
+        description="A list of questions that capture the key points of the conversation",
+    )
+
+
+@router.post(
+    "/chat/summary", response_model=Union[ChatSummaryResponse, ChatQuestionsResponse]
+)
 async def chat_summary(
     summary_request: ChatSummaryRequest,
     anthropic_chat_model: ChatAnthropic = Depends(get_anthropic_chat_model),
@@ -380,42 +399,84 @@ async def chat_summary(
                 )
             chat_history.append(f"{role}: {content}")
 
-        # Create the prompt for summarization
-        prompt = (
-            "Based on the following chat history, generate a concise title and a brief description "
-            "that summarizes the main topic and key points of the conversation:\n\n"
-            f"Chat History:\n{chr(10).join(chat_history)}\n\n"
-            f"Please provide a title (max {summary_request.max_title_length} characters) and a description "
-            f"(max {summary_request.max_description_length} characters) that capture the essence of this conversation."
-        )
-
-        # Bind the ChatSummary tool to the model
-        llm_with_summary_tool = anthropic_chat_model.bind_tools([ChatSummary])
-
-        # Invoke the model with the prompt
-        response = await llm_with_summary_tool.ainvoke([HumanMessage(content=prompt)])
-
-        # Extract the summary from the response
-        tool_calls = response.tool_calls
-        if tool_calls and len(tool_calls) > 0:
-            summary = tool_calls[0].get("args", {})
-        else:
-            return JSONResponse(
-                content={"error": "No tool calls found in response"}, status_code=500
+        if summary_request.type == "summary":
+            # Create the prompt for summarization
+            prompt = (
+                "Based on the following chat history, generate a concise title and a brief description "
+                "that summarizes the main topic and key points of the conversation:\n\n"
+                f"Chat History:\n{chr(10).join(chat_history)}\n\n"
+                f"Please provide a title (max {summary_request.max_title_length} characters) and a description "
+                f"(max {summary_request.max_description_length} characters) that capture the essence of this conversation."
             )
 
-        try:
-            parsed_summary = ChatSummary(**summary)
-        except ValidationError as e:
-            print(f"Validation error: {e}")
-            return JSONResponse(content={"error": str(e)}, status_code=400)
+            # Bind the ChatSummary tool to the model
+            llm_with_summary_tool = anthropic_chat_model.bind_tools([ChatSummary])
 
-        return ChatSummaryResponse(
-            title=parsed_summary.title[: summary_request.max_title_length],
-            description=parsed_summary.description[
-                : summary_request.max_description_length
-            ],
-        )
+            # Invoke the model with the prompt
+            response = await llm_with_summary_tool.ainvoke(
+                [HumanMessage(content=prompt)]
+            )
+
+            # Extract the summary from the response
+            tool_calls = response.tool_calls
+            if tool_calls and len(tool_calls) > 0:
+                summary = tool_calls[0].get("args", {})
+            else:
+                return JSONResponse(
+                    content={"error": "No tool calls found in response"},
+                    status_code=500,
+                )
+
+            try:
+                parsed_summary = ChatSummary(**summary)
+            except ValidationError as e:
+                print(f"Validation error: {e}")
+                return JSONResponse(content={"error": str(e)}, status_code=400)
+
+            return ChatSummaryResponse(
+                title=parsed_summary.title[: summary_request.max_title_length],
+                description=parsed_summary.description[
+                    : summary_request.max_description_length
+                ],
+            )
+        elif summary_request.type == "questions":
+            print("summary_request.type", summary_request.type)
+            # Create the prompt for summarization
+            prompt = (
+                f"You are a GitLab coding agent."
+                f"Chat History:\n```\n{chr(10).join(chat_history)}\n\n```"
+                f"Please provide a list of 5 prompts that a user might ask a GitLab coding agent based on the Chat History."
+                f"If the data contains references to a web framework, frame the prompts in terms of that framework."
+                f"Frame the prompts from the perspective of the user, not the AI."
+            )
+            print("prompt", prompt)
+
+            # Bind the ChatQuestions tool to the model
+            llm_with_questions_tool = anthropic_chat_model.bind_tools([ChatQuestions])
+
+            # Invoke the model with the prompt
+            response = await llm_with_questions_tool.ainvoke(
+                [HumanMessage(content=prompt)]
+            )
+
+            # Extract the questions from the response
+            tool_calls = response.tool_calls
+
+            if tool_calls and len(tool_calls) > 0:
+                questions = tool_calls[0].get("args", {})
+            else:
+                return JSONResponse(
+                    content={"error": "No tool calls found in response"},
+                    status_code=500,
+                )
+
+            try:
+                parsed_questions = ChatQuestions(**questions)
+            except ValidationError as e:
+                print(f"Validation error: {e}")
+                return JSONResponse(content={"error": str(e)}, status_code=400)
+
+            return ChatQuestionsResponse(questions=parsed_questions.questions)
 
     except Exception as e:
         print(f"Error in chat_summary: {e}")
