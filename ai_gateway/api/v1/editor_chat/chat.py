@@ -17,6 +17,7 @@ from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.base import BaseMessageChunk
 from typing import List, Union, Optional, TypedDict, Literal, Dict
 from langchain_core.messages.ai import AIMessageChunk
+from langchain_core.messages import HumanMessage, AIMessage
 
 
 router = APIRouter()
@@ -480,4 +481,73 @@ async def chat_summary(
 
     except Exception as e:
         print(f"Error in chat_summary: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+# ... (existing imports)
+
+class DiffRequest(BaseModel):
+    original_code: str
+    generated_code: str
+
+class UnifiedDiff(BaseModel):
+    diff: str
+
+class UnifiedDiffResponse(BaseModel):
+    diffs: List[UnifiedDiff]
+
+@router.post("/generate-diff", response_model=UnifiedDiffResponse)
+async def generate_diff(
+    diff_request: DiffRequest,
+    anthropic_chat_model: ChatAnthropic = Depends(get_anthropic_chat_model),
+):
+    try:
+        # Create the prompt for generating the unified diff
+        prompt = f"""
+        Generate a unified diff between the original code and the generated code.
+        Do not include line numbers in the diff headers.
+        Focus on high-level, semantically coherent chunks of code.
+        
+        Original code:
+        ```
+        {diff_request.original_code}
+        ```
+        
+        Generated code:
+        ```
+        {diff_request.generated_code}
+        ```
+        
+        Please provide the unified diff in the following format:
+        ```diff
+        @@ ... @@
+        -removed line
+        +added line
+         unchanged line
+        ```
+        """
+
+        anthropic_chat_model.name = "claude-3-haiku-20240307"
+        # Use the chat model to generate the diff
+        response = await anthropic_chat_model.ainvoke([HumanMessage(content=prompt)])
+
+        # Extract the diff from the response
+        diff_text = response.content
+
+        # Parse the diff text into UnifiedDiff objects
+        diffs: List[UnifiedDiff] = []
+        current_diff: List[str] = []
+        for line in diff_text.split('\n'):
+            if line.startswith('```diff'):
+                current_diff = []
+            elif line.startswith('```') and current_diff:
+                diffs.append(UnifiedDiff(diff='\n'.join(current_diff)))
+                current_diff = []
+            elif current_diff or line.startswith('@@'):
+                current_diff.append(line)
+
+        return UnifiedDiffResponse(diffs=diffs)
+
+    except Exception as e:
+        print(f"Error in generate_diff: {e}")
         return JSONResponse(content={"error": str(e)}, status_code=500)
