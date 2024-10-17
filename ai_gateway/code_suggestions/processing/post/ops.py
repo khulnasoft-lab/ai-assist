@@ -20,6 +20,7 @@ __all__ = [
     "fix_end_block_errors_with_comparison",
     "strip_code_block_markdown",
     "prepend_new_line",
+    "strip_asterisks",
 ]
 
 log = structlog.stdlib.get_logger("codesuggestions")
@@ -28,6 +29,7 @@ log = structlog.stdlib.get_logger("codesuggestions")
 _COMMENT_IDENTIFIERS = ["/*", "//", "#"]
 _SPECIAL_CHARS = "()[];.,$%&^*@#!{}/"
 _RE_MARKDOWN_CODE_BLOCK_BEGIN = re.compile(r"^`{3}\S*\n", flags=re.MULTILINE)
+_ASTERISKS_PATTERN = "\*{5,}"
 
 
 async def clean_model_reflection(context: str, completion: str, **kwargs: Any) -> str:
@@ -243,21 +245,37 @@ def prepend_new_line(code_context: str, completion: str) -> str:
     return completion
 
 
-def _split_code_lines(s: str) -> list[str]:
-    lines_split = s.splitlines(keepends=True)
-    lines_processed = []
+# This trims leading asterisks in the suggestion
+def strip_asterisks(completion: str) -> str:
+    # search first part of completion for a string of asterisks
+    leading_asterisks_pattern = f"^\s*{_ASTERISKS_PATTERN}"
+    match = re.search(leading_asterisks_pattern, completion)
 
-    for i, line in enumerate(lines_split):
-        line = line.rstrip("\n")
-        if i > 0:
-            line = "\n" + line
+    # if there is no match for a string of asterisks, no need to clean the completion
+    if not match:
+        return completion
 
-        lines_processed.append(line)
+    # get index of the first new line after the asterisks
+    start_index = match.span()[1]
+    first_newline_index = completion.find("\n", start_index)
 
-    if len(lines_split) and lines_split[-1].endswith("\n"):
-        lines_processed.append("\n")
+    # if no new line after the asterisks, return an empty completion
+    if first_newline_index == -1:
+        return ""
 
-    return lines_processed
+    # if there lines after the asterisks:
+    # - extract the leading spaces in the first line of the completion
+    # - strip the leading spaces from the rest of the completion
+    # - combine the 2 strings and return as the full completion
+    asterisks_to_end_of_string_pattern = f"{_ASTERISKS_PATTERN}.*$"
+    first_line_leading_spaces = re.sub(
+        asterisks_to_end_of_string_pattern, "", completion[0:first_newline_index]
+    )
+    rest_of_completion_without_leading_spaces = completion[
+        first_newline_index + 1 :
+    ].lstrip()
+
+    return f"{first_line_leading_spaces}{rest_of_completion_without_leading_spaces}"
 
 
 # If the completion contains only comments, we should not return anything
@@ -279,3 +297,20 @@ async def remove_comment_only_completion(
         log.warning(f"Failed to parse code: {e}")
 
     return completion
+
+
+def _split_code_lines(s: str) -> list[str]:
+    lines_split = s.splitlines(keepends=True)
+    lines_processed = []
+
+    for i, line in enumerate(lines_split):
+        line = line.rstrip("\n")
+        if i > 0:
+            line = "\n" + line
+
+        lines_processed.append(line)
+
+    if len(lines_split) and lines_split[-1].endswith("\n"):
+        lines_processed.append("\n")
+
+    return lines_processed

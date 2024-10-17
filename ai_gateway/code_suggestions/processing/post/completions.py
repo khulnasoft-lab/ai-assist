@@ -10,6 +10,7 @@ from ai_gateway.code_suggestions.processing.post.ops import (
     fix_end_block_errors_with_comparison,
     remove_comment_only_completion,
     trim_by_min_allowed_context,
+    strip_asterisks,
 )
 from ai_gateway.code_suggestions.processing.typing import LanguageId
 
@@ -29,6 +30,7 @@ class PostProcessorOperation(StrEnum):
     FIX_END_BLOCK_ERRORS_WITH_COMPARISON = "fix_end_block_errors_with_comparison"
     CLEAN_MODEL_REFLECTION = "clean_model_reflection"
     STRIP_WHITESPACES = "strip_whitespaces"
+    STRIP_ASTERISKS = "strip_asterisks"
 
 
 # This is the ordered list of prost-processing functions
