@@ -1,7 +1,6 @@
 from time import time
 from typing import Annotated, AsyncIterator, Union
 
-import structlog
 from dependency_injector.providers import Factory, FactoryAggregate
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
@@ -29,13 +28,14 @@ from ai_gateway.models import (
     KindModelProvider,
 )
 from ai_gateway.models.base_text import TextGenModelChunk, TextGenModelOutput
+from ai_gateway.structured_logging import get_request_logger
 from ai_gateway.tracking import log_exception
 
 __all__ = [
     "router",
 ]
 
-log = structlog.stdlib.get_logger("chat")
+log = get_request_logger("chat")
 
 router = APIRouter()
 

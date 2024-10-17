@@ -2,7 +2,6 @@ from time import time
 from typing import Annotated, AsyncIterator, Optional, Tuple, Union
 
 import anthropic
-import structlog
 from dependency_injector.providers import Factory
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 
@@ -56,6 +55,7 @@ from ai_gateway.models.base import TokensConsumptionMetadata
 from ai_gateway.models.vertex_text import KindVertexTextModel
 from ai_gateway.prompts import BasePromptRegistry
 from ai_gateway.prompts.typing import ModelMetadata
+from ai_gateway.structured_logging import get_request_logger
 from ai_gateway.tracking import SnowplowEvent, SnowplowEventContext
 from ai_gateway.tracking.errors import log_exception
 from ai_gateway.tracking.instrumentator import SnowplowInstrumentator
@@ -65,7 +65,7 @@ __all__ = [
 ]
 
 
-log = structlog.stdlib.get_logger("codesuggestions")
+log = get_request_logger("codesuggestions")
 
 router = APIRouter()
 

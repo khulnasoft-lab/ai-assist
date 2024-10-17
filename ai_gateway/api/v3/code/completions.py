@@ -1,7 +1,6 @@
 from time import time
 from typing import Annotated, AsyncIterator, Optional
 
-import structlog
 from dependency_injector.providers import Factory
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -35,13 +34,14 @@ from ai_gateway.container import ContainerApplication
 from ai_gateway.gitlab_features import GitLabFeatureCategory, GitLabUnitPrimitive
 from ai_gateway.models import KindModelProvider
 from ai_gateway.prompts import BasePromptRegistry
+from ai_gateway.structured_logging import get_request_logger
 from ai_gateway.tracking import SnowplowEventContext
 
 __all__ = [
     "router",
 ]
 
-log = structlog.stdlib.get_logger("codesuggestions")
+log = get_request_logger("codesuggestions")
 
 router = APIRouter()
 

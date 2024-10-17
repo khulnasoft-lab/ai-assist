@@ -1,6 +1,5 @@
 from typing import Annotated, AsyncIterator
 
-import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from starlette.responses import StreamingResponse
 
@@ -20,7 +19,6 @@ from ai_gateway.chat.agents import (
     TypeAgentEvent,
 )
 from ai_gateway.chat.executor import GLAgentRemoteExecutor
-from ai_gateway.feature_flags import FeatureFlag, is_feature_enabled
 from ai_gateway.gitlab_features import GitLabFeatureCategory, GitLabUnitPrimitive
 from ai_gateway.internal_events import InternalEventsClient
 
@@ -28,8 +26,9 @@ __all__ = [
     "router",
 ]
 
+from ai_gateway.structured_logging import get_request_logger
 
-log = structlog.stdlib.get_logger("chat")
+log = get_request_logger("chat")
 
 router = APIRouter()
 
@@ -125,8 +124,7 @@ async def chat(
     gl_version = request.headers.get(X_GITLAB_VERSION_HEADER, "")
     gl_agent_remote_executor.on_behalf(current_user, gl_version)
 
-    if is_feature_enabled(FeatureFlag.EXPANDED_AI_LOGGING):
-        log.info("Request to V2 Chat Agent", source=__name__, inputs=inputs)
+    log.info("Request to V2 Chat Agent", source=__name__, inputs=inputs)
 
     stream_events = gl_agent_remote_executor.stream(inputs=inputs)
 

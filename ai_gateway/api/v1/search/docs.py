@@ -1,7 +1,6 @@
 import time
 from typing import Annotated
 
-import structlog
 from dependency_injector.providers import Factory
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
@@ -26,7 +25,9 @@ __all__ = [
     "router",
 ]
 
-log = structlog.stdlib.get_logger("search")
+from ai_gateway.structured_logging import get_request_logger
+
+log = get_request_logger("search")
 
 router = APIRouter()
 

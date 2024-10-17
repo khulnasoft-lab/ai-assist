@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -8,6 +9,7 @@ from fastapi import FastAPI
 from structlog.types import EventDict, Processor
 
 from ai_gateway.config import ConfigLogging
+from ai_gateway.feature_flags import FeatureFlag, is_feature_enabled
 
 access_logger = structlog.stdlib.get_logger("api.access")
 
@@ -145,3 +147,19 @@ def setup_logging(logging_config: ConfigLogging):
         )
 
     sys.excepthook = handle_exception
+
+
+def prevent_logging_if_disabled(_, __, event_dict: EventDict) -> EventDict:
+    # pylint: disable=direct-environment-variable-reference
+    if os.getenv("AIGW_LOGGING__ENABLED", "false").lower() == "true":
+        return event_dict
+    if is_feature_enabled(FeatureFlag.EXPANDED_AI_LOGGING):
+        return event_dict
+    # pylint: enable=direct-environment-variable-reference
+    raise structlog.DropEvent
+
+
+def get_request_logger(name: str):
+    return structlog.wrap_logger(
+        structlog.get_logger(name), processors=[prevent_logging_if_disabled]
+    )
