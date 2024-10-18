@@ -1,3 +1,4 @@
+import os
 import urllib.parse
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -57,7 +58,9 @@ class JwksProvider:
 class CompositeProvider(JwksProvider, AuthProvider):
     RS256_ALGORITHM = "RS256"
     SUPPORTED_ALGORITHMS = [RS256_ALGORITHM]
-    AUDIENCE = "gitlab-ai-gateway"
+    # pylint: disable=direct-environment-variable-reference
+    AUDIENCE = os.environ["CLOUD_CONNECTOR_SERVICE_NAME"]
+    # pylint: enable=direct-environment-variable-reference
     CACHE_KEY = "jwks"
 
     class CriticalAuthError(Exception):
@@ -162,12 +165,14 @@ class LocalAuthProvider(JwksProvider):
                 .public_key()
                 .to_dict()
             )
+            # pylint: disable=direct-environment-variable-reference
             signing_key.update(
                 {
-                    "kid": "gitlab_ai_gateway_signing_key",
+                    "kid": f"{os.environ['CLOUD_CONNECTOR_SERVICE_NAME']}_signing_key",
                     "use": "sig",
                 }
             )
+            # pylint: enable=direct-environment-variable-reference
         except JWKError as e:
             log_exception(e)
 
@@ -180,12 +185,14 @@ class LocalAuthProvider(JwksProvider):
                 .public_key()
                 .to_dict()
             )
+            # pylint: disable=direct-environment-variable-reference
             validation_key.update(
                 {
-                    "kid": "gitlab_ai_gateway_validation_key",
+                    "kid": f"{os.environ['CLOUD_CONNECTOR_SERVICE_NAME']}_validation_key",
                     "use": "sig",
                 }
             )
+            # pylint: enable=direct-environment-variable-reference
         except JWKError as e:
             log_exception(e)
 

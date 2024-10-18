@@ -79,6 +79,7 @@ async def user_access_token(
             x_gitlab_realm,
             current_user,
             x_gitlab_instance_id,
+            scopes=[GitLabUnitPrimitive.CODE_SUGGESTIONS],
         )
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to generate JWT")

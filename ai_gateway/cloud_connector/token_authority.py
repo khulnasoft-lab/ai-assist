@@ -1,3 +1,4 @@
+import os
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -5,15 +6,15 @@ from jose import JWTError, jwt
 
 from ai_gateway.cloud_connector.logging import log_exception
 from ai_gateway.cloud_connector.providers import CompositeProvider
-from ai_gateway.gitlab_features import GitLabUnitPrimitive
 
 __all__ = [
     "SELF_SIGNED_TOKEN_ISSUER",
     "TokenAuthority",
 ]
 
-
-SELF_SIGNED_TOKEN_ISSUER = "gitlab-ai-gateway"
+# pylint: disable=direct-environment-variable-reference
+SELF_SIGNED_TOKEN_ISSUER = os.environ["CLOUD_CONNECTOR_SERVICE_NAME"]
+# pylint: enable=direct-environment-variable-reference
 
 
 class TokenAuthority:
@@ -23,7 +24,7 @@ class TokenAuthority:
         self.signing_key = signing_key
 
     def encode(
-        self, sub, gitlab_realm, current_user, gitlab_instance_id
+        self, sub, gitlab_realm, current_user, gitlab_instance_id, scopes
     ) -> tuple[str, int]:
         expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
         try:
@@ -37,7 +38,7 @@ class TokenAuthority:
                 "jti": str(uuid.uuid4()),
                 "gitlab_realm": gitlab_realm,
                 "gitlab_instance_id": gitlab_instance_id,
-                "scopes": [GitLabUnitPrimitive.CODE_SUGGESTIONS],
+                "scopes": scopes,
             }
 
             duo_seat_count = getattr(current_user.claims, "duo_seat_count", "")
