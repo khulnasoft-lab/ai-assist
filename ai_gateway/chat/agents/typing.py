@@ -21,8 +21,9 @@ __all__ = [
 class AgentBaseEvent(BaseModel):
     def dump_as_response(self) -> str:
         model_dump = self.model_dump()
-        type = model_dump.pop("type")
-        return json.dumps({"type": type, "data": model_dump})
+        event_type = model_dump.pop("type")
+        data = json.dumps(model_dump)
+        return f"event: {event_type}\ndata: {data}\n\n"
 
 
 class AgentToolAction(AgentBaseEvent):

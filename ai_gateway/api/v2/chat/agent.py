@@ -54,6 +54,7 @@ async def chat(
 ):
     async def _stream_handler(stream_events: AsyncIterator[TypeAgentEvent]):
         async for event in stream_events:
+            print(event, "angelo testing")
             yield f"{event.dump_as_response()}\n"
 
     scratchpad = [
@@ -105,5 +106,5 @@ async def chat(
     # Ref: https://github.com/encode/starlette/discussions/1739#discussioncomment-3094935.
     # If an exception is raised during the process, you will see `exception_message` field in the access log.
     return StreamingResponse(
-        _stream_handler(stream_events), media_type="application/x-ndjson; charset=utf-8"
+        _stream_handler(stream_events), media_type="text/event-stream; charset=utf-8"
     )

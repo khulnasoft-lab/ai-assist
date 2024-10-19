@@ -131,6 +131,7 @@ class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
     re_final_answer = re.compile(r"Final Answer:\s*([\s\S]*?)\s*</message>")
 
     def _parse_final_answer(self, message: str) -> Optional[AgentFinalAnswer]:
+        print(message, "angelo testing")
         if match_answer := self.re_final_answer.search(message):
             match_thought = self.re_thought.search(message)
 
@@ -164,7 +165,7 @@ class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
         elif agent_action := self._parse_agent_action(wrapped_text):
             event = agent_action
         else:
-            event = AgentUnknownAction(text=text)
+            event = AgentFinalAnswer(text=text, thought="")
 
         return event
 
