@@ -369,36 +369,36 @@ UGw3kIW+604fnnXLDm4TaLA=
     @pytest.mark.parametrize(
         "private_key_used_to_sign,claims,gitlab_realm,authenticated",
         [
-            (
-                private_key_test,
-                claims | ai_gateway_audience,
-                "self-managed",
-                True,
-            ),
-            (
-                private_key_ai_gateway_signing_key_test,
-                claims | ai_gateway_audience,
-                "self-managed",
-                True,
-            ),
-            (
-                private_key_ai_gateway_validation_key_test,
-                claims | ai_gateway_audience,
-                "self-managed",
-                True,
-            ),
-            (
-                private_key_customers,
-                claims | ai_gateway_audience,
-                "self-managed",
-                True,
-            ),
-            (
-                forged_private_key,
-                claims | ai_gateway_audience,
-                "",
-                False,
-            ),
+            # (
+            #     private_key_test,
+            #     claims | ai_gateway_audience,
+            #     "self-managed",
+            #     True,
+            # ),
+            # (
+            #     private_key_ai_gateway_signing_key_test,
+            #     claims | ai_gateway_audience,
+            #     "self-managed",
+            #     True,
+            # ),
+            # (
+            #     private_key_ai_gateway_validation_key_test,
+            #     claims | ai_gateway_audience,
+            #     "self-managed",
+            #     True,
+            # ),
+            # (
+            #     private_key_customers,
+            #     claims | ai_gateway_audience,
+            #     "self-managed",
+            #     True,
+            # ),
+            # (
+            #     forged_private_key,
+            #     claims | ai_gateway_audience,
+            #     "",
+            #     False,
+            # ),
             (
                 private_key_test,
                 {

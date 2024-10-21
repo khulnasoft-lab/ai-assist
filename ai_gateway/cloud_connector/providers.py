@@ -1,4 +1,3 @@
-import os
 import urllib.parse
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -9,6 +8,7 @@ from jose import JWTError, jwk, jwt
 from jose.exceptions import JWKError
 
 from ai_gateway.cloud_connector.cache import LocalAuthCache
+from ai_gateway.cloud_connector.config import service_name
 from ai_gateway.cloud_connector.user import User, UserClaims
 from ai_gateway.tracking.errors import log_exception
 
@@ -58,9 +58,7 @@ class JwksProvider:
 class CompositeProvider(JwksProvider, AuthProvider):
     RS256_ALGORITHM = "RS256"
     SUPPORTED_ALGORITHMS = [RS256_ALGORITHM]
-    # pylint: disable=direct-environment-variable-reference
-    AUDIENCE = os.environ["CLOUD_CONNECTOR_SERVICE_NAME"]
-    # pylint: enable=direct-environment-variable-reference
+    AUDIENCE = service_name
     CACHE_KEY = "jwks"
 
     class CriticalAuthError(Exception):
@@ -168,7 +166,7 @@ class LocalAuthProvider(JwksProvider):
             # pylint: disable=direct-environment-variable-reference
             signing_key.update(
                 {
-                    "kid": f"{os.environ['CLOUD_CONNECTOR_SERVICE_NAME']}_signing_key",
+                    "kid": f"{service_name}_signing_key",
                     "use": "sig",
                 }
             )
@@ -188,7 +186,7 @@ class LocalAuthProvider(JwksProvider):
             # pylint: disable=direct-environment-variable-reference
             validation_key.update(
                 {
-                    "kid": f"{os.environ['CLOUD_CONNECTOR_SERVICE_NAME']}_validation_key",
+                    "kid": f"{service_name}_validation_key",
                     "use": "sig",
                 }
             )

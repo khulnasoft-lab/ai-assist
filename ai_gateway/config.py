@@ -11,6 +11,7 @@ __all__ = [
     "ConfigFastApi",
     "ConfigAuth",
     "ConfigGoogleCloudProfiler",
+    "ConfigCloudConnector",
     "FFlags",
     "FFlagsCodeSuggestions",
     "ConfigSnowplow",
@@ -50,6 +51,10 @@ class ConfigFastApi(BaseModel):
 class ConfigAuth(BaseModel):
     bypass_external: bool = False
     bypass_external_with_header: bool = False
+
+
+class ConfigCloudConnector(BaseModel):
+    service_name: str = "gitlab-ai-gateway"
 
 
 class ConfigGoogleCloudProfiler(BaseModel):
@@ -179,6 +184,9 @@ class Config(BaseSettings):
         ConfigFastApi()
     )
     auth: Annotated[ConfigAuth, Field(default_factory=ConfigAuth)] = ConfigAuth()
+    cloud_connector: Annotated[
+        ConfigCloudConnector, Field(default_factory=ConfigCloudConnector)
+    ] = ConfigCloudConnector()
     google_cloud_profiler: Annotated[
         ConfigGoogleCloudProfiler, Field(default_factory=ConfigGoogleCloudProfiler)
     ] = ConfigGoogleCloudProfiler()

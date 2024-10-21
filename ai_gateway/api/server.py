@@ -14,6 +14,7 @@ from starlette.requests import Request
 from starlette_context import context
 from starlette_context.middleware import RawContextMiddleware
 
+import ai_gateway.cloud_connector.config as cloud_connector_config
 from ai_gateway.api.middleware import (
     AccessLogMiddleware,
     DistributedTraceMiddleware,
@@ -60,6 +61,7 @@ async def lifespan(app: FastAPI):
         )
 
     setup_litellm(config)
+    setup_cloud_connector(config)
 
     yield
 
@@ -158,6 +160,10 @@ def setup_custom_exception_handlers(app: FastAPI):
 
 def setup_litellm(config: Config):
     litellm.vertex_project = config.google_cloud_platform.project
+
+
+def setup_cloud_connector(config: Config):
+    cloud_connector_config.service_name = config.cloud_connector.service_name
 
 
 def setup_router(app: FastAPI):

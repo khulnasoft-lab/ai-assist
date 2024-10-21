@@ -1,9 +1,9 @@
-import os
 import uuid
 from datetime import datetime, timedelta, timezone
 
 from jose import JWTError, jwt
 
+from ai_gateway.cloud_connector.config import service_name
 from ai_gateway.cloud_connector.logging import log_exception
 from ai_gateway.cloud_connector.providers import CompositeProvider
 
@@ -12,9 +12,8 @@ __all__ = [
     "TokenAuthority",
 ]
 
-# pylint: disable=direct-environment-variable-reference
-SELF_SIGNED_TOKEN_ISSUER = os.environ["CLOUD_CONNECTOR_SERVICE_NAME"]
-# pylint: enable=direct-environment-variable-reference
+
+SELF_SIGNED_TOKEN_ISSUER = service_name
 
 
 class TokenAuthority:
