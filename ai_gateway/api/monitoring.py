@@ -8,9 +8,10 @@ from fastapi_health import health
 from ai_gateway.async_dependency_resolver import (
     get_code_suggestions_completions_vertex_legacy_provider,
     get_code_suggestions_generations_anthropic_factory_provider,
+    get_code_suggestions_generations_anthropic_chat_factory_provider
 )
 from ai_gateway.code_suggestions import CodeCompletionsLegacy, CodeGenerations
-from ai_gateway.models import KindAnthropicModel, KindModelProvider
+from ai_gateway.models import KindAnthropicModel, KindModelProvider, Message
 
 __all__ = [
     "router",
@@ -68,12 +69,12 @@ async def validate_vertex_available(
 
 @single_validation(KindModelProvider.ANTHROPIC)
 async def validate_anthropic_available(
-    generations_anthropic_factory: Factory[CodeGenerations] = Depends(
-        get_code_suggestions_generations_anthropic_factory_provider
+    generations_anthropic_chat_factory: Factory[CodeGenerations] = Depends(
+        get_code_suggestions_generations_anthropic_chat_factory_provider
     ),
 ) -> bool:
-    code_generations = generations_anthropic_factory(
-        model__name=KindAnthropicModel.CLAUDE_INSTANT_1_2.value,
+    code_generations = generations_anthropic_chat_factory(
+        model__name=KindAnthropicModel.CLAUDE_3_HAIKU.value,
         model__stop_sequences=["</new_code>"],
     )
 
@@ -84,6 +85,11 @@ async def validate_anthropic_available(
         file_name="monitoring.py",
         editor_lang="python",
         model_provider=KindModelProvider.ANTHROPIC.value,
+        prompt_version=3,
+        prompt=[
+            Message(role="user", content="Complete this code: def hello_world()"),
+            Message(role="assistant", content="Tell me how do this")
+        ]
     )
 
     return True
