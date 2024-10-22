@@ -31,6 +31,7 @@ from ai_gateway.cloud_connector import (
     GitLabOidcProvider,
     LocalAuthProvider,
 )
+from ai_gateway.cloud_connector.providers import CertificateChainProvider
 from ai_gateway.config import Config
 from ai_gateway.container import ContainerApplication
 from ai_gateway.instrumentators.threads import monitor_threads
@@ -94,6 +95,9 @@ def create_fast_api_server(config: Config):
             MiddlewareAuthentication(
                 CompositeProvider(
                     [
+                        CertificateChainProvider(
+                            structlog, config.cloud_connector.root_cert
+                        ),
                         LocalAuthProvider(
                             structlog,
                             signing_key=config.self_signed_jwt.signing_key,

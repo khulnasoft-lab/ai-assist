@@ -153,6 +153,10 @@ class ConfigDefaultPrompts(RootModel):
     root: dict[str, str] = {}
 
 
+class CloudConnector(BaseModel):
+    root_cert: str = ""
+
+
 class Config(BaseSettings):
     model_config = SettingsConfigDict(
         env_nested_delimiter="__",
@@ -219,6 +223,9 @@ class Config(BaseSettings):
     feature_flags: Annotated[
         ConfigFeatureFlags, Field(default_factory=ConfigFeatureFlags)
     ] = ConfigFeatureFlags()
+    cloud_connector: Annotated[
+        CloudConnector, Field(default_factory=CloudConnector)
+    ] = CloudConnector()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

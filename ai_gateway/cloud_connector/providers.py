@@ -1,9 +1,12 @@
+import base64
 import urllib.parse
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from datetime import datetime, timedelta
 
+import cryptography.x509.verification as x509v
 import requests
+from cryptography import x509
 from jose import JWTError, jwk, jwt
 from jose.exceptions import JWKError
 
@@ -72,7 +75,7 @@ class CompositeProvider(JwksProvider, AuthProvider):
         self.cache = LocalAuthCache()
 
     def authenticate(self, token: str) -> User:
-        jwks = self.jwks()
+        jwks = self.jwks(token)
         is_allowed = False
         gitlab_realm = ""
         subject = ""
@@ -116,19 +119,19 @@ class CompositeProvider(JwksProvider, AuthProvider):
             ),
         )
 
-    def cached_jwks(self) -> dict:
+    def cached_jwks(self, _) -> dict:
         jwks_record = self.cache.get(self.CACHE_KEY)
         if jwks_record and jwks_record.exp > datetime.now():
             return jwks_record.value
 
         return defaultdict()
 
-    def load_jwks(self) -> dict:
+    def load_jwks(self, token: str) -> dict:
         jwks: dict[str, list] = defaultdict()
         jwks["keys"] = []
         for provider in self.providers:
             try:
-                provider_jwks = provider.jwks()
+                provider_jwks = provider.jwks(token)
                 jwks["keys"] += provider_jwks["keys"]
             except Exception as e:
                 log_exception(e)
@@ -149,7 +152,7 @@ class LocalAuthProvider(JwksProvider):
         self.signing_key = signing_key
         self.validation_key = validation_key
 
-    def load_jwks(self) -> dict:
+    def load_jwks(self, _) -> dict:
         jwks: dict[str, list] = defaultdict(list)
         jwks["keys"] = []
 
@@ -200,7 +203,7 @@ class GitLabOidcProvider(JwksProvider):
         super().__init__(log_provider)
         self.oidc_providers = oidc_providers
 
-    def load_jwks(self) -> dict:
+    def load_jwks(self, _) -> dict:
         jwks = defaultdict(list)
 
         for oidc_provider, base_url in self.oidc_providers.items():
@@ -240,3 +243,46 @@ class GitLabOidcProvider(JwksProvider):
             log_exception(err, {"oidc_provider": oidc_provider})
 
         return jwks
+
+
+class CertificateChainProvider(JwksProvider):
+    def __init__(self, log_provider, root_cert: str):
+        super().__init__(log_provider)
+        self.root_cert = root_cert
+        print("root cert:", root_cert)
+
+    def load_jwks(self, token: str) -> dict:
+        print("token:", token)
+
+        claims = jwt.get_unverified_claims(token)
+        print(claims)
+
+        jwks: dict[str, list] = defaultdict(list)
+        jwks["keys"] = []
+
+        cert_chain = claims.get("x5c", None)
+        if not cert_chain:
+            return jwks
+
+        self._verify_cert_chain(cert_chain)
+
+        return jwks
+
+    # verify PEM-encoded certificate list
+    def _verify_cert_chain(self, x5c_cert_chain: list[str]):
+        print("cert chain:", x5c_cert_chain)
+
+        cert_chain = [self._x5c_str_to_cert(cert_str) for cert_str in x5c_cert_chain]
+        trust_store = x509v.Store(
+            x509.load_pem_x509_certificates(self.root_cert.encode())
+        )
+        builder = x509v.PolicyBuilder()
+        builder = builder.store(trust_store)
+        verifier = builder.build_client_verifier()
+
+        verified_client = verifier.verify(cert_chain[0], cert_chain[1:])
+        print("result:", verified_client)
+
+    def _x5c_str_to_cert(self, cert_str: str) -> x509.Certificate:
+        cert_der = base64.urlsafe_b64decode(cert_str)
+        return x509.load_der_x509_certificate(cert_der)
