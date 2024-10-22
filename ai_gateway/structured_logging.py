@@ -1,5 +1,4 @@
 import logging
-import os
 import sys
 from pathlib import Path
 
@@ -8,7 +7,7 @@ from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI
 from structlog.types import EventDict, Processor
 
-from ai_gateway.config import ConfigLogging
+from ai_gateway.config import Config, ConfigLogging
 from ai_gateway.feature_flags import FeatureFlag, is_feature_enabled
 
 access_logger = structlog.stdlib.get_logger("api.access")
@@ -23,6 +22,7 @@ def rename_event_key(_, __, event_dict: EventDict) -> EventDict:
     See https://github.com/hynek/structlog/issues/35#issuecomment-591321744
     """
     event_dict["message"] = event_dict.pop("event")
+
     return event_dict
 
 
@@ -150,12 +150,11 @@ def setup_logging(logging_config: ConfigLogging):
 
 
 def prevent_logging_if_disabled(_, __, event_dict: EventDict) -> EventDict:
-    # pylint: disable=direct-environment-variable-reference
-    if os.getenv("AIGW_LOGGING__ENABLED", "false").lower() == "true":
+    if Config().logging.allow_request_logging or is_feature_enabled(
+        FeatureFlag.EXPANDED_AI_LOGGING
+    ):
         return event_dict
-    if is_feature_enabled(FeatureFlag.EXPANDED_AI_LOGGING):
-        return event_dict
-    # pylint: enable=direct-environment-variable-reference
+
     raise structlog.DropEvent
 
 

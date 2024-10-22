@@ -28,6 +28,7 @@ class ConfigLogging(BaseModel):
     level: str = "INFO"
     format_json: bool = True
     to_file: Optional[str] = None
+    allow_request_logging: Optional[bool] = False
 
 
 class ConfigSelfSignedJwt(BaseModel):
