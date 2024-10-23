@@ -9,6 +9,7 @@ from ai_gateway.chat.tools.gitlab import (
     GitlabDocumentation,
     IssueReader,
     MergeRequestReader,
+    DuoCodeReviewChat,
 )
 from ai_gateway.feature_flags import FeatureFlag, is_feature_enabled
 
@@ -25,6 +26,7 @@ class DuoChatToolsRegistry(BaseToolsRegistry):
             EpicReader(),
             IssueReader(),
             MergeRequestReader(),
+            DuoCodeReviewChat(),
         ]
 
         # We continue to use CIEditor tool unless the feature flag for its

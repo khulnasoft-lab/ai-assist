@@ -12,6 +12,7 @@ __all__ = [
     "GitlabDocumentation",
     "EpicReader",
     "BuildReader",
+    "DuoCodeReviewChat",
 ]
 
 
@@ -240,4 +241,26 @@ class MergeRequestReader(BaseRemoteTool):
              Based on this information you can present final answer about merge request.
          Action: merge_request_reader
          Action Input: Please identify the author of #123 merge request"""
+    )
+
+class DuoCodeReviewChat(BaseRemoteTool):
+    name: str = "duo_code_review_chat"
+    resource: str = "diff_notes"
+    unit_primitive: GitLabUnitPrimitive = GitLabUnitPrimitive.ASK_MERGE_REQUEST
+    min_required_gl_version: Optional[str] = "17.6.0-pre"
+
+    description: str = dedent(
+        """\
+        This tool replies to the user question on a diff note
+        ONLY if the user is on a page that displays a diff note in a merge request.
+        If the user question can be answered by other tools, use them instead."""
+    )
+
+    example: str = dedent(
+        """\
+        Question: Is there an alternative solution?
+        Thought: You have asked if there is an alternative solution.
+            "duo_code_review_chat" tool can assist with this kind of questions.
+        Action: duo_code_review_chat
+        Action Input: Is there an alternative solution?"""
     )

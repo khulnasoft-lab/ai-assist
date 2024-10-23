@@ -64,7 +64,7 @@ class AgentStep(BaseModel):
 
 
 class Context(BaseModel, frozen=True):  # type: ignore[call-arg]
-    type: Literal["issue", "epic", "merge_request", "commit", "build"]
+    type: Literal["issue", "epic", "merge_request", "commit", "build", "diff_note"]
     content: str
 
 
