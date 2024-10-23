@@ -248,12 +248,10 @@ class GitLabOidcProvider(JwksProvider):
 class CertificateChainProvider(JwksProvider):
     def __init__(self, log_provider, root_cert: str):
         super().__init__(log_provider)
-        self.root_cert = root_cert
-        print("root cert:", root_cert)
+        trusted_certs = x509.load_pem_x509_certificates(root_cert.encode())
+        self.trust_store = x509v.Store(trusted_certs)
 
     def load_jwks(self, token: str) -> dict:
-        print("token:", token)
-
         claims = jwt.get_unverified_claims(token)
         print(claims)
 
@@ -270,18 +268,13 @@ class CertificateChainProvider(JwksProvider):
 
     # verify PEM-encoded certificate list
     def _verify_cert_chain(self, x5c_cert_chain: list[str]):
-        print("cert chain:", x5c_cert_chain)
-
         cert_chain = [self._x5c_str_to_cert(cert_str) for cert_str in x5c_cert_chain]
-        trust_store = x509v.Store(
-            x509.load_pem_x509_certificates(self.root_cert.encode())
-        )
+
         builder = x509v.PolicyBuilder()
-        builder = builder.store(trust_store)
+        builder = builder.store(self.trust_store)
         verifier = builder.build_client_verifier()
 
-        verified_client = verifier.verify(cert_chain[0], cert_chain[1:])
-        print("result:", verified_client)
+        _ = verifier.verify(cert_chain[0], cert_chain[1:])
 
     def _x5c_str_to_cert(self, cert_str: str) -> x509.Certificate:
         cert_der = base64.urlsafe_b64decode(cert_str)
