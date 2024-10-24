@@ -3,11 +3,13 @@ import urllib.parse
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from datetime import datetime, timedelta
+from typing import Optional
 
 import cryptography.x509.verification as x509v
 import requests
 from cryptography import x509
 from jose import JWTError, jwk, jwt
+from jose.backends.cryptography_backend import CryptographyRSAKey
 from jose.exceptions import JWKError
 
 from ai_gateway.cloud_connector.cache import LocalAuthCache
@@ -23,6 +25,7 @@ __all__ = [
 ]
 
 REQUEST_TIMEOUT_SECONDS = 10
+UNAUTHENTICATED_USER = User(authenticated=False, claims=UserClaims(**{}))
 
 
 class AuthProvider(ABC):
@@ -31,25 +34,42 @@ class AuthProvider(ABC):
         pass
 
 
+# Decorator that takes a list of actual authentication providers,
+# runs them in sequence, and returns the first user that is authenticated.
+# If no authenticated user is found, it returns a default user object with
+# authenticated=False.
+class AuthProviderChain(AuthProvider):
+    def __init__(self, providers: list[AuthProvider]) -> None:
+        self.providers = providers
+
+    def authenticate(self, *args, **kwargs) -> User:
+        for provider in self.providers:
+            user = provider.authenticate(*args, **kwargs)
+            if user.authenticated:
+                return user
+
+        return UNAUTHENTICATED_USER
+
+
 class JwksProvider:
     def __init__(self, log_provider) -> None:
         self.logger = log_provider.getLogger("cloud_connector")
 
-    def jwks(self, *args, **kwargs) -> dict:
-        cached_jwks = self.cached_jwks(*args, **kwargs)
+    def jwks(self, token: str) -> dict:
+        cached_jwks = self.cached_jwks()
         if cached_jwks and len(cached_jwks) > 0:
             return cached_jwks
 
-        new_jwks = self.load_jwks(*args, **kwargs)
+        new_jwks = self.load_jwks(token)
         self._log_keyset_update(new_jwks)
         return new_jwks
 
     @abstractmethod
-    def cached_jwks(self, *args, **kwargs) -> dict:
+    def cached_jwks(self) -> dict:
         pass
 
     @abstractmethod
-    def load_jwks(self, *args, **kwargs) -> dict:
+    def load_jwks(self, token: str) -> dict:
         pass
 
     def _log_keyset_update(self, jwks):
@@ -57,25 +77,24 @@ class JwksProvider:
         self.logger.info("JWKS refreshed", kids=kids, provider=self.__class__.__name__)
 
 
-class CompositeProvider(JwksProvider, AuthProvider):
+# An AuthProvider that uses a JSON Web Key Set (JWKS) to authenticate users.
+class JwksAuthProvider(AuthProvider, JwksProvider):
     RS256_ALGORITHM = "RS256"
     SUPPORTED_ALGORITHMS = [RS256_ALGORITHM]
     AUDIENCE = "gitlab-ai-gateway"
-    CACHE_KEY = "jwks"
 
     class CriticalAuthError(Exception):
         pass
 
-    def __init__(
-        self, providers: list[JwksProvider], log_provider, expiry_seconds: int = 86400
-    ):
-        super().__init__(log_provider)
-        self.providers = providers
-        self.expiry_seconds = expiry_seconds
-        self.cache = LocalAuthCache()
-
     def authenticate(self, token: str) -> User:
         jwks = self.jwks(token)
+        if len(jwks.get("keys", [])) == 0:
+            self.logger(
+                "No keys founds in JWKS; provider might be unreachable",
+                provider=self.__class__.__name__,
+            )
+            return UNAUTHENTICATED_USER
+
         is_allowed = False
         gitlab_realm = ""
         subject = ""
@@ -83,11 +102,6 @@ class CompositeProvider(JwksProvider, AuthProvider):
         scopes = []
         duo_seat_count = ""
         gitlab_instance_id = ""
-
-        if len(jwks.get("keys", [])) == 0:
-            raise self.CriticalAuthError(
-                "No keys founds in JWKS; are OIDC providers up?"
-            )
 
         try:
             jwt_claims = jwt.decode(
@@ -119,7 +133,21 @@ class CompositeProvider(JwksProvider, AuthProvider):
             ),
         )
 
-    def cached_jwks(self, _) -> dict:
+
+# A JwksAuthProvider that composes a list of concrete JwksAuthProviders,
+# merges their JWKSs, caches this set, and uses it to authenticate users.
+class CompositeProvider(JwksAuthProvider):
+    CACHE_KEY = "jwks"
+
+    def __init__(
+        self, providers: list[JwksProvider], log_provider, expiry_seconds: int = 86400
+    ):
+        super().__init__(log_provider)
+        self.providers = providers
+        self.expiry_seconds = expiry_seconds
+        self.cache = LocalAuthCache()
+
+    def cached_jwks(self) -> dict:
         jwks_record = self.cache.get(self.CACHE_KEY)
         if jwks_record and jwks_record.exp > datetime.now():
             return jwks_record.value
@@ -145,7 +173,7 @@ class CompositeProvider(JwksProvider, AuthProvider):
 
 
 class LocalAuthProvider(JwksProvider):
-    ALGORITHM = CompositeProvider.RS256_ALGORITHM
+    ALGORITHM = JwksAuthProvider.RS256_ALGORITHM
 
     def __init__(self, log_provider, signing_key: str, validation_key: str) -> None:
         super().__init__(log_provider)
@@ -245,36 +273,71 @@ class GitLabOidcProvider(JwksProvider):
         return jwks
 
 
-class CertificateChainProvider(JwksProvider):
+# A JwksAuthProvider that produces the JWKS by parsing it from the x5c
+# certificate chain claim embedded in a JWT (self-contained token).
+#
+# The x5c claim contains a list of DER-encoded X.509 certificates,
+# which can be used to create a JWK to validate the token.
+class CertificateChainProvider(JwksAuthProvider):
     def __init__(self, log_provider, root_cert: str):
         super().__init__(log_provider)
         trusted_certs = x509.load_pem_x509_certificates(root_cert.encode())
         self.trust_store = x509v.Store(trusted_certs)
 
+    # We should never cache these values since they change with every request.
+    def cached_jwks(self) -> dict:
+        return defaultdict()
+
+    # Constructs a JWKS from a certificate embedded in the x5c token claim.
     def load_jwks(self, token: str) -> dict:
         claims = jwt.get_unverified_claims(token)
-        print(claims)
 
         jwks: dict[str, list] = defaultdict(list)
         jwks["keys"] = []
 
         cert_chain = claims.get("x5c", None)
+        self.logger.info("x5c cert chain", cert_chain=cert_chain)
         if not cert_chain:
             return jwks
 
-        self._verify_cert_chain(cert_chain)
+        cert = self._verify_cert_chain(cert_chain)
+        if not cert:
+            return jwks
+
+        rsa_key = cert.public_key()
+        jose_key: CryptographyRSAKey = jwk.construct(
+            rsa_key, algorithm=self.RS256_ALGORITHM
+        )
+        key_dict = jose_key.to_dict()
+        key_dict.update(
+            {
+                "kid": jwt.get_unverified_header(token).get("kid"),
+                "use": "sig",
+            }
+        )
+        self.logger.info("x5c JWK", key=key_dict)
+
+        jwks["keys"].append(key_dict)
 
         return jwks
 
-    # verify PEM-encoded certificate list
-    def _verify_cert_chain(self, x5c_cert_chain: list[str]):
+    def _verify_cert_chain(
+        self, x5c_cert_chain: list[str]
+    ) -> Optional[x509.Certificate]:
         cert_chain = [self._x5c_str_to_cert(cert_str) for cert_str in x5c_cert_chain]
 
         builder = x509v.PolicyBuilder()
         builder = builder.store(self.trust_store)
         verifier = builder.build_client_verifier()
 
-        _ = verifier.verify(cert_chain[0], cert_chain[1:])
+        leaf_cert = cert_chain[0]
+
+        try:
+            _ = verifier.verify(leaf_cert, cert_chain[1:])
+            return leaf_cert
+        except x509v.VerificationError as err:
+            log_exception(err)
+            return None
 
     def _x5c_str_to_cert(self, cert_str: str) -> x509.Certificate:
         cert_der = base64.urlsafe_b64decode(cert_str)

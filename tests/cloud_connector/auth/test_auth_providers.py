@@ -323,7 +323,9 @@ UGw3kIW+604fnnXLDm4TaLA=
             '{"keys": []}',
         ],
     )
-    def test_no_jwks_available_raises_error(
+    # TODO: We can't do this anymore since an empty JWKS is expected
+    # when the x5c claim isn't present or fails to validate
+    def _test_no_jwks_available_raises_error(
         self,
         jwks_response_body,
     ):
@@ -516,8 +518,8 @@ UGw3kIW+604fnnXLDm4TaLA=
 
         # Make sure to warm up the key cache; we only want log events
         # when the cache is first populated or refreshed.
-        _ = auth_provider.jwks()
-        jwks = auth_provider.jwks()
+        _ = auth_provider.jwks("token")
+        jwks = auth_provider.jwks("token")
         assert jwks is not None
         assert len(jwks["keys"]) == 1
 

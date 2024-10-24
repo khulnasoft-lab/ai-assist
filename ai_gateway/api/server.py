@@ -31,7 +31,10 @@ from ai_gateway.cloud_connector import (
     GitLabOidcProvider,
     LocalAuthProvider,
 )
-from ai_gateway.cloud_connector.providers import CertificateChainProvider
+from ai_gateway.cloud_connector.providers import (
+    AuthProviderChain,
+    CertificateChainProvider,
+)
 from ai_gateway.config import Config
 from ai_gateway.container import ContainerApplication
 from ai_gateway.instrumentators.threads import monitor_threads
@@ -93,25 +96,29 @@ def create_fast_api_server(config: Config):
                 environment=config.environment,
             ),
             MiddlewareAuthentication(
-                CompositeProvider(
+                AuthProviderChain(
                     [
                         CertificateChainProvider(
                             structlog, config.cloud_connector.root_cert
                         ),
-                        LocalAuthProvider(
+                        CompositeProvider(
+                            [
+                                LocalAuthProvider(
+                                    structlog,
+                                    signing_key=config.self_signed_jwt.signing_key,
+                                    validation_key=config.self_signed_jwt.validation_key,
+                                ),
+                                GitLabOidcProvider(
+                                    structlog,
+                                    oidc_providers={
+                                        "Gitlab": config.gitlab_url,
+                                        "CustomersDot": config.customer_portal_url,
+                                    },
+                                ),
+                            ],
                             structlog,
-                            signing_key=config.self_signed_jwt.signing_key,
-                            validation_key=config.self_signed_jwt.validation_key,
                         ),
-                        GitLabOidcProvider(
-                            structlog,
-                            oidc_providers={
-                                "Gitlab": config.gitlab_url,
-                                "CustomersDot": config.customer_portal_url,
-                            },
-                        ),
-                    ],
-                    structlog,
+                    ]
                 ),
                 bypass_auth=config.auth.bypass_external,
                 bypass_auth_with_header=config.auth.bypass_external_with_header,
