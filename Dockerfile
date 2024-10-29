@@ -5,12 +5,15 @@ ENV PYTHONUNBUFFERED=1 \
   PIP_DISABLE_PIP_VERSION_CHECK=1 \
   POETRY_VERSION=1.8.4 \
   POETRY_VIRTUALENVS_PATH=/home/aigateway/app/venv \
+  POETRY_HOME=/home/aigateway/app/poetry \
+  POETRY_CONFIG_DIR=/home/aigateway/app/.config/pypoetry \
   CLOUD_CONNECTOR_SERVICE_NAME=${CLOUD_CONNECTOR_SERVICE_NAME}
 
 WORKDIR /home/aigateway/app
 
 COPY poetry.lock pyproject.toml ./
 RUN pip install "poetry==$POETRY_VERSION"
+RUN mkdir -p -m 777 $POETRY_CONFIG_DIR
 
 ##
 ## Intermediate image contains build-essential for installing
@@ -35,6 +38,10 @@ FROM base-image AS final
 
 WORKDIR /home/aigateway/app
 
+RUN useradd aigateway
+RUN chown -R aigateway:aigateway /home/aigateway/
+USER aigateway
+
 COPY --from=install-image /home/aigateway/app/venv /home/aigateway/app/venv
 
 COPY ai_gateway/ ai_gateway/
@@ -44,12 +51,6 @@ COPY --from=install-image /home/aigateway/app/scripts/bootstrap.py .
 COPY --from=install-image /home/aigateway/app/scripts/run.sh .
 
 RUN poetry run python bootstrap.py
-
-RUN useradd aigateway
-
-RUN chown -R aigateway:aigateway /home/aigateway/
-
-USER aigateway
 
 EXPOSE 5052
 
