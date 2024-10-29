@@ -65,7 +65,7 @@ __all__ = [
 ]
 
 
-log = get_request_logger("codesuggestions")
+request_log = get_request_logger("codesuggestions")
 
 router = APIRouter()
 
@@ -142,7 +142,7 @@ async def completions(
     except Exception as e:
         log_exception(e)
 
-    log.debug(
+    request_log.debug(
         "code completion input:",
         model_name=payload.model_name,
         model_provider=payload.model_provider,
@@ -293,7 +293,7 @@ async def generations(
     except Exception as e:
         log_exception(e)
 
-    log.debug(
+    request_log.debug(
         "code creation input:",
         prompt=payload.prompt if hasattr(payload, "prompt") else None,
         prefix=payload.current_file.content_above_cursor,
@@ -344,7 +344,7 @@ async def generations(
     if isinstance(suggestion, AsyncIterator):
         return await _handle_stream(suggestion)
 
-    log.debug(
+    request_log.debug(
         "code creation suggestion:",
         suggestion=suggestion.text,
         score=suggestion.score,
@@ -477,7 +477,7 @@ def _completion_suggestion_choices(
     choices = []
     tokens_consumption_metadata = None
     for suggestion in suggestions:
-        log.debug(
+        request_log.debug(
             "code completion suggestion:",
             suggestion=suggestion.text,
             score=suggestion.score,

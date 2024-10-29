@@ -11,6 +11,7 @@ from ai_gateway.config import Config, ConfigLogging
 from ai_gateway.feature_flags import FeatureFlag, is_feature_enabled
 
 access_logger = structlog.stdlib.get_logger("api.access")
+enable_request_logging = False
 
 
 # https://github.com/hynek/structlog/issues/35#issuecomment-591321744
@@ -49,7 +50,10 @@ def setup_app_logging(app: FastAPI):
 
 
 def setup_logging(logging_config: ConfigLogging):
+    global enable_request_logging
+
     timestamper = structlog.processors.TimeStamper(fmt="iso")
+    enable_request_logging = logging_config.enable_request_logging
 
     shared_processors: list[Processor] = [
         structlog.contextvars.merge_contextvars,
@@ -150,9 +154,9 @@ def setup_logging(logging_config: ConfigLogging):
 
 
 def prevent_logging_if_disabled(_, __, event_dict: EventDict) -> EventDict:
-    if Config().logging.allow_request_logging or is_feature_enabled(
-        FeatureFlag.EXPANDED_AI_LOGGING
-    ):
+    global enable_request_logging
+
+    if enable_request_logging or is_feature_enabled(FeatureFlag.EXPANDED_AI_LOGGING):
         return event_dict
 
     raise structlog.DropEvent

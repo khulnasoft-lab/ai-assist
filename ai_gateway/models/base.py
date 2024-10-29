@@ -4,6 +4,7 @@ from enum import StrEnum
 from typing import Any, NamedTuple, Optional
 
 import httpx
+import structlog
 from anthropic import AsyncAnthropic
 from anthropic._base_client import _DefaultAsyncHttpxClient
 from google.cloud.aiplatform.gapic import PredictionServiceAsyncClient
@@ -32,7 +33,9 @@ __all__ = [
     "init_anthropic_client",
 ]
 
-log = get_request_logger("models")
+
+log = structlog.stdlib.get_logger("models")
+request_log = get_request_logger("models")
 
 
 class KindModelProvider(StrEnum):
@@ -131,7 +134,7 @@ async def log_anthropic_request(request: httpx.Request):
         except Exception:
             request_content_json = {}
 
-        log.info(
+        request_log.info(
             "Request to Anthropic",
             source=__name__,
             request_method=request.method,

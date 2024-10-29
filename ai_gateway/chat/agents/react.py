@@ -34,7 +34,7 @@ from ai_gateway.structured_logging import get_request_logger
 
 _REACT_AGENT_TOOL_ACTION_CONTEXT_KEY = "duo_chat.agent_tool_action"
 
-log = get_request_logger("react")
+request_log = get_request_logger("react")
 
 
 class ReActAgentInputs(BaseModel):
@@ -175,7 +175,7 @@ class ReActAgent(Prompt[ReActAgentInputs, TypeAgentEvent]):
 
         try:
             async for event in astream:
-                log.info("Response streaming", source=__name__, streamed_event=event)
+                request_log.info("Response streaming", source=__name__, streamed_event=event)
 
                 if isinstance(event, AgentFinalAnswer) and len(event.text) > 0:
                     yield AgentFinalAnswer(

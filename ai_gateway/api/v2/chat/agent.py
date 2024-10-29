@@ -28,7 +28,7 @@ __all__ = [
 
 from ai_gateway.structured_logging import get_request_logger
 
-log = get_request_logger("chat")
+request_log = get_request_logger("chat")
 
 router = APIRouter()
 
@@ -124,7 +124,7 @@ async def chat(
     gl_version = request.headers.get(X_GITLAB_VERSION_HEADER, "")
     gl_agent_remote_executor.on_behalf(current_user, gl_version)
 
-    log.info("Request to V2 Chat Agent", source=__name__, inputs=inputs)
+    request_log.info("Request to V2 Chat Agent", source=__name__, inputs=inputs)
 
     stream_events = gl_agent_remote_executor.stream(inputs=inputs)
 

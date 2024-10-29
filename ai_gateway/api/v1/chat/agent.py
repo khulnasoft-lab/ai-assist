@@ -28,14 +28,11 @@ from ai_gateway.models import (
     KindModelProvider,
 )
 from ai_gateway.models.base_text import TextGenModelChunk, TextGenModelOutput
-from ai_gateway.structured_logging import get_request_logger
 from ai_gateway.tracking import log_exception
 
 __all__ = [
     "router",
 ]
-
-log = get_request_logger("chat")
 
 router = APIRouter()
 

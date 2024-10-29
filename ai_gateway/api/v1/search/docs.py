@@ -25,10 +25,6 @@ __all__ = [
     "router",
 ]
 
-from ai_gateway.structured_logging import get_request_logger
-
-log = get_request_logger("search")
-
 router = APIRouter()
 
 

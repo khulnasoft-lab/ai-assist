@@ -41,7 +41,7 @@ __all__ = [
     "router",
 ]
 
-log = get_request_logger("codesuggestions")
+request_log = get_request_logger("codesuggestions")
 
 router = APIRouter()
 
@@ -158,7 +158,7 @@ def _completion_suggestion_choices(suggestions: list) -> list:
 
     choices = []
     for suggestion in suggestions:
-        log.debug(
+        request_log.debug(
             "code completion suggestion:",
             suggestion=suggestion,
             score=suggestion.score,
