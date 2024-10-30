@@ -95,8 +95,7 @@ async def chat(
         category=__name__,
     )
 
-    if is_feature_enabled(FeatureFlag.EXPANDED_AI_LOGGING):
-        log.info("Request to V2 Chat Agent", source=__name__, inputs=inputs)
+    log.info("Request to V2 Chat Agent", source=__name__, inputs=inputs)
 
     stream_events = gl_agent_remote_executor.stream(inputs=inputs)
 

@@ -4,8 +4,9 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field, ValidationError
 import json
 import asyncio
+import uuid
 
-from ai_gateway.chat.tools.base import BaseTool
+from ai_gateway.chat.tools.base import BaseTool, BaseToolParameter
 from ai_gateway.models.base import connect_anthropic
 from ai_gateway.models.v2.anthropic_claude import ChatAnthropic
 from langchain.callbacks.base import AsyncCallbackHandler
@@ -22,6 +23,48 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 router = APIRouter()
 
+RAILS_TOOLS = ["merge_request_reader", "issue_reader"]
+
+merge_request_tool = BaseTool(
+    name="merge_request_reader",
+    description="Use this tool to read the contents of a merge request. If provided a URL, use the url encoded path as the project_id.",
+    parameters=[
+        BaseToolParameter(
+            name="merge_request_id",
+            type="string",
+            description="The ID of the merge request to read",
+            required=True,
+        ),
+        BaseToolParameter(
+            name="project_id",
+            type="string",
+            description="The ID or project path of the project the merge request belongs to",
+            required=True,
+        ),
+    ],
+)
+
+issue_tool = BaseTool(
+    name="issue_reader",
+    description="Use this tool to read the contents of an issue.",
+    parameters=[
+        BaseToolParameter(
+            name="issue_id",
+            type="string",
+            description="The ID of the issue to read",
+            required=True,
+        ),
+        BaseToolParameter(
+            name="project_id",
+            type="string",
+            description="The ID or project path of the project the issue belongs to",
+            required=True,
+        ),
+    ],
+)
+
+IDE_TOOLS = ["workspace_tree"]
+
 
 class AIContextItem(BaseModel):
     id: str
@@ -32,18 +75,18 @@ class AIContextItem(BaseModel):
 class ChatHistoryMessage(BaseModel):
     role: str  # 'user' or 'assistant'
     content: str
-    additional_context: Optional[List[AIContextItem]] = []
+    ai_context_items: Optional[List[AIContextItem]] = []
     tool_used: bool = False
 
 
-def build_additional_context_prompt(
-    additional_context: Optional[List[AIContextItem]], tool_used: bool = False
+def build_ai_context_items_prompt(
+    ai_context_items: Optional[List[AIContextItem]], tool_used: bool = False
 ) -> str:
-    if not additional_context:
+    if not ai_context_items:
         return ""
 
     context_items: List[str] = []
-    for item in additional_context:
+    for item in ai_context_items:
         context_items.append(f"- {item.category}: {item.id}")
         if item.content:
             context_items.append(f"  Content: {item.content}")
@@ -57,9 +100,10 @@ def build_additional_context_prompt(
 class EditorChatRequest(BaseModel):
     prompt: str
     tools: List[BaseTool]
+    disabled_tools: List[str] = []
     openapi_schema: Optional[dict] = None
     history: Optional[List[ChatHistoryMessage]] = []
-    additional_context: Optional[List[AIContextItem]] = []
+    ai_context_items: Optional[List[AIContextItem]] = []
     tool_used: bool = False
 
 
@@ -123,8 +167,10 @@ class CustomCallbackHandler(AsyncCallbackHandler):
         await self.queue.put(None)
 
 
-def build_sse_message(message: str) -> str:
-    return f"data: {message}\n\n"
+def build_sse_message(message: str, event_type: str) -> str:
+    sse_message = f"event: {event_type}\ndata: {message}\n\n"
+    print(sse_message)
+    return sse_message
 
 
 class TextContentChunk:
@@ -250,10 +296,11 @@ async def editor_chat(
         for history_message in chat_request.history if chat_request.history else []:
             if history_message.role == "user":
                 human_message = (
-                    history_message.content
-                    + build_additional_context_prompt(
-                        history_message.additional_context, history_message.tool_used
+                    ""
+                    + build_ai_context_items_prompt(
+                        history_message.ai_context_items, history_message.tool_used
                     )
+                    + history_message.content
                 )
                 memory.chat_memory.add_user_message(HumanMessage(content=human_message))
             elif history_message.role == "assistant":
@@ -265,6 +312,10 @@ async def editor_chat(
         anthropic_tools = [
             convert_to_anthropic_tool(tool) for tool in chat_request.tools
         ]
+        if merge_request_tool.name not in chat_request.disabled_tools:
+            anthropic_tools.append(convert_to_anthropic_tool(merge_request_tool))
+        if issue_tool.name not in chat_request.disabled_tools:
+            anthropic_tools.append(convert_to_anthropic_tool(issue_tool))
         print("anthropic_tools", anthropic_tools)
 
         # Bind tools to the Anthropic model
@@ -274,8 +325,8 @@ async def editor_chat(
         callback_handler = CustomCallbackHandler()
 
         async def stream_agent_response() -> AsyncIterator[str]:
-            prompt_message = chat_request.prompt + build_additional_context_prompt(
-                chat_request.additional_context, chat_request.tool_used
+            prompt_message = chat_request.prompt + build_ai_context_items_prompt(
+                chat_request.ai_context_items, chat_request.tool_used
             )
             messages = memory.chat_memory.messages + [
                 HumanMessage(content=prompt_message)
@@ -291,6 +342,8 @@ async def editor_chat(
             tool_selection_tracker = ToolSelectionTracker()
 
             total_tokens = 0
+            request_id = str(uuid.uuid4())
+            chunk_id = 1
             async for raw_chunk in stream:
                 chunk = handle_stream_chunk(raw_chunk)
                 if isinstance(raw_chunk, AIMessageChunk):
@@ -302,12 +355,18 @@ async def editor_chat(
                     if isinstance(chunk, TextContentChunk):
                         message = build_sse_message(
                             json.dumps(
-                                {"event_type": "message_chunk", "content": chunk.text}
-                            )
+                                {
+                                    "event_type": "message_chunk",
+                                    "content": chunk.text,
+                                    "chunk_id": chunk_id,
+                                    "request_id": request_id,
+                                }
+                            ),
+                            event_type="message_chunk",
                         )
                         yield message
                         full_message += chunk.text
-
+                        chunk_id += 1
                     if isinstance(chunk, ToolUseSelected):
                         tool_selection_tracker.add_selection(
                             chunk.index, chunk.id, chunk.name
@@ -318,21 +377,42 @@ async def editor_chat(
                         )
 
             for selection in tool_selection_tracker.get_all_selections():
+                event_type = (
+                    "rails_tool_chosen"
+                    if selection["name"] in RAILS_TOOLS
+                    else "ide_tool_chosen"
+                )
                 yield build_sse_message(
                     json.dumps(
                         {
-                            "event_type": "tool_chosen",
+                            "event_type": event_type,
                             "name": selection["name"],
                             "args": selection["args"],
                             "index": selection["index"],
+                            "request_id": request_id,
                         }
-                    )
+                    ),
+                    event_type=event_type,
                 )
             yield build_sse_message(
-                json.dumps({"event_type": "tokens_count", "total_tokens": total_tokens})
+                json.dumps(
+                    {
+                        "event_type": "tokens_count",
+                        "total_tokens": total_tokens,
+                        "request_id": request_id,
+                    }
+                ),
+                event_type="tokens_count",
             )
             yield build_sse_message(
-                json.dumps({"event_type": "full_message", "content": full_message})
+                json.dumps(
+                    {
+                        "event_type": "full_message",
+                        "content": full_message,
+                        "request_id": request_id,
+                    }
+                ),
+                event_type="full_message",
             )
 
         return StreamingResponse(
@@ -394,9 +474,9 @@ async def chat_summary(
         for msg in summary_request.history:
             role = "Human" if msg.role == "user" else "Assistant"
             content = msg.content
-            if msg.additional_context:
-                content += "\n" + build_additional_context_prompt(
-                    msg.additional_context, msg.tool_used
+            if msg.ai_context_items:
+                content += "\n" + build_ai_context_items_prompt(
+                    msg.ai_context_items, msg.tool_used
                 )
             chat_history.append(f"{role}: {content}")
 
@@ -486,15 +566,19 @@ async def chat_summary(
 
 # ... (existing imports)
 
+
 class DiffRequest(BaseModel):
     original_code: str
     generated_code: str
 
+
 class UnifiedDiff(BaseModel):
     diff: str
 
+
 class UnifiedDiffResponse(BaseModel):
     diffs: List[UnifiedDiff]
+
 
 @router.post("/generate-diff", response_model=UnifiedDiffResponse)
 async def generate_diff(
@@ -537,13 +621,13 @@ async def generate_diff(
         # Parse the diff text into UnifiedDiff objects
         diffs: List[UnifiedDiff] = []
         current_diff: List[str] = []
-        for line in diff_text.split('\n'):
-            if line.startswith('```diff'):
+        for line in diff_text.split("\n"):
+            if line.startswith("```diff"):
                 current_diff = []
-            elif line.startswith('```') and current_diff:
-                diffs.append(UnifiedDiff(diff='\n'.join(current_diff)))
+            elif line.startswith("```") and current_diff:
+                diffs.append(UnifiedDiff(diff="\n".join(current_diff)))
                 current_diff = []
-            elif current_diff or line.startswith('@@'):
+            elif current_diff or line.startswith("@@"):
                 current_diff.append(line)
 
         return UnifiedDiffResponse(diffs=diffs)

@@ -69,6 +69,7 @@ class ReActInputParser(Runnable[ReActAgentInputs, dict]):
             "unavailable_resources": input.unavailable_resources,
             "tools": input.tools,
         }
+        print("additional_context", input.additional_context, "angelo testing")
 
         if isinstance(input.chat_history, list) and any(
             isinstance(m, Message) for m in input.chat_history
@@ -85,8 +86,7 @@ class ReActInputParser(Runnable[ReActAgentInputs, dict]):
                 {"context_type": context.type, "context_content": context.content}
             )
 
-        if is_feature_enabled(FeatureFlag.EXPANDED_AI_LOGGING):
-            log.info("ReActInputParser", source=__name__, final_inputs=final_inputs)
+        log.info("ReActInputParser", source=__name__, final_inputs=final_inputs)
 
         return final_inputs
 
@@ -165,7 +165,7 @@ class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
         elif agent_action := self._parse_agent_action(wrapped_text):
             event = agent_action
         else:
-            event = AgentFinalAnswer(text=text, thought="")
+            event = AgentUnknownAction(text=text)
 
         return event
 
