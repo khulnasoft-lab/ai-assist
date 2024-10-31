@@ -7,6 +7,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from langchain.chat_models.fake import FakeListChatModel
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.outputs import ChatGenerationChunk
 from starlette.middleware import Middleware
 from starlette_context.middleware import RawContextMiddleware
@@ -36,7 +37,7 @@ from ai_gateway.models.base_text import (
 from ai_gateway.prompts import Prompt
 from ai_gateway.prompts.config.base import ModelConfig, PromptConfig, PromptParams
 from ai_gateway.prompts.config.models import ChatLiteLLMParams, TypeModelParams
-from ai_gateway.prompts.typing import Model, TypeModelFactory
+from ai_gateway.prompts.typing import TypeModelFactory
 
 pytest_plugins = ("pytest_asyncio",)
 
@@ -452,7 +453,7 @@ def model(
 
 
 @pytest.fixture
-def model_factory(model: Model):
+def model_factory(model: BaseChatModel):
     yield lambda *args, **kwargs: model
 
 

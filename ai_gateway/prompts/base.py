@@ -3,6 +3,7 @@ from typing import Any, AsyncIterator, Mapping, Optional, Sequence, Tuple, TypeV
 
 from jinja2 import PackageLoader
 from jinja2.sandbox import SandboxedEnvironment
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.prompts.chat import MessageLikeRepresentation
 from langchain_core.prompts.string import DEFAULT_FORMATTER_MAPPING
@@ -12,7 +13,7 @@ from ai_gateway.api.auth_utils import StarletteUser
 from ai_gateway.cloud_connector import GitLabUnitPrimitive, WrongUnitPrimitives
 from ai_gateway.instrumentators.model_requests import ModelRequestInstrumentator
 from ai_gateway.prompts.config.base import ModelConfig, PromptConfig, PromptParams
-from ai_gateway.prompts.typing import Model, ModelMetadata, TypeModelFactory
+from ai_gateway.prompts.typing import ModelMetadata, TypeModelFactory
 
 __all__ = [
     "Prompt",
@@ -38,7 +39,7 @@ DEFAULT_FORMATTER_MAPPING["jinja2"] = jinja2_formatter
 
 class Prompt(RunnableBinding[Input, Output]):
     name: str
-    model: Model
+    model: BaseChatModel
     unit_primitives: list[GitLabUnitPrimitive]
     prompt_tpl: ChatPromptTemplate
 
@@ -79,7 +80,7 @@ class Prompt(RunnableBinding[Input, Output]):
         self,
         model_factory: TypeModelFactory,
         config: ModelConfig,
-    ) -> Model:
+    ) -> BaseChatModel:
         return model_factory(
             model=config.name,
             **config.params.model_dump(
