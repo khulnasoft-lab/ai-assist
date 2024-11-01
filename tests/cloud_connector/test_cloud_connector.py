@@ -1,6 +1,14 @@
+import os
+from unittest import mock
+
 import pytest
 
-from ai_gateway.cloud_connector import AuthProvider, CloudConnectorUser, UserClaims
+from ai_gateway.cloud_connector import (
+    AuthProvider,
+    CloudConnectorConfig,
+    CloudConnectorUser,
+    UserClaims,
+)
 from ai_gateway.cloud_connector import authenticate as cloud_connector_authenticate
 
 
@@ -31,6 +39,17 @@ def test_cloud_connector_authenticate_bypass_auth(
         )
     )
     assert cloud_connector_error is None
+
+
+def test_cloud_connector_config():
+    assert (
+        CloudConnectorConfig().service_name == CloudConnectorConfig.DEFAULT_SERVICE_NAME
+    )
+
+    with mock.patch.dict(
+        os.environ, {"CLOUD_CONNECTOR_SERVICE_NAME": "different"}, clear=True
+    ):
+        assert CloudConnectorConfig().service_name == "different"
 
 
 class StubAuthProvider(AuthProvider):
