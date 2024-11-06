@@ -13,6 +13,6 @@ class ContainerAbuseDetection(containers.DeclarativeContainer):
         enabled=config.enabled,
         sampling_rate=config.sampling_rate,
         model=providers.Factory(
-            models.anthropic_claude_chat, KindAnthropicModel.CLAUDE_3_HAIKU
+            models.anthropic_claude_chat, KindAnthropicModel.CLAUDE_3_5_HAIKU
         ),
     )

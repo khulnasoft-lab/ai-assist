@@ -75,6 +75,7 @@ class KindAnthropicModel(StrEnum):
     CLAUDE_3_SONNET = "claude-3-sonnet-20240229"
     CLAUDE_3_5_SONNET = "claude-3-5-sonnet-20240620"
     CLAUDE_3_HAIKU = "claude-3-haiku-20240307"
+    CLAUDE_3_5_HAIKU = "claude-3-5-haiku-20241022"
 
 
 class AnthropicModel(TextGenModelBase):
@@ -224,7 +225,7 @@ class AnthropicChatModel(ChatModelBase):
         self,
         client: AsyncAnthropic,
         version: str = DEFAULT_VERSION,
-        model_name: str = KindAnthropicModel.CLAUDE_3_HAIKU.value,
+        model_name: str = KindAnthropicModel.CLAUDE_3_5_HAIKU.value,
         **kwargs: Any,
     ):
         client_opts = self._obtain_client_opts(version, **kwargs)

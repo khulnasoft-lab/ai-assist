@@ -285,6 +285,26 @@ class TestLocalPromptRegistry:
             ),
             (
                 "chat/react",
+                None,
+                "Chat react prompt",
+                MockPromptClass,
+                [("system", "Template1"), ("user", "Template2")],
+                "claude-3-5-haiku-20241022",
+                {"stop": ["Foo", "Bar"], "timeout": 60},
+                {
+                    "temperature": 0.1,
+                    "top_p": 0.8,
+                    "top_k": 40,
+                    "max_tokens": 256,
+                    "max_retries": 6,
+                    "default_headers": {
+                        "header1": "Header1 value",
+                        "header2": "Header2 value",
+                    },
+                },
+            ),
+            (
+                "chat/react",
                 ModelMetadata(
                     name="custom",
                     endpoint=HttpUrl("http://localhost:4000/"),

@@ -88,7 +88,7 @@ async def validate_anthropic_available(
     )
 
     code_generations = generations_anthropic_chat_factory(
-        model__name=KindAnthropicModel.CLAUDE_3_HAIKU.value,
+        model__name=KindAnthropicModel.CLAUDE_3_5_HAIKU.value,
         model__stop_sequences=["</new_code>"],
     )
 
