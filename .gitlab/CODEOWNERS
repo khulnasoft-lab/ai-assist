@@ -6,3 +6,6 @@
 
 ^[Infrastructure]
 * @gitlab-org/production-engineering @gitlab-org/scalability
+
+[Cloud Connector]
+/ai_gateway/cloud_connector/**/* @gitlab-org/cloud-connector-team 
