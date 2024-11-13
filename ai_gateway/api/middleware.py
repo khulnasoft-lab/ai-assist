@@ -431,7 +431,6 @@ class FeatureFlagMiddleware:
             disallowed_flags = self.disallowed_flags.get(gitlab_realm, set())
             enabled_feature_flags = enabled_feature_flags.difference(disallowed_flags)
 
-        import pdb;pdb.set_trace()
         current_feature_flag_context.set(enabled_feature_flags)
         starlette_context["enabled_feature_flags"] = ",".join(enabled_feature_flags)
 
