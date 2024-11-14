@@ -215,3 +215,17 @@ tag-self-hosted:
       git push origin "self-hosted-${GITLAB_VERSION}"
   rules:
     - if: $GITLAB_VERSION
+
+evaluation:
+  stage: test
+  inherit:
+    variables: false
+  variables:
+    EVALUATION_RUNNER_GITLAB_RAILS_CHECKOUT_REF: master
+    EVALUATION_RUNNER_AI_GATEWAY_CHECKOUT_REF: main # $CI_COMMIT_REF_NAME
+  trigger:
+    project: gitlab-org/modelops/ai-model-validation-and-research/ai-evaluation/evaluation-runner
+    branch: main
+    strategy: depend
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
