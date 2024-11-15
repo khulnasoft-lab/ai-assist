@@ -8,13 +8,13 @@ import pytest
 from dependency_injector import containers
 from fastapi import status
 from fastapi.testclient import TestClient
+from gitlab_cloud_connector import CloudConnectorUser, UserClaims
 from snowplow_tracker import Snowplow
 from starlette.datastructures import CommaSeparatedStrings
 from structlog.testing import capture_logs
 
 from ai_gateway.api.error_utils import capture_validation_errors
 from ai_gateway.api.v2 import api_router
-from ai_gateway.cloud_connector import CloudConnectorUser, UserClaims
 from ai_gateway.config import Config
 from ai_gateway.models.base_chat import Message, Role
 from ai_gateway.tracking.container import ContainerTracking
@@ -910,6 +910,7 @@ class TestCodeCompletions:
                 gitlab_realm=request_headers.get("X-Gitlab-Realm", ""),
                 is_direct_connection=True,
                 suggestion_source="network",
+                region="us-central1",
                 gitlab_instance_id=request_headers.get("X-Gitlab-Instance-Id", ""),
                 gitlab_global_user_id=request_headers.get(
                     "X-Gitlab-Global-User-Id", ""
@@ -1721,6 +1722,7 @@ class TestCodeGenerations:
                 gitlab_realm=request_headers.get("X-Gitlab-Realm", ""),
                 is_direct_connection=False,
                 suggestion_source="network",
+                region="us-central1",
                 gitlab_instance_id=request_headers.get("X-Gitlab-Instance-Id", ""),
                 gitlab_global_user_id=request_headers.get(
                     "X-Gitlab-Global-User-Id", ""

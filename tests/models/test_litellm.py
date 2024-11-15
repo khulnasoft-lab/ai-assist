@@ -70,7 +70,7 @@ class TestKindLiteLlmModel:
         )
 
 
-class TestLiteLlmChatMode:
+class TestLiteLlmChatModel:
     @pytest.fixture
     def endpoint(self):
         return "http://127.0.0.1:1111/v1"
@@ -92,6 +92,18 @@ class TestLiteLlmChatMode:
             identifier=identifier,
             custom_models_enabled=True,
         )
+
+    @pytest.mark.parametrize(
+        ("model_name", "expected_limit"),
+        [
+            (KindLiteLlmModel.CODEGEMMA, 8_192),
+            (KindLiteLlmModel.CODELLAMA, 16_384),
+            (KindLiteLlmModel.CODESTRAL, 32_768),
+        ],
+    )
+    def test_max_model_len(self, model_name: str, expected_limit: int):
+        model = LiteLlmChatModel.from_model_name(name=model_name)
+        assert model.MAX_MODEL_LEN == expected_limit
 
     @pytest.mark.parametrize(
         (
@@ -159,8 +171,12 @@ class TestLiteLlmChatMode:
                 True,
                 {"fireworks_api_key": "stubbed-api-key"},
                 {
-                    "fireworks_completion_endpoint": "https://fireworks.endpoint",
-                    "fireworks_completion_identifier": "provider/some-cool-model#deployment_id",
+                    "fireworks_regional_endpoints": {
+                        "us": {
+                            "endpoint": "https://fireworks.endpoint",
+                            "identifier": "provider/some-cool-model#deployment_id",
+                        }
+                    },
                 },
                 "fireworks_ai/qwen2p5-coder-7b",
                 "stubbed-api-key",
@@ -351,8 +367,12 @@ class TestLiteLlmTextGenModel:
     @pytest.fixture
     def provider_endpoints(self):
         return {
-            "fireworks_completion_endpoint": "https://fireworks.endpoint",
-            "fireworks_completion_identifier": "provider/some-cool-model#deployment_id",
+            "fireworks_regional_endpoints": {
+                "us": {
+                    "endpoint": "https://fireworks.endpoint",
+                    "identifier": "provider/some-cool-model#deployment_id",
+                }
+            }
         }
 
     @pytest.fixture
@@ -363,6 +383,18 @@ class TestLiteLlmTextGenModel:
             api_key=api_key,
             custom_models_enabled=True,
         )
+
+    @pytest.mark.parametrize(
+        ("model_name", "expected_limit"),
+        [
+            (KindLiteLlmModel.CODEGEMMA, 8_192),
+            (KindLiteLlmModel.CODELLAMA, 16_384),
+            (KindLiteLlmModel.CODESTRAL, 32_768),
+        ],
+    )
+    def test_max_model_len(self, model_name: str, expected_limit: int):
+        model = LiteLlmTextGenModel.from_model_name(name=model_name)
+        assert model.MAX_MODEL_LEN == expected_limit
 
     @pytest.mark.parametrize(
         (
@@ -444,8 +476,12 @@ class TestLiteLlmTextGenModel:
                 True,
                 {"fireworks_api_key": "stubbed-api-key"},
                 {
-                    "fireworks_completion_endpoint": "https://fireworks.endpoint",
-                    "fireworks_completion_identifier": "provider/some-cool-model#deployment_id",
+                    "fireworks_regional_endpoints": {
+                        "us": {
+                            "endpoint": "https://fireworks.endpoint",
+                            "identifier": "provider/some-cool-model#deployment_id",
+                        }
+                    }
                 },
                 "text-completion-fireworks_ai/qwen2p5-coder-7b",
                 "stubbed-api-key",
@@ -530,11 +566,23 @@ class TestLiteLlmTextGenModel:
                     provider=provider,
                     name=model_name,
                     provider_keys={"fireworks_api_key": "stubbed-api-key"},
+                    provider_endpoints={"fireworks_regional_endpoints": {"us": {}}},
+                )
+            assert (
+                str(exc.value)
+                == "Fireworks endpoint or identifier missing in region config for us."
+            )
+
+            with pytest.raises(ValueError) as exc:
+                LiteLlmTextGenModel.from_model_name(
+                    provider=provider,
+                    name=model_name,
+                    provider_keys={"fireworks_api_key": "stubbed-api-key"},
                     provider_endpoints={},
                 )
             assert (
                 str(exc.value)
-                == "Fireworks endpoint or identifier is missing from configuration."
+                == "Fireworks regional endpoints configuration is missing."
             )
 
     @pytest.mark.asyncio

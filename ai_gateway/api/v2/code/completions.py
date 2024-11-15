@@ -4,6 +4,11 @@ from typing import Annotated, AsyncIterator, Optional, Tuple, Union
 import anthropic
 from dependency_injector.providers import Factory
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
+from gitlab_cloud_connector import (
+    CloudConnectorConfig,
+    GitLabFeatureCategory,
+    GitLabUnitPrimitive,
+)
 
 from ai_gateway.api.auth_utils import StarletteUser, get_current_user
 from ai_gateway.api.error_utils import capture_validation_errors
@@ -35,11 +40,6 @@ from ai_gateway.async_dependency_resolver import (
     get_container_application,
     get_internal_event_client,
     get_snowplow_instrumentator,
-)
-from ai_gateway.cloud_connector import (
-    CloudConnectorConfig,
-    GitLabFeatureCategory,
-    GitLabUnitPrimitive,
 )
 from ai_gateway.code_suggestions import (
     CodeCompletions,
@@ -151,6 +151,7 @@ async def completions(
             suffix=payload.current_file.content_below_cursor,
             language=language_name,
             global_user_id=current_user.global_user_id,
+            region=_get_gcp_location(),
         )
         snowplow_instrumentator.watch(SnowplowEvent(context=snowplow_event_context))
     except Exception as e:
@@ -326,6 +327,7 @@ async def generations(
             suffix=payload.current_file.content_below_cursor,
             language=language_name,
             global_user_id=current_user.global_user_id,
+            region=_get_gcp_location(),
         )
         snowplow_instrumentator.watch(SnowplowEvent(context=snowplow_event_context))
     except Exception as e:

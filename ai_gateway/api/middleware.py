@@ -7,6 +7,13 @@ from typing import Optional, Tuple
 import structlog
 from asgi_correlation_id.context import correlation_id
 from fastapi.encoders import jsonable_encoder
+from gitlab_cloud_connector import (
+    X_GITLAB_DUO_SEAT_COUNT_HEADER,
+    AuthProvider,
+    CloudConnectorAuthError,
+    CloudConnectorUser,
+)
+from gitlab_cloud_connector import authenticate as cloud_connector_authenticate
 from langsmith.run_helpers import tracing_context
 from starlette.authentication import (
     AuthCredentials,
@@ -26,13 +33,6 @@ from uvicorn.protocols.utils import get_path_with_query_string
 
 from ai_gateway.api.auth_utils import StarletteUser
 from ai_gateway.api.timing import timing
-from ai_gateway.cloud_connector import (
-    X_GITLAB_DUO_SEAT_COUNT_HEADER,
-    AuthProvider,
-    CloudConnectorAuthError,
-    CloudConnectorUser,
-)
-from ai_gateway.cloud_connector import authenticate as cloud_connector_authenticate
 from ai_gateway.feature_flags import current_feature_flag_context
 from ai_gateway.internal_events import (
     EventContext,
@@ -137,6 +137,8 @@ class AccessLogMiddleware:
         try:
             await self.app(scope, receive, send_wrapper)
         except Exception as e:
+            if isinstance(e, BaseExceptionGroup):
+                e = e.exceptions[0]
             starlette_context.data["exception_message"] = str(e)
             starlette_context.data["exception_class"] = type(e).__name__
             starlette_context.data["exception_backtrace"] = traceback.format_exc()

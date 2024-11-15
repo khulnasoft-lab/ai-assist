@@ -137,10 +137,10 @@ class LiteLlmChatModel(ChatModelBase):
             KindLiteLlmModel.CODELLAMA,
         }
 
-        if self._metadata.name in codegemma_models:
+        if self.model_name in codegemma_models:
             return 8_192
 
-        if self._metadata.name in codelama_models:
+        if self.model_name in codelama_models:
             return 16_384
 
         return 32_768
@@ -152,6 +152,7 @@ class LiteLlmChatModel(ChatModelBase):
         metadata: Optional[ModelMetadata] = None,
     ):
         self._metadata = _init_litellm_model_metadata(metadata, model_name, provider)
+        self.model_name = model_name
         self.stop_tokens = MODEL_STOP_TOKENS.get(model_name, [])
 
     @property
@@ -234,8 +235,9 @@ class LiteLlmChatModel(ChatModelBase):
 
         if provider == KindModelProvider.FIREWORKS:
             api_key = provider_keys.get("fireworks_api_key")
-            endpoint = provider_endpoints.get("fireworks_completion_endpoint")
-            identifier = f"fireworks_ai/{provider_endpoints.get('fireworks_completion_identifier')}"
+
+            endpoint, identifier = _get_fireworks_config(provider_endpoints)
+            identifier = f"fireworks_ai/{identifier}"
 
         try:
             kind_model = KindLiteLlmModel(name)
@@ -256,10 +258,10 @@ class LiteLlmChatModel(ChatModelBase):
 class LiteLlmTextGenModel(TextGenModelBase):
     @property
     def MAX_MODEL_LEN(self):  # pylint: disable=invalid-name
-        if self._metadata.name in KindLiteLlmModel.CODEGEMMA:
+        if self.model_name == KindLiteLlmModel.CODEGEMMA:
             return 8_192
 
-        if self._metadata.name == KindLiteLlmModel.CODELLAMA:
+        if self.model_name == KindLiteLlmModel.CODELLAMA:
             return 16_384
 
         return 32_768
@@ -456,13 +458,8 @@ class LiteLlmTextGenModel(TextGenModelBase):
             if not api_key:
                 raise ValueError("Fireworks API key is missing from configuration.")
 
-            endpoint = provider_endpoints.get("fireworks_completion_endpoint")
-            identifier = f"text-completion-openai/{provider_endpoints.get('fireworks_completion_identifier')}"
-
-            if not endpoint or not identifier:
-                raise ValueError(
-                    "Fireworks endpoint or identifier is missing from configuration."
-                )
+            endpoint, identifier = _get_fireworks_config(provider_endpoints)
+            identifier = f"text-completion-openai/{identifier}"
 
         try:
             if provider == KindModelProvider.VERTEX_AI:
@@ -481,6 +478,43 @@ class LiteLlmTextGenModel(TextGenModelBase):
         )
 
         return cls(model_name=kind_model, provider=provider, metadata=metadata)
+
+
+def _get_fireworks_config(provider_endpoints: dict) -> tuple[str, str]:
+    """Get Fireworks endpoint and identifier based on region configuration.
+
+    Args:
+        provider_endpoints: Dictionary containing provider endpoint configurations
+
+    Returns:
+        tuple: (endpoint, identifier) for Fireworks configuration
+
+    Raises:
+        ValueError: If required configuration is missing
+    """
+    regional_endpoints = provider_endpoints.get("fireworks_regional_endpoints", {})
+    if not regional_endpoints:
+        raise ValueError("Fireworks regional endpoints configuration is missing.")
+
+    # Get region based on GCP location
+    current_location = Config().google_cloud_platform.location
+    matching_regions = [
+        region for region in regional_endpoints if current_location.startswith(region)
+    ]
+    # Default to us if configuration not found for this region
+    selected_region = matching_regions[0] if matching_regions else "us"
+
+    # Get endpoint configuration for selected region
+    region_config = regional_endpoints.get(selected_region, {})
+    endpoint = region_config.get("endpoint")
+    identifier = region_config.get("identifier")
+
+    if not endpoint or not identifier:
+        raise ValueError(
+            f"Fireworks endpoint or identifier missing in region config for {selected_region}."
+        )
+
+    return endpoint, identifier
 
 
 def _init_litellm_model_metadata(
