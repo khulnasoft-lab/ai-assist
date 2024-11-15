@@ -25,3 +25,4 @@ AIGW_FEATURE_FLAGS__DISALLOWED_FLAGS: '{"self-managed": ["expanded_ai_logging"]}
 CLOUD_CONNECTOR_SERVICE_NAME: "gitlab-ai-gateway"
 AIGW_MODEL_ENDPOINTS__FIREWORKS_COMPLETION_ENDPOINT: 'https://gitlab-e1d92914.us-virginia-1.direct.fireworks.ai/v1'
 AIGW_MODEL_ENDPOINTS__FIREWORKS_COMPLETION_IDENTIFIER: 'accounts/fireworks/models/qwen2p5-coder-7b#accounts/gitlab/deployments/e1d92914'
+AIGW_DEFAULT_PROMPTS: '{code_suggestions/generations": "vertex"}'
