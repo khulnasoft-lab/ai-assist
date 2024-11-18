@@ -223,7 +223,7 @@ class AnthropicChatModel(ChatModelBase):
         self,
         client: AsyncAnthropic,
         version: str = DEFAULT_VERSION,
-        model_name: str = KindAnthropicModel.CLAUDE_3_HAIKU.value,
+        model_name: str = KindAnthropicModel.CLAUDE_3_5_HAIKU.value,
         **kwargs: Any,
     ):
         client_opts = self._obtain_client_opts(version, **kwargs)

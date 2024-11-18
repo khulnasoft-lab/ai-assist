@@ -27,12 +27,12 @@ def test_container(mock_container: containers.DeclarativeContainer):
 
     assert isinstance(generations.vertex(), CodeGenerations)
     assert isinstance(
-        generations.anthropic_factory(model__name=KindAnthropicModel.CLAUDE_3_HAIKU),
+        generations.anthropic_factory(model__name=KindAnthropicModel.CLAUDE_3_5_HAIKU),
         CodeGenerations,
     )
     assert isinstance(
         generations.anthropic_chat_factory(
-            model__name=KindAnthropicModel.CLAUDE_3_HAIKU
+            model__name=KindAnthropicModel.CLAUDE_3_5_HAIKU
         ),
         CodeGenerations,
     )

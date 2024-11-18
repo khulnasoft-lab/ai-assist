@@ -111,6 +111,16 @@ class TestAgentSuccessfulRequest:
                     "max_tokens_to_sample": 2048,
                 },
             ),
+                        (
+                "chat_content",
+                "anthropic",
+                "claude-3-5-haiku-20241022",
+                {
+                    "temperature": 0.3,
+                    "stop_sequences": ["\n\nHuman", "Observation:"],
+                    "max_tokens_to_sample": 2048,
+                },
+            ),
             ("chat_content", "anthropic", "claude-3-haiku-20240307", None),
             ("chat_content", "litellm", "mistral", None),
         ],

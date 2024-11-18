@@ -67,7 +67,7 @@ def test_ready(
     ]
 
     # Assert the attributes of the mock code generations object
-    assert mock_generations.return_value.model.name == "claude-3-haiku-20240307"
+    assert mock_generations.return_value.model.name == "claude-3-5-haiku-20241022"
 
 
 def model_failure(*args, **kwargs):
@@ -123,6 +123,6 @@ def test_ready_anthropic_failure(
     ]
 
     # Assert the attributes of the mock code generations object
-    assert mock_generations.return_value.model.name == "claude-3-haiku-20240307"
+    assert mock_generations.return_value.model.name == "claude-3-5-haiku-20241022"
 
     assert response.status_code == 503

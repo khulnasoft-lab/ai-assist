@@ -510,6 +510,7 @@ class TestAnthropicChatModel:
                 AnthropicAPIConnectionError,
             ),
             ("claude-3-haiku-20240307", APITimeoutError, AnthropicAPITimeoutError),
+            ("claude-3-5-haiku-20241022", APITimeoutError, AnthropicAPITimeoutError)
         ],
     )
     async def test_anthropic_model_error(
@@ -620,6 +621,28 @@ class TestAnthropicChatModel:
             ),
             (
                 "claude-3-haiku-20240307",
+                [
+                    Message(role=Role.USER, content="write code"),
+                    Message(role=Role.ASSISTANT, content="Writing code:"),
+                ],
+                "random_text",
+                {},
+                {
+                    "temperature": 0.1,
+                    "top_p": 0.95,
+                },  # Override the temperature when calling the model
+                {
+                    **AnthropicChatModel.OPTS_MODEL,
+                    **{"temperature": 0.1, "top_p": 0.95, "stream": False},
+                },
+                TextGenModelOutput(
+                    text="random_text",
+                    score=10_000,
+                    safety_attributes=SafetyAttributes(),
+                ),
+            ),
+                        (
+                "claude-3-5-haiku-20241022",
                 [
                     Message(role=Role.USER, content="write code"),
                     Message(role=Role.ASSISTANT, content="Writing code:"),
