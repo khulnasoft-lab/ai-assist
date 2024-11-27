@@ -6,12 +6,38 @@ model:
     model_class_provider: anthropic
     temperature: 0.1
     max_tokens: 4_096
+    tools:
+      - name: issue_reader
+        description: |
+          This tool retrieves the content of a specific issue ONLY if strict usage conditions are met:
+          1. A valid issue ID must be provided
+          2. User must be actively viewing a specific issue URL or provide a specific URL
+          
+          Do NOT attempt to search for issues based on descriptions or keywords.
+          Will reject any input without a valid identifier.
+    
+          Example usage:
+          Thought: You have access to the same resources as user who asks a question. Question is about the content of an issue so you need to use issue_reader tool to retrieve and read issue. Based on this information you can present final answer about issue.
+          Action: issue_reader
+          Action Input: Please identify the author of #123 issue
+        input_schema:
+          type: object
+          properties:
+            thought:
+              type: string
+              description: The reasoning process for using this tool
+            action:
+              type: string
+              description: Should always be "issue_reader"
+            action_input:
+              type: string
+              description: The original question/request about a specific issue. Format should be like 'Please identify the author of /#123 issue'
     max_retries: 1
 unit_primitives:
   - duo_chat
 prompt_template:
   system: |
-    {% include 'chat/react/system.jinja' %}
+    {% include 'chat/react/system_tools.jinja' %}
   user: |
     {% include 'chat/react/user.jinja' %}
   assistant: |

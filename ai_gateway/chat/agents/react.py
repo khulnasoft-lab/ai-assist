@@ -96,18 +96,42 @@ class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
 
         return name.replace("\\_", "_")
 
-    def _parse(self, text: str) -> TypeAgentEvent:
+    def _parse_native_tool_call_action(
+        self, message: str, result: Any
+    ) -> Optional[AgentToolAction]:
+        response_meta = result[0].message.response_metadata
+        if not response_meta or response_meta.get("stop_reason") != "tool_use":
+            return None
+
+        tool_call = result[0].message.tool_calls[0]
+        args = tool_call["args"]
+
+        return AgentToolAction(
+            tool=args["action"].replace("\\_", "_", 1),
+            tool_input=args["action_input"],
+            thought=args["thought"].replace("\\_", "_") if args.get("thought") else "",
+        )
+
+    def _parse_base(self, text: str, parse_action_fn, **kwargs) -> TypeAgentEvent:
         wrapped_text = f"<message>Thought: {text}</message>"
 
         event: Optional[TypeAgentEvent] = None
         if final_answer := self._parse_final_answer(wrapped_text):
             event = final_answer
-        elif agent_action := self._parse_agent_action(wrapped_text):
+        elif agent_action := parse_action_fn(wrapped_text, **kwargs):
             event = agent_action
         else:
             event = AgentUnknownAction(text=text)
 
         return event
+
+    def _parse(self, text: str) -> TypeAgentEvent:
+        return self._parse_base(text, self._parse_agent_action)
+
+    def _parse_native_tool_call(self, text: str, result: Any) -> TypeAgentEvent:
+        return self._parse_base(
+            text, self._parse_native_tool_call_action, result=result
+        )
 
     def parse_result(
         self, result: list[Generation], *, partial: bool = False
@@ -116,7 +140,11 @@ class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
         text = result[0].text.strip()
 
         try:
-            event = self._parse(text)
+            if result[0].message.tool_calls:
+                event = self._parse_native_tool_call(text, result)
+            else:
+                event = self._parse(text)
+
         except ValueError as e:
             if not partial:
                 msg = f"Invalid output: {text}"
@@ -178,6 +206,12 @@ class ReActAgent(Prompt[ReActAgentInputs, TypeAgentEvent]):
                 )
             )
         )
+
+        # TODO - fix this
+        #  Temporary to fix "Your API request included an `assistant` message in the final
+        #  position, which would pre-fill the `assistant` response. When using tools, pre-filling the `assistant`
+        #  response is not supported"
+        messages.append(HumanMessage("Continue from the previous steps"))
         return messages
 
     async def astream(

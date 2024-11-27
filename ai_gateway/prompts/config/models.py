@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Annotated, Literal, Mapping
+from typing import Annotated, Any, Dict, List, Literal, Mapping
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -37,6 +37,7 @@ class ChatLiteLLMParams(BaseModelParams):
 class ChatAnthropicParams(BaseModelParams):
     model_class_provider: Literal[ModelClassProvider.ANTHROPIC]
     default_headers: Mapping[str, str] | None = None
+    tools: List[Dict[str, Any]] | None = None
 
 
 TypeModelParams = Annotated[
