@@ -24,6 +24,7 @@ from ai_gateway.chat.agents import (
     ReActAgentInputs,
     TypeAgentEvent,
 )
+from ai_gateway.chat.agents.typing import Message
 from ai_gateway.chat.executor import GLAgentRemoteExecutor
 from ai_gateway.internal_events import InternalEventsClient
 
@@ -62,18 +63,15 @@ def authorize_additional_context(
         )
 
 
-def authorize_agent_request(
+def authorize_additional_contexts(
     current_user: StarletteUser,
-    agent_request: AgentRequest,
+    messages: list[Message],
     internal_event_client: InternalEventsClient,
 ):
-    if agent_request.messages:
-        for message in agent_request.messages:
-            if message.additional_context:
-                for ctx in message.additional_context:
-                    authorize_additional_context(
-                        current_user, ctx, internal_event_client
-                    )
+    for message in messages:
+        if message.additional_context:
+            for ctx in message.additional_context:
+                authorize_additional_context(current_user, ctx, internal_event_client)
 
 
 @router.post("/agent")
@@ -106,7 +104,9 @@ async def chat(
         category=__name__,
     )
 
-    authorize_agent_request(current_user, agent_request, internal_event_client)
+    authorize_additional_contexts(
+        current_user, agent_request.messages, internal_event_client
+    )
 
     async def _stream_handler(stream_events: AsyncIterator[TypeAgentEvent]):
         async for event in stream_events:
