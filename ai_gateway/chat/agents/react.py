@@ -3,7 +3,7 @@ from typing import Any, AsyncIterator, Optional, Sequence
 
 import starlette_context
 from langchain_core.exceptions import OutputParserException
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.output_parsers import BaseCumulativeTransformOutputParser
 from langchain_core.outputs import Generation
 from langchain_core.prompts.chat import MessageLikeRepresentation
@@ -22,7 +22,6 @@ from ai_gateway.chat.agents.typing import (
 from ai_gateway.chat.tools.base import BaseTool
 from ai_gateway.models.base_chat import Role
 from ai_gateway.prompts import Prompt, jinja2_formatter
-from ai_gateway.prompts.typing import ModelMetadata
 
 __all__ = [
     "ReActAgentInputs",
@@ -38,9 +37,7 @@ request_log = get_request_logger("react")
 
 
 class ReActAgentInputs(BaseModel):
-    messages: list[Message]
     agent_scratchpad: Optional[list[AgentStep]] = None
-    model_metadata: Optional[ModelMetadata] = None
     unavailable_resources: Optional[list[str]] = None
     tools: Optional[list[BaseTool]] = None
 
@@ -139,54 +136,42 @@ class ReActAgent(Prompt[ReActAgentInputs, TypeAgentEvent]):
 
     @classmethod
     def build_messages(
-        cls,
-        prompt_template: dict[str, str],
-        agent_inputs: ReActAgentInputs,
-        **kwargs,
+        cls, prompt_template: dict[str, str], messages: list[Message]
     ) -> Sequence[MessageLikeRepresentation]:
-        messages = []
+        agent_messages = []
 
         if "system" in prompt_template:
-            messages.append(
-                SystemMessage(
-                    jinja2_formatter(
-                        prompt_template["system"],
-                        tools=agent_inputs.tools,
-                        unavailable_resources=agent_inputs.unavailable_resources,
-                    )
-                )
-            )
+            agent_messages.append(("system", prompt_template["system"]))
 
-        for m in agent_inputs.messages:
+        # We want to rebuild the conversation history, but since this is done from user inputs we need to be careful to
+        # not have the final content of the reconstructed messages be evaluated as templates themselves, because of the
+        # risk of RCE (see https://gitlab.com/gitlab-org/modelops/applied-ml/code-suggestions/ai-assist/-/issues/604).
+        # We use non-template message classes (`HumanMessage`, `AIMessage`) to mark this.
+        for m in messages:
             if m.role is Role.USER:
-                messages.append(
+                agent_messages.append(
                     HumanMessage(jinja2_formatter(prompt_template["user"], message=m))
                 )
             elif m.role is Role.ASSISTANT:
-                messages.append(AIMessage(m.content))
+                agent_messages.append(AIMessage(m.content))
             else:
                 raise ValueError("Unsupported message")
 
-        if not isinstance(messages[-1], HumanMessage):
+        if not isinstance(agent_messages[-1], HumanMessage):
             raise ValueError("Last message must be a human message")
 
-        messages.append(
-            AIMessage(
-                jinja2_formatter(
-                    prompt_template["assistant"],
-                    agent_scratchpad=agent_inputs.agent_scratchpad,
-                )
-            )
-        )
-        return messages
+        agent_messages.append(("assistant", prompt_template["assistant"]))
+
+        return agent_messages
 
     async def astream(
         self,
+        input: ReActAgentInputs,
         config: Optional[RunnableConfig] = None,
         **kwargs: Optional[Any],
     ) -> AsyncIterator[TypeAgentEvent]:
         events = []
-        astream = super().astream(config=config, **kwargs)
+        astream = super().astream(input=dict(input), config=config, **kwargs)
         len_final_answer = 0
 
         try:

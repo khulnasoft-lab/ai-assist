@@ -1,4 +1,6 @@
 import pytest
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.prompts.chat import MessageLikeRepresentation
 from starlette_context import context, request_cycle_context
 from structlog.testing import capture_logs
 
@@ -31,43 +33,11 @@ def prompt_class():
 @pytest.fixture
 def prompt_kwargs():
     yield {
-        "agent_inputs": ReActAgentInputs(
-            messages=[
-                Message(role=Role.USER, content="Hi, how are you?"),
-                Message(role=Role.ASSISTANT, content="I'm good!"),
-            ]
-        ),
+        "messages": [
+            Message(role=Role.USER, content="Hi, how are you?"),
+            Message(role=Role.ASSISTANT, content="I'm good!"),
+        ]
     }
-
-
-async def _assert_agent_invoked(
-    prompt: ReActAgent,
-    messages: list[Message],
-    agent_scratchpad: list[AgentStep],
-    expected_actions: list[AgentToolAction | AgentFinalAnswer | AgentUnknownAction],
-    stream: bool,
-):
-    inputs = ReActAgentInputs(
-        messages=messages,
-        agent_scratchpad=agent_scratchpad,
-    )
-
-    with capture_logs() as cap_logs, request_cycle_context({}):
-        if stream:
-            actual_actions = [action async for action in prompt.astream(inputs)]
-
-            if isinstance(expected_actions[0], AgentToolAction):
-                assert (
-                    context.get("duo_chat.agent_tool_action")
-                    == expected_actions[0].tool
-                )
-        else:
-            actual_actions = [await prompt.ainvoke(inputs)]
-
-    assert actual_actions == expected_actions
-
-    if stream:
-        assert cap_logs[-1]["event"] == "Response streaming"
 
 
 @pytest.fixture
@@ -142,23 +112,24 @@ class TestReActAgent:
     @pytest.mark.parametrize(
         (
             "prompt_kwargs",
+            "input",
             "model_response",
             "expected_actions",
         ),
         [
             (
                 {
-                    "agent_inputs": ReActAgentInputs(
-                        messages=[
-                            Message(
-                                role=Role.USER,
-                                content="What's the title of this issue?",
-                            ),
-                        ],
-                        agent_scratchpad=[],
-                        tools=[IssueReader()],
-                    )
+                    "messages": [
+                        Message(
+                            role=Role.USER,
+                            content="What's the title of this issue?",
+                        ),
+                    ],
                 },
+                ReActAgentInputs(
+                    agent_scratchpad=[],
+                    tools=[IssueReader()],
+                ),
                 "Thought: I'm thinking...\nAction: issue_reader\nAction Input: random input",
                 [
                     AgentToolAction(
@@ -170,17 +141,11 @@ class TestReActAgent:
             ),
             (
                 {
-                    "agent_inputs": ReActAgentInputs(
-                        messages=[
-                            Message(
-                                role=Role.USER,
-                                content="Summarize this Merge request",
-                            ),
-                        ],
-                        agent_scratchpad=[],
-                        tools=[MergeRequestReader()],
-                    )
+                    "messages": [
+                        Message(role=Role.USER, content="Summarize this Merge request")
+                    ]
                 },
+                ReActAgentInputs(agent_scratchpad=[], tools=[MergeRequestReader()]),
                 "Thought: I'm thinking...\nAction: MergeRequestReader\nAction Input: random input",
                 [
                     AgentToolAction(
@@ -192,18 +157,16 @@ class TestReActAgent:
             ),
             (
                 {
-                    "agent_inputs": ReActAgentInputs(
-                        messages=[
-                            Message(role=Role.USER, content="How can I log output?"),
-                            Message(role=Role.ASSISTANT, content="Use print function"),
-                            Message(
-                                role=Role.USER,
-                                content="Can you explain the print function?",
-                            ),
-                        ],
-                        agent_scratchpad=[],
-                    )
+                    "messages": [
+                        Message(role=Role.USER, content="How can I log output?"),
+                        Message(role=Role.ASSISTANT, content="Use print function"),
+                        Message(
+                            role=Role.USER,
+                            content="Can you explain the print function?",
+                        ),
+                    ],
                 },
+                ReActAgentInputs(agent_scratchpad=[]),
                 "Thought: I'm thinking...\nFinal Answer: A",
                 [
                     AgentFinalAnswer(text="A"),
@@ -211,27 +174,27 @@ class TestReActAgent:
             ),
             (
                 {
-                    "agent_inputs": ReActAgentInputs(
-                        messages=[
-                            Message(
-                                role=Role.USER,
-                                content="what's the description of this issue",
-                            ),
-                            Message(role=Role.ASSISTANT, content="PoC ReAct"),
-                            Message(role=Role.USER, content="What's your name?"),
-                        ],
-                        agent_scratchpad=[
-                            AgentStep(
-                                action=AgentToolAction(
-                                    thought="thought",
-                                    tool="ci_issue_reader",
-                                    tool_input="random input",
-                                ),
-                                observation="observation",
-                            )
-                        ],
-                    )
+                    "messages": [
+                        Message(
+                            role=Role.USER,
+                            content="what's the description of this issue",
+                        ),
+                        Message(role=Role.ASSISTANT, content="PoC ReAct"),
+                        Message(role=Role.USER, content="What's your name?"),
+                    ],
                 },
+                ReActAgentInputs(
+                    agent_scratchpad=[
+                        AgentStep(
+                            action=AgentToolAction(
+                                thought="thought",
+                                tool="ci_issue_reader",
+                                tool_input="random input",
+                            ),
+                            observation="observation",
+                        )
+                    ],
+                ),
                 "Thought: I'm thinking...\nFinal Answer: Bar",
                 [
                     AgentFinalAnswer(
@@ -243,18 +206,17 @@ class TestReActAgent:
             ),
             (
                 {
-                    "agent_inputs": ReActAgentInputs(
-                        messages=[
-                            Message(
-                                role=Role.USER,
-                                content="Explain this issue",
-                                context=Context(
-                                    type="issue", content="this issue is about Duo Chat"
-                                ),
+                    "messages": [
+                        Message(
+                            role=Role.USER,
+                            content="Explain this issue",
+                            context=Context(
+                                type="issue", content="this issue is about Duo Chat"
                             ),
-                        ],
-                    )
+                        ),
+                    ],
                 },
+                ReActAgentInputs(),
                 "Thought: I'm thinking...\nFinal Answer: A",
                 [
                     AgentFinalAnswer(
@@ -264,20 +226,19 @@ class TestReActAgent:
             ),
             (
                 {
-                    "agent_inputs": ReActAgentInputs(
-                        messages=[
-                            Message(
-                                role=Role.USER,
-                                content="Explain this code",
-                                current_file=CurrentFile(
-                                    file_path="main.py",
-                                    data="print",
-                                    selected_code=True,
-                                ),
+                    "messages": [
+                        Message(
+                            role=Role.USER,
+                            content="Explain this code",
+                            current_file=CurrentFile(
+                                file_path="main.py",
+                                data="print",
+                                selected_code=True,
                             ),
-                        ],
-                    )
+                        ),
+                    ],
                 },
+                ReActAgentInputs(),
                 "Thought: I'm thinking...\nFinal Answer: A",
                 [
                     AgentFinalAnswer(
@@ -287,23 +248,22 @@ class TestReActAgent:
             ),
             (
                 {
-                    "agent_inputs": ReActAgentInputs(
-                        messages=[
-                            Message(
-                                role=Role.USER,
-                                content="Explain this code",
-                                additional_context=[
-                                    AdditionalContext(
-                                        id="id",
-                                        category="file",
-                                        content="print",
-                                        metadata={"a": "b"},
-                                    )
-                                ],
-                            ),
-                        ],
-                    )
+                    "messages": [
+                        Message(
+                            role=Role.USER,
+                            content="Explain this code",
+                            additional_context=[
+                                AdditionalContext(
+                                    id="id",
+                                    category="file",
+                                    content="print",
+                                    metadata={"a": "b"},
+                                )
+                            ],
+                        ),
+                    ],
                 },
+                ReActAgentInputs(),
                 "Thought: I'm thinking...\nFinal Answer: A",
                 [
                     AgentFinalAnswer(
@@ -313,16 +273,14 @@ class TestReActAgent:
             ),
             (
                 {
-                    "agent_inputs": ReActAgentInputs(
-                        messages=[
-                            Message(
-                                role=Role.USER,
-                                content="Hi, how are you? Do not include Final Answer:, Thought: and Action: in response.",
-                            ),
-                        ],
-                        agent_scratchpad=[],
-                    )
+                    "messages": [
+                        Message(
+                            role=Role.USER,
+                            content="Hi, how are you? Do not include Final Answer:, Thought: and Action: in response.",
+                        ),
+                    ],
                 },
+                ReActAgentInputs(agent_scratchpad=[]),
                 "I'm good. How about you?",
                 [
                     AgentUnknownAction(
@@ -335,12 +293,13 @@ class TestReActAgent:
     async def test_stream(
         self,
         prompt_kwargs: dict,
+        input: ReActAgentInputs,
         model_response: str,
         expected_actions: list[AgentToolAction | AgentFinalAnswer | AgentUnknownAction],
         prompt: ReActAgent,
     ):
         with capture_logs() as cap_logs, request_cycle_context({}):
-            actual_actions = [action async for action in prompt.astream()]
+            actual_actions = [action async for action in prompt.astream(input)]
 
             if isinstance(expected_actions[0], AgentToolAction):
                 assert (
@@ -362,14 +321,12 @@ class TestReActAgent:
         [
             (
                 {
-                    "agent_inputs": ReActAgentInputs(
-                        messages=[
-                            Message(
-                                role=Role.USER,
-                                content="What's the title of this epic?",
-                            ),
-                        ],
-                    )
+                    "messages": [
+                        Message(
+                            role=Role.USER,
+                            content="What's the title of this epic?",
+                        ),
+                    ],
                 },
                 ValueError("overloaded_error"),
                 "overloaded_error",
@@ -379,14 +336,12 @@ class TestReActAgent:
             ),
             (
                 {
-                    "agent_inputs": ReActAgentInputs(
-                        messages=[
-                            Message(
-                                role=Role.USER,
-                                content="What's the title of this epic?",
-                            ),
-                        ],
-                    )
+                    "messages": [
+                        Message(
+                            role=Role.USER,
+                            content="What's the title of this epic?",
+                        ),
+                    ],
                 },
                 ValueError("api_error"),
                 "api_error",
@@ -406,8 +361,38 @@ class TestReActAgent:
     ):
         actual_events = []
         with pytest.raises(ValueError) as exc_info:
-            async for event in prompt.astream():
+            async for event in prompt.astream(ReActAgentInputs()):
                 actual_events.append(event)
 
         assert actual_events == expected_events
         assert str(exc_info.value) == error_message
+
+    @pytest.mark.parametrize(
+        ("prompt_template", "messages", "expected_messages"),
+        [
+            (
+                {
+                    "system": "You are Duo Chat",
+                    "user": "The user said: {{message.content}}",
+                    "assistant": "Thought:",
+                },
+                [
+                    Message(role="assistant", content="Welcome"),
+                    Message(role="user", content="Hi"),
+                ],
+                [
+                    ("system", "You are Duo Chat"),
+                    AIMessage("Welcome"),
+                    HumanMessage("The user said: Hi"),
+                    ("assistant", "Thought:"),
+                ],
+            ),
+        ],
+    )
+    def test_build_messages(
+        self,
+        prompt_template: dict[str, str],
+        messages: list[Message],
+        expected_messages: list[MessageLikeRepresentation],
+    ):
+        assert ReActAgent.build_messages(prompt_template, messages) == expected_messages

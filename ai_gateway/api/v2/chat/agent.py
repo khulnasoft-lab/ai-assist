@@ -1,7 +1,12 @@
 from typing import Annotated, AsyncIterator
 
+from dependency_injector.providers import Factory
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from gitlab_cloud_connector import GitLabFeatureCategory, GitLabUnitPrimitive
+from gitlab_cloud_connector import (
+    GitLabFeatureCategory,
+    GitLabUnitPrimitive,
+    WrongUnitPrimitives,
+)
 from starlette.responses import StreamingResponse
 
 from ai_gateway.api.auth_utils import StarletteUser, get_current_user
@@ -33,8 +38,8 @@ request_log = get_request_logger("chat")
 router = APIRouter()
 
 
-async def get_gl_agent_remote_executor():
-    yield get_container_application().chat.gl_agent_remote_executor()
+async def get_gl_agent_remote_executor_provider():
+    yield get_container_application().chat.gl_agent_remote_executor
 
 
 def authorize_additional_context(
@@ -62,17 +67,6 @@ def authorize_agent_request(
     agent_request: AgentRequest,
     internal_event_client: InternalEventsClient,
 ):
-    if current_user.can(GitLabUnitPrimitive.DUO_CHAT):
-        internal_event_client.track_event(
-            f"request_{GitLabUnitPrimitive.DUO_CHAT}",
-            category=__name__,
-        )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Unauthorized to access duo chat",
-        )
-
     if agent_request.messages:
         for message in agent_request.messages:
             if message.additional_context:
@@ -88,11 +82,30 @@ async def chat(
     request: Request,
     agent_request: AgentRequest,
     current_user: Annotated[StarletteUser, Depends(get_current_user)],
-    gl_agent_remote_executor: GLAgentRemoteExecutor[
-        ReActAgentInputs, TypeAgentEvent
-    ] = Depends(get_gl_agent_remote_executor),
+    gl_agent_remote_executor_factory: Factory[GLAgentRemoteExecutor] = Depends(
+        get_gl_agent_remote_executor_provider
+    ),
     internal_event_client: InternalEventsClient = Depends(get_internal_event_client),
 ):
+    gl_version = request.headers.get(X_GITLAB_VERSION_HEADER, "")
+    try:
+        gl_agent_remote_executor = gl_agent_remote_executor_factory(
+            user=current_user,
+            gl_version=gl_version,
+            model_metadata=agent_request.model_metadata,
+            messages=agent_request.messages,
+        )
+    except WrongUnitPrimitives:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Unauthorized to access duo chat",
+        )
+
+    internal_event_client.track_event(
+        f"request_{GitLabUnitPrimitive.DUO_CHAT}",
+        category=__name__,
+    )
+
     authorize_agent_request(current_user, agent_request, internal_event_client)
 
     async def _stream_handler(stream_events: AsyncIterator[TypeAgentEvent]):
@@ -115,14 +128,9 @@ async def chat(
         scratchpad = []
 
     inputs = ReActAgentInputs(
-        messages=agent_request.messages,
         agent_scratchpad=scratchpad,
-        model_metadata=agent_request.model_metadata,
         unavailable_resources=agent_request.unavailable_resources,
     )
-
-    gl_version = request.headers.get(X_GITLAB_VERSION_HEADER, "")
-    gl_agent_remote_executor.on_behalf(current_user, gl_version)
 
     request_log.info("Request to V2 Chat Agent", source=__name__, inputs=inputs)
 

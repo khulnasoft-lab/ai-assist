@@ -3,10 +3,12 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Optional, Type
 from unittest.mock import AsyncMock, Mock, patch
 
+from ai_gateway.api.auth_utils import StarletteUser
+from ai_gateway.internal_events.client import InternalEventsClient
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from gitlab_cloud_connector import GitLabUnitPrimitive
+from gitlab_cloud_connector import GitLabUnitPrimitive, CloudConnectorUser, UserClaims
 from langchain.chat_models.fake import FakeListChatModel
 from langchain_core.outputs import ChatGenerationChunk
 from starlette.middleware import Middleware
@@ -526,3 +528,24 @@ def prompt(
     prompt_kwargs: dict,
 ):
     yield prompt_class(model_factory, prompt_config, model_metadata, **prompt_kwargs)
+
+
+@pytest.fixture()
+def internal_event_client():
+    internal_event_client = Mock(spec=InternalEventsClient)
+    return internal_event_client
+
+
+@pytest.fixture
+def scopes():
+    yield []
+
+
+@pytest.fixture
+def user_is_debug():
+    yield False
+
+
+@pytest.fixture
+def user(user_is_debug: bool, scopes: list[str]):
+    yield StarletteUser(CloudConnectorUser(authenticated=True, is_debug=user_is_debug, claims=UserClaims(scopes=scopes)))
