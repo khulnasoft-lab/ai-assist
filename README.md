@@ -1,4 +1,4 @@
-# GitLab AI Gateway
+# GitLab AI Gateway Docs
 
 GitLab AI Gateway is a standalone-service that will give access to AI features to all users of
 GitLab, no matter which instance they are using: self-managed, dedicated or GitLab.com.
