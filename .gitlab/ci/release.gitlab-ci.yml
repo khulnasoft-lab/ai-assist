@@ -71,7 +71,7 @@ release-docker-hub-image:self-managed-nightly:
   stage: release
   extends: .docker-release
   variables:
-    RELEASE_VERSION: "$SELF_HOSTED_TARGET_IMAGE"
+    RELEASE_VERSION: "$DOCKERHUB_MODEL_GATEWAY_SELF_HOSTED_IMAGE"
     REGISTRY_USER: "$DOCKERHUB_USERNAME"
     REGISTRY_PASSWORD: "$DOCKERHUB_PASSWORD"
     REGISTRY: "docker.io"
