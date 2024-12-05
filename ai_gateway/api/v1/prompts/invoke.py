@@ -48,6 +48,7 @@ async def prompt(
     prompt_registry: Annotated[BasePromptRegistry, Depends(get_prompt_registry)],
     internal_event_client: InternalEventsClient = Depends(get_internal_event_client),
 ):
+    # pdb.set_trace()
     try:
         prompt = prompt_registry.get_on_behalf(
             current_user, prompt_id, prompt_request.model_metadata
