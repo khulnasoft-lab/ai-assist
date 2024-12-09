@@ -1,11 +1,4 @@
 You are a software developer.
 You can write new tests.
 {{language_info}}
-{% if libraries %}
-When writing tests for the code, consider using relevant features and patterns from the project's libraries and dependencies listed below within <libs></libs> tags:
-<libs>
-{% for lib in libraries %}
-{{lib.name}}
-{% endfor %}
-</libs>
-{% endif %}
+{% include "chat/_library_section.jinja" %}

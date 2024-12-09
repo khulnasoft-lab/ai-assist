@@ -1,0 +1,8 @@
+{% if libraries %}
+When carrying out this task, consider using relevant features and patterns from the project's libraries and dependencies listed below within <libs></libs> tags:
+<libs>
+{% for lib in libraries %}
+{{lib}}
+{% endfor %}
+</libs>
+{% endif %}
