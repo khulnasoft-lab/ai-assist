@@ -198,20 +198,17 @@ class ReActAgent(Prompt[ReActAgentInputs, TypeAgentEvent]):
         if not isinstance(messages[-1], HumanMessage):
             raise ValueError("Last message must be a human message")
 
-        messages.append(
-            AIMessage(
-                jinja2_formatter(
-                    prompt_template["assistant"],
-                    agent_scratchpad=agent_inputs.agent_scratchpad,
+        if agent_inputs.agent_scratchpad:
+            messages.append(
+                AIMessage(
+                    jinja2_formatter(
+                        prompt_template["assistant"],
+                        agent_scratchpad=agent_inputs.agent_scratchpad,
+                    )
                 )
             )
-        )
 
-        # TODO - fix this
-        #  Temporary to fix "Your API request included an `assistant` message in the final
-        #  position, which would pre-fill the `assistant` response. When using tools, pre-filling the `assistant`
-        #  response is not supported"
-        messages.append(HumanMessage("Continue from the previous steps"))
+            messages.append(HumanMessage("Continue from the previous steps"))
         return messages
 
     async def astream(
