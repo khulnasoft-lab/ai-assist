@@ -1,7 +1,16 @@
 from ai_gateway.api.auth_utils import StarletteUser
 from ai_gateway.chat.base import BaseToolsRegistry
 from ai_gateway.chat.tools import BaseTool
-from ai_gateway.chat.tools.gitlab import IssueReader
+from ai_gateway.chat.tools.gitlab import (
+    BuildReader,
+    CommitReader,
+    EpicReader,
+    GitlabDocumentation,
+    IssueReader,
+    MergeRequestReader,
+    SelfHostedGitlabDocumentation,
+)
+from ai_gateway.feature_flags import FeatureFlag, is_feature_enabled
 
 __all__ = ["DuoChatToolsRegistry"]
 
@@ -15,11 +24,20 @@ class DuoChatToolsRegistry(BaseToolsRegistry):
     def tools(self) -> list[BaseTool]:
         # We can also read the list of tools and associated unit primitives from the file
         # similar to what we implemented for the Prompt Registry
-
-        # TODO - only adding IssueReader to show approach
         tools = [
+            BuildReader(),
+            EpicReader(),
             IssueReader(),
+            MergeRequestReader(),
         ]
+
+        if self.self_hosted_documentation_enabled:
+            tools.append(SelfHostedGitlabDocumentation())
+        else:
+            tools.append(GitlabDocumentation())
+
+        if is_feature_enabled(FeatureFlag.AI_COMMIT_READER_FOR_CHAT):
+            tools.append(CommitReader())
 
         return tools
 
