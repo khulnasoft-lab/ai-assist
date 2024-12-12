@@ -104,6 +104,16 @@ class TestAgentSuccessfulRequest:
             (
                 "chat_content",
                 "anthropic",
+                "claude-3-haiku-20240307",
+                {
+                    "temperature": 0.3,
+                    "stop_sequences": ["\n\nHuman", "Observation:"],
+                    "max_tokens_to_sample": 8192,
+                },
+            ),
+            (
+                "chat_content",
+                "anthropic",
                 "claude-3-5-sonnet-20240620",
                 {
                     "temperature": 0.3,
@@ -175,6 +185,9 @@ class TestAgentSuccessfulRequest:
             messages = [Message(**message) for message in content]
             if max_tokens := params.pop("max_tokens_to_sample", None):
                 params["max_tokens"] = max_tokens
+
+                if params["max_tokens"] > 4096:
+                    params["max_tokens"] = 4096
 
             mock = mock_anthropic_chat if provider == "anthropic" else mock_llm_chat
             mock.assert_called_with(messages=messages, stream=False, **params)
