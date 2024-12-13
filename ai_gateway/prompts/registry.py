@@ -4,6 +4,7 @@ from typing import NamedTuple, Optional, Type
 import structlog
 import yaml
 
+from ai_gateway.feature_flags import FeatureFlag, is_feature_enabled
 from ai_gateway.prompts.base import BasePromptRegistry, Prompt
 from ai_gateway.prompts.config import ModelClassProvider, PromptConfig
 from ai_gateway.prompts.typing import ModelMetadata, TypeModelFactory
@@ -44,6 +45,15 @@ class LocalPromptRegistry(BasePromptRegistry):
             return f"{prompt_id}/{model_metadata.name}"
 
         type = self.default_prompts.get(prompt_id, self.key_prompt_type_base)
+
+        # TODO - push feature flag from Rails
+        # if prompt_id == "chat/react" and is_feature_enabled(FeatureFlag.ANTHROPIC_FUNCTION_CALLING):
+        #     type = "feature_flagged"
+
+        fake_feature_flag = True
+        if prompt_id == "chat/react" and fake_feature_flag:
+            type = "anthropic_tool_calling"
+
         return f"{prompt_id}/{type}"
 
     def get(
