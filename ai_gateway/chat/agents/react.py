@@ -107,9 +107,9 @@ class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
         args = tool_call["args"]
 
         return AgentToolAction(
-            tool=args["action"].replace("\\_", "_", 1),
+            tool=args["action"],
             tool_input=args["action_input"],
-            thought=args["thought"].replace("\\_", "_") if args.get("thought") else "",
+            thought=args["thought"] if args.get("thought") else "",
         )
 
     def _parse_base(self, text: str, parse_action_fn, **kwargs) -> TypeAgentEvent:
