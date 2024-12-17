@@ -39,6 +39,15 @@ async def oauth_create_application(
             detail="Unauthorized to perform action",
         )
 
+    internal_event_client.track_event(
+        f"request_{GitLabUnitPrimitive.AMAZON_Q_INTEGRATION}",
+        category=__name__,
+    )
+
+    internal_event_client.track_event(
+        f"request_{GitLabUnitPrimitive.AMAZON_Q_INTEGRATION}",
+        category=__name__,
+    )
 
     try:
         q_client = amazon_q_client_factory.get_client(
