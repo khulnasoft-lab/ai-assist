@@ -3,6 +3,7 @@ from typing import AsyncIterator
 from unittest.mock import Mock, PropertyMock, call, patch
 
 import pytest
+from freezegun import freeze_time
 from gitlab_cloud_connector import CloudConnectorUser, UserClaims
 from starlette.testclient import TestClient
 
@@ -69,6 +70,12 @@ def mock_config():
     config.custom_models.enabled = True
 
     yield config
+
+
+@pytest.fixture(autouse=True)
+def frozen_time():
+    with freeze_time("2024-01-01"):
+        yield
 
 
 def chunk_to_model(chunk: str, klass: AgentBaseEvent) -> str:
@@ -295,6 +302,7 @@ class TestReActAgentStream:
             agent_scratchpad=agent_scratchpad,
             model_metadata=model_metadata,
             unavailable_resources=unavailable_resources,
+            current_date="Friday, December 06, 2024",
         )
 
         assert response.status_code == 200

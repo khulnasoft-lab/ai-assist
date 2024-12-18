@@ -43,6 +43,7 @@ class ReActAgentInputs(BaseModel):
     model_metadata: Optional[ModelMetadata] = None
     unavailable_resources: Optional[list[str]] = None
     tools: Optional[list[BaseTool]] = None
+    current_date: Optional[str] = None
 
 
 class ReActPlainTextParser(BaseCumulativeTransformOutputParser):
@@ -153,6 +154,7 @@ class ReActAgent(Prompt[ReActAgentInputs, TypeAgentEvent]):
                         prompt_template["system"],
                         tools=agent_inputs.tools,
                         unavailable_resources=agent_inputs.unavailable_resources,
+                        current_date=agent_inputs.current_date,
                     )
                 )
             )

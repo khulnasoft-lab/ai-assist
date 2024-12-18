@@ -81,6 +81,10 @@ types-pyyaml = "^6.0.12.20240311"
 types-protobuf = "^4.25.0.20240417"
 types-requests = "^2.31.0.20240406"
 
+
+[tool.poetry.group.dev.dependencies]
+freezegun = "^1.5.1"
+
 [tool.pytest.ini_options]
 addopts = "--disable-warnings"
 testpaths = ["tests"]
