@@ -1,5 +1,5 @@
- ---
-name: Claude 3 Explain Code agent
+---
+name: Claude 3 Explain Terminal agent
 model:
   name: claude-3-5-sonnet-20241022
   params:

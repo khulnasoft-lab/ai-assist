@@ -1,5 +1,5 @@
- ---
-name: GPT 3 Explain Code agent
+---
+name: GPT Explain Terminal agent
 model:
   name: gpt
   params:
