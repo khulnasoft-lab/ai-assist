@@ -74,6 +74,7 @@ class Prompt(RunnableBinding[Input, Output]):
         return {
             **(params.model_dump(exclude_none=True) if params else {}),
             **(model_metadata_to_params(model_metadata) if model_metadata else {}),
+            "drop_params": True,
         }
 
     def _build_model(
@@ -85,6 +86,7 @@ class Prompt(RunnableBinding[Input, Output]):
         return model_factory(
             model=config.name,
             disable_streaming=disable_streaming,
+            drop_params=True,
             **config.params.model_dump(
                 exclude={"model_class_provider"}, exclude_none=True, by_alias=True
             ),

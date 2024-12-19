@@ -197,6 +197,7 @@ class LiteLlmChatModel(ChatModelBase):
             "max_tokens": max_output_tokens,
             "timeout": 30.0,
             "stop": self.stop_tokens,
+            "drop_params": True,
             **self.model_metadata_to_params(),
         }
 
@@ -418,6 +419,7 @@ class LiteLlmTextGenModel(TextGenModelBase):
             "stream": stream,
             "timeout": self.specifications.get("timeout", 30.0),
             "stop": self._get_stop_tokens(suffix),
+            "drop_params": True,
         }
 
         if self._is_vertex():
