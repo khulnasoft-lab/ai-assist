@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from typing import AsyncIterator
 from unittest.mock import Mock, PropertyMock, call, patch
 
@@ -31,6 +32,15 @@ from ai_gateway.prompts.typing import Model, ModelMetadata
 @pytest.fixture(scope="class")
 def fast_api_router():
     return api_router
+
+
+@pytest.fixture(autouse=True)
+def mock_date(mocker):
+    mock_datetime = mocker.patch(
+        "ai_gateway.api.v2.chat.agent.datetime", wraps=datetime
+    )
+    mock_datetime.now.return_value = datetime(2024, 12, 25)
+    return "Wednesday, December 25, 2024"
 
 
 @pytest.fixture
@@ -252,6 +262,7 @@ class TestReActAgentStream:
         expected_actions: list[TypeAgentEvent],
         model_metadata: ModelMetadata,
         unavailable_resources: list[str],
+        mock_date,
     ):
         async def _agent_stream(*_args, **_kwargs) -> AsyncIterator[TypeAgentEvent]:
             for action in actions:
@@ -295,6 +306,7 @@ class TestReActAgentStream:
             agent_scratchpad=agent_scratchpad,
             model_metadata=model_metadata,
             unavailable_resources=unavailable_resources,
+            current_date=mock_date,
         )
 
         assert response.status_code == 200
