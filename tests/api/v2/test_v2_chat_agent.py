@@ -53,16 +53,6 @@ def mock_model(model: Model):
         yield mock
 
 
-@pytest.fixture()
-def mocked_tools():
-    with patch(
-        "ai_gateway.chat.executor.GLAgentRemoteExecutor.tools",
-        new_callable=PropertyMock,
-        return_value=[],
-    ) as mock:
-        yield mock
-
-
 @pytest.fixture
 def mock_config():
     config = Config()
@@ -157,7 +147,6 @@ class TestReActAgentStream:
         self,
         mock_client: TestClient,
         mock_model: Mock,
-        mocked_tools: Mock,
         agent_request: AgentRequest,
         expected_events: list[TypeAgentEvent],
     ):
@@ -484,7 +473,6 @@ class TestChatAgent:
         self,
         mock_client: TestClient,
         mock_model: Mock,
-        mocked_tools: Mock,
         mock_track_internal_event,
         messages: list[Message],
         agent_options: AgentRequestOptions,
