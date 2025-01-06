@@ -1,5 +1,5 @@
 ---
-name: Mistral Explain Code Chat agent
+name: Mistral Explain Terminal Chat agent
 model:
   name: mistral
   params:
