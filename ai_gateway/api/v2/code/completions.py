@@ -455,13 +455,15 @@ def _completion_suggestion_choices(
     choices = []
     tokens_consumption_metadata = None
     for suggestion in suggestions:
+        suggested_text = _format_suggested_text(suggestion.text)
+
         request_log.debug(
             "code completion suggestion:",
-            suggestion=suggestion.text,
+            suggestion=suggested_text,
             score=suggestion.score,
             language=suggestion.lang,
         )
-        if not suggestion.text:
+        if not suggested_text:
             continue
 
         if tokens_consumption_metadata is None:
@@ -475,14 +477,15 @@ def _completion_suggestion_choices(
 
         choices.append(
             SuggestionsResponse.Choice(
-                text=suggestion.text,
+                text=suggested_text,
             )
         )
     return choices, tokens_consumption_metadata
 
 
 def _generation_suggestion_choices(text: str) -> list:
-    return [SuggestionsResponse.Choice(text=text)] if text else []
+    suggested_text = _format_suggested_text(text)
+    return [SuggestionsResponse.Choice(text=suggested_text)] if text else []
 
 
 def _get_gcp_location():
@@ -494,11 +497,16 @@ async def _handle_stream(
 ) -> StreamSuggestionsResponse:
     async def _stream_generator():
         async for result in response:
-            yield result.text
+            yield _format_suggested_text(result.text)
 
     return StreamSuggestionsResponse(
         _stream_generator(), media_type="text/event-stream"
     )
+
+
+def _format_suggested_text(text: str) -> str:
+    formatted_text = text.replace("\\_", "_") if text else None
+    return formatted_text
 
 
 async def _execute_code_completion(
