@@ -43,8 +43,10 @@ class AgentModel(TextGenModelBase):
 
         response = await self.prompt.ainvoke(params)
 
+        response_content = self._format_response_content(response.content)
+
         return TextGenModelOutput(
-            text=response.content,
+            text=response_content,
             # Give a high value, the model doesn't return scores.
             score=10**5,
             safety_attributes=SafetyAttributes(),
@@ -55,4 +57,13 @@ class AgentModel(TextGenModelBase):
         params: dict,
     ) -> AsyncIterator[TextGenModelChunk]:
         async for chunk in self.prompt.astream(params):
-            yield TextGenModelChunk(text=chunk.content)
+            chunk_content = self._format_response_content(chunk.content)
+            yield TextGenModelChunk(text=chunk_content)
+
+    def _format_response_content(self, text: str) -> str:
+        formatted_content = text
+
+        if self.prompt.model_name in ["mixtral"]:
+            formatted_content = text.replace("\\_", "_") if text else None
+
+        return formatted_content
