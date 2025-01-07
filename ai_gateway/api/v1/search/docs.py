@@ -32,6 +32,11 @@ router = APIRouter()
 request_log = get_request_logger("search")
 
 
+def estimate_token_count(text: str) -> int:
+    """Estimate the number of tokens in a given text."""
+    return int(len(text.split()) * 1.4)
+
+
 @router.post(
     "/gitlab-docs", response_model=SearchResponse, status_code=status.HTTP_200_OK
 )
@@ -66,22 +71,36 @@ async def docs(
 
     response = await searcher.search_with_retry(**search_params)
 
-    results = [
-        SearchResult(
-            id=result["id"], content=result["content"], metadata=result["metadata"]
-        )
-        for result in response
-    ]
+    # Apply token limit (8K tokens)
+    max_tokens = 8000
+    token_count = 0
+    filtered_results = []
 
+    for result in response:
+        tokens = estimate_token_count(result["content"])
+        if token_count + tokens > max_tokens:
+            break
+        token_count += tokens
+        filtered_results.append(
+            SearchResult(
+                id=result["id"], content=result["content"], metadata=result["metadata"]
+            )
+        )
+
+    # Enhanced logging
     request_log.info(
-        "Search completed",
+        "Search completed with token limiting",
         search_params=search_params,
-        results_metadata=[result.metadata for result in results],
+        total_results=len(response),
+        total_tokens=token_count,
+        max_tokens=max_tokens,
+        filtered_results_count=len(filtered_results),
+        filtered_results_ids=[result.id for result in filtered_results],
     )
 
     return SearchResponse(
         response=SearchResponseDetails(
-            results=results,
+            results=filtered_results,
         ),
         metadata=SearchResponseMetadata(
             provider=searcher.provider(),
