@@ -13,6 +13,7 @@ from ai_gateway.api.middleware import (
     X_GITLAB_REALM_HEADER,
     X_GITLAB_SAAS_DUO_PRO_NAMESPACE_IDS_HEADER,
     X_GITLAB_VERSION_HEADER,
+    X_GITLAB_TEAM_MEMBER_HEADER,
     DistributedTraceMiddleware,
     FeatureFlagMiddleware,
     InternalEventMiddleware,
@@ -119,6 +120,7 @@ async def test_middleware_set_context(internal_event_middleware):
                 (X_GITLAB_VERSION_HEADER.lower().encode(), b"test-version"),
                 (X_GITLAB_GLOBAL_USER_ID_HEADER.lower().encode(), b"test-user"),
                 (X_GITLAB_DUO_SEAT_COUNT_HEADER.lower().encode(), b"100"),
+                (X_GITLAB_TEAM_MEMBER_HEADER.lower().encode(), b"true"),
             ],
         }
     )
@@ -142,6 +144,7 @@ async def test_middleware_set_context(internal_event_middleware):
             instance_version="test-version",
             global_user_id="test-user",
             duo_seat_count="100",
+            is_gitlab_team_member="true",
             feature_enabled_by_namespace_ids=[],
             context_generated_at=mock_event_context.set.call_args[0][
                 0
@@ -223,6 +226,7 @@ async def test_middleware_set_context_feature_enabled_by_namespace_ids(
             host_name=None,
             instance_version=None,
             global_user_id=None,
+            is_gitlab_team_member=None,
             feature_enabled_by_namespace_ids=expected,
             context_generated_at=mock_event_context.set.call_args[0][
                 0
