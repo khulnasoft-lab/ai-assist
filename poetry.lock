@@ -2033,13 +2033,13 @@ requests = ">=2,<3"
 
 [[package]]
 name = "litellm"
-version = "1.55.9"
+version = "1.57.1"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.55.9-py3-none-any.whl", hash = "sha256:5ea931bee64535090d49a54e6b9842883fa6cabd6849c3c9674c12b166145da0"},
-    {file = "litellm-1.55.9.tar.gz", hash = "sha256:861be3447552db32da05abff8af4945d1dd84df2f4b10985f97120dca5c07a42"},
+    {file = "litellm-1.57.1-py3-none-any.whl", hash = "sha256:f9e93689f2d96df3bcebe723d44b6e2e71b9b047ec7ebd1054b6c9bc96cd9515"},
+    {file = "litellm-1.57.1.tar.gz", hash = "sha256:2ce6ce1707c92fb278f828a8ea058fa12b3eeb8081dd8c10776569995e03bb6f"},
 ]
 
 [package.dependencies]
@@ -2052,13 +2052,12 @@ jsonschema = ">=4.22.0,<5.0.0"
 openai = ">=1.55.3"
 pydantic = ">=2.0.0,<3.0.0"
 python-dotenv = ">=0.2.0"
-requests = ">=2.31.0,<3.0.0"
 tiktoken = ">=0.7.0"
 tokenizers = "*"
 
 [package.extras]
 extra-proxy = ["azure-identity (>=1.15.0,<2.0.0)", "azure-keyvault-secrets (>=4.8.0,<5.0.0)", "google-cloud-kms (>=2.21.3,<3.0.0)", "prisma (==0.11.0)", "resend (>=0.8.0,<0.9.0)"]
-proxy = ["PyJWT (>=2.8.0,<3.0.0)", "apscheduler (>=3.10.4,<4.0.0)", "backoff", "cryptography (>=42.0.5,<43.0.0)", "fastapi (>=0.111.0,<0.112.0)", "fastapi-sso (>=0.10.0,<0.11.0)", "gunicorn (>=22.0.0,<23.0.0)", "orjson (>=3.9.7,<4.0.0)", "pynacl (>=1.5.0,<2.0.0)", "python-multipart (>=0.0.9,<0.0.10)", "pyyaml (>=6.0.1,<7.0.0)", "rq", "uvicorn (>=0.22.0,<0.23.0)"]
+proxy = ["PyJWT (>=2.8.0,<3.0.0)", "apscheduler (>=3.10.4,<4.0.0)", "backoff", "cryptography (>=43.0.1,<44.0.0)", "fastapi (>=0.115.5,<0.116.0)", "fastapi-sso (>=0.16.0,<0.17.0)", "gunicorn (>=22.0.0,<23.0.0)", "orjson (>=3.9.7,<4.0.0)", "pynacl (>=1.5.0,<2.0.0)", "python-multipart (>=0.0.18,<0.0.19)", "pyyaml (>=6.0.1,<7.0.0)", "rq", "uvicorn (>=0.22.0,<0.23.0)"]
 
 [[package]]
 name = "markupsafe"
@@ -4136,13 +4135,13 @@ zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
 name = "uvicorn"
-version = "0.34.0"
+version = "0.32.1"
 description = "The lightning-fast ASGI server."
 optional = false
-python-versions = ">=3.9"
+python-versions = ">=3.8"
 files = [
-    {file = "uvicorn-0.34.0-py3-none-any.whl", hash = "sha256:023dc038422502fa28a09c7a30bf2b6991512da7dcdb8fd35fe57cfc154126f4"},
-    {file = "uvicorn-0.34.0.tar.gz", hash = "sha256:404051050cd7e905de2c9a7e61790943440b3416f49cb409f965d9dcd0fa73e9"},
+    {file = "uvicorn-0.32.1-py3-none-any.whl", hash = "sha256:82ad92fd58da0d12af7482ecdb5f2470a04c9c9a53ced65b9bbb4a205377602e"},
+    {file = "uvicorn-0.32.1.tar.gz", hash = "sha256:ee9519c246a72b1c084cea8d3b44ed6026e78a4a309cbedae9c37e4cb9fbb175"},
 ]
 
 [package.dependencies]
@@ -4536,4 +4535,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.11.0"
-content-hash = "bd299d83acc9da35a0905de50eb50e850088d60841f5a22dfe2a7ec67c49cc66"
+content-hash = "2ac93708b537ae445924af0bb6a1e6bd0ae3c24b77c286104905cf518058118e"
