@@ -1,5 +1,4 @@
 import re
-from collections import defaultdict
 from typing import Any, AsyncIterator, Optional, Sequence
 
 import starlette_context
@@ -189,20 +188,24 @@ class ReActAgent(Prompt[ReActAgentInputs, TypeAgentEvent]):
         events = []
         astream = super().astream(config=config, **kwargs)
         len_final_answer = 0
-        event_type_map = defaultdict(int)
+        agent_final_answer_found = False
+        agent_tool_action_found = False
 
         try:
             async for event in astream:
-                event_type_map[type(event)] += 1
                 request_log.info(
                     "Response streaming", source=__name__, streamed_event=event
                 )
-                if isinstance(event, AgentFinalAnswer) and len(event.text) > 0:
-                    yield AgentFinalAnswer(
-                        text=event.text[len_final_answer:],
-                    )
+                if isinstance(event, AgentToolAction):
+                    agent_tool_action_found = True
+                elif isinstance(event, AgentFinalAnswer):
+                    agent_final_answer_found = True
+                    if len(event.text) > 0:
+                        yield AgentFinalAnswer(
+                            text=event.text[len_final_answer:],
+                        )
 
-                    len_final_answer = len(event.text)
+                        len_final_answer = len(event.text)
 
                 events.append(event)
         except Exception as e:
@@ -212,9 +215,9 @@ class ReActAgent(Prompt[ReActAgentInputs, TypeAgentEvent]):
             yield AgentError(message=error_message, retryable=retryable)
             raise
 
-        if event_type_map[AgentFinalAnswer] > 0:
+        if agent_final_answer_found:
             pass  # no-op
-        elif event_type_map[AgentToolAction] > 0:
+        elif agent_tool_action_found:
             event = events[-1]
             starlette_context.context[_REACT_AGENT_TOOL_ACTION_CONTEXT_KEY] = event.tool
             yield event
