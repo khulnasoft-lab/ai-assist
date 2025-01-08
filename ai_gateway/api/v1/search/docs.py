@@ -1,4 +1,5 @@
 import time
+import os
 from typing import Annotated
 
 from dependency_injector.providers import Factory
@@ -33,7 +34,7 @@ request_log = get_request_logger("search")
 
 
 def estimate_token_count(text: str) -> int:
-    """Estimate the number of tokens in a given text."""
+    """Estimate the number of tokens in a given text (approx: 1.4 x word count)."""
     return int(len(text.split()) * 1.4)
 
 
@@ -70,40 +71,66 @@ async def docs(
     searcher = search_factory()
 
     response = await searcher.search_with_retry(**search_params)
+    self_hosted_models_enabled = os.getenv("AIGW_CUSTOM_MODELS__ENABLED", "") == "true"
 
-    # Apply token limit (8K tokens)
-    max_tokens = 8000
-    token_count = 0
-    filtered_results = []
+    if self_hosted_models_enabled:
+        # Apply token limit (8K tokens)
+        max_tokens = 8000
+        token_count = 0
+        filtered_results = []
 
-    for result in response:
-        tokens = estimate_token_count(result["content"])
-        if token_count + tokens > max_tokens:
-            break
-        token_count += tokens
-        filtered_results.append(
-            SearchResult(
-                id=result["id"], content=result["content"], metadata=result["metadata"]
+        for result in response:
+            tokens = estimate_token_count(result["content"])
+            if token_count + tokens > max_tokens:
+                break
+            token_count += tokens
+            filtered_results.append(
+                SearchResult(
+                    id=result["id"], content=result["content"], metadata=result["metadata"]
+                )
             )
+
+        request_log.info(
+            "Search completed with token limiting",
+            self_hosted_models_enabled=self_hosted_models_enabled,
+            search_params=search_params,
+            results_metadata=[res["metadata"] for res in response],
+            total_results=len(response),
+            total_tokens=token_count,
+            max_tokens=max_tokens,
+            filtered_results_count=len(filtered_results),
+            filtered_results_ids=[res.id for res in filtered_results],
         )
 
-    # Enhanced logging
-    request_log.info(
-        "Search completed with token limiting",
-        search_params=search_params,
-        total_results=len(response),
-        total_tokens=token_count,
-        max_tokens=max_tokens,
-        filtered_results_count=len(filtered_results),
-        filtered_results_ids=[result.id for result in filtered_results],
-    )
+        return SearchResponse(
+            response=SearchResponseDetails(
+                results=filtered_results,
+            ),
+            metadata=SearchResponseMetadata(
+                provider=searcher.provider(),
+                timestamp=int(time.time()),
+            ),
+        )
+    else:
+        results = [
+            SearchResult(
+                id=res["id"], content=res["content"], metadata=res["metadata"]
+            )
+            for res in response
+        ]
 
-    return SearchResponse(
-        response=SearchResponseDetails(
-            results=filtered_results,
-        ),
-        metadata=SearchResponseMetadata(
-            provider=searcher.provider(),
-            timestamp=int(time.time()),
-        ),
-    )
+        request_log.info(
+            "Search completed",
+            search_params=search_params,
+            results_metadata=[res["metadata"] for res in response],
+        )
+
+        return SearchResponse(
+            response=SearchResponseDetails(
+                results=results,
+            ),
+            metadata=SearchResponseMetadata(
+                provider=searcher.provider(),
+                timestamp=int(time.time()),
+            ),
+        )
