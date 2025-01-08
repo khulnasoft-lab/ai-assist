@@ -60,10 +60,8 @@ class AgentModel(TextGenModelBase):
             chunk_content = self._format_response_content(chunk.content)
             yield TextGenModelChunk(text=chunk_content)
 
-    def _format_response_content(self, text: str) -> str:
-        formatted_content = text
+    def _format_response_content(self, text: Optional[str]) -> Optional[str]:
+        if text and self.prompt.model_name == "mixtral":
+            return text.replace("\\_", "_")
 
-        if self.prompt.model_name in ["mixtral"]:
-            formatted_content = text.replace("\\_", "_") if text else None
-
-        return formatted_content
+        return text
