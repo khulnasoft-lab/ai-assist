@@ -31,6 +31,29 @@ class BaseTool(ABC, BaseModel, frozen=True):
         except InvalidVersion:
             return False
 
+    def get_tool_config(self) -> dict:
+        return {
+            "name": self.name,
+            "description": f"{self.description}\n\nExample:\n{self.example}",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "thought": {
+                        "type": "string",
+                    },
+                    "action": {
+                        "type": "string",
+                        "description": f"Should always be {self.name}",
+                    },
+                    "action_input": {
+                        "type": "string",
+                        "description": "The original question/request",
+                    },
+                },
+                "required": ["thought", "action", "action_input"],
+            },
+        }
+
 
 class BaseRemoteTool(BaseTool):
     def _run(self, *args: Any, **kwargs: Any) -> Any:
