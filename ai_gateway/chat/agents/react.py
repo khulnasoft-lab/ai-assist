@@ -1,5 +1,5 @@
-from collections import defaultdict
 import re
+from collections import defaultdict
 from typing import Any, AsyncIterator, Optional, Sequence
 
 import starlette_context
@@ -190,7 +190,7 @@ class ReActAgent(Prompt[ReActAgentInputs, TypeAgentEvent]):
         astream = super().astream(config=config, **kwargs)
         len_final_answer = 0
         event_type_map = defaultdict(int)
-        
+
         try:
             async for event in astream:
                 event_type_map[type(event)] += 1
