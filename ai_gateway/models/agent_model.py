@@ -1,4 +1,4 @@
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, Optional
 
 from ai_gateway.models.base import ModelMetadata
 from ai_gateway.models.base_text import (
