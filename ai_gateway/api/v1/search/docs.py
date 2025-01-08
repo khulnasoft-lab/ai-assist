@@ -1,7 +1,7 @@
 import time
-import os
 from typing import Annotated
 
+from dependency_injector import providers
 from dependency_injector.providers import Factory
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from gitlab_cloud_connector import GitLabFeatureCategory, GitLabUnitPrimitive
@@ -71,9 +71,10 @@ async def docs(
     searcher = search_factory()
 
     response = await searcher.search_with_retry(**search_params)
-    self_hosted_models_enabled = os.getenv("AIGW_CUSTOM_MODELS__ENABLED", "") == "true"
+    config = providers.Configuration(strict=True)
+    custom_models_enabled = config.custom_models.enabled
 
-    if self_hosted_models_enabled:
+    if custom_models_enabled:
         # Apply token limit (8K tokens)
         max_tokens = 8000
         token_count = 0
@@ -86,13 +87,15 @@ async def docs(
             token_count += tokens
             filtered_results.append(
                 SearchResult(
-                    id=result["id"], content=result["content"], metadata=result["metadata"]
+                    id=result["id"],
+                    content=result["content"],
+                    metadata=result["metadata"],
                 )
             )
 
         request_log.info(
             "Search completed with token limiting",
-            self_hosted_models_enabled=self_hosted_models_enabled,
+            self_hosted_models_enabled=custom_models_enabled,
             search_params=search_params,
             results_metadata=[res["metadata"] for res in response],
             total_results=len(response),
@@ -111,26 +114,25 @@ async def docs(
                 timestamp=int(time.time()),
             ),
         )
-    else:
-        results = [
-            SearchResult(
-                id=res["id"], content=res["content"], metadata=res["metadata"]
-            )
-            for res in response
-        ]
 
-        request_log.info(
-            "Search completed",
-            search_params=search_params,
-            results_metadata=[res["metadata"] for res in response],
-        )
+    # When custom models is disabled
+    results = [
+        SearchResult(id=res["id"], content=res["content"], metadata=res["metadata"])
+        for res in response
+    ]
 
-        return SearchResponse(
-            response=SearchResponseDetails(
-                results=results,
-            ),
-            metadata=SearchResponseMetadata(
-                provider=searcher.provider(),
-                timestamp=int(time.time()),
-            ),
-        )
+    request_log.info(
+        "Search completed",
+        search_params=search_params,
+        results_metadata=[res["metadata"] for res in response],
+    )
+
+    return SearchResponse(
+        response=SearchResponseDetails(
+            results=results,
+        ),
+        metadata=SearchResponseMetadata(
+            provider=searcher.provider(),
+            timestamp=int(time.time()),
+        ),
+    )
