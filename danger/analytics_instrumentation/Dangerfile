@@ -1,0 +1,19 @@
+# frozen_string_literal: true
+
+TRACK_EVENT_REVIEWER = 'apanchal'
+
+def changes_include_track_event?
+  git.modified_files.any? do |file|
+    next unless File.exist?(file)
+    File.read(file).include?('track_event')
+  end
+end
+
+if changes_include_track_event?
+  message = <<~MARKDOWN
+    ## Track Event Changes
+    This MR contains changes to `track_event`. Adding @#{TRACK_EVENT_REVIEWER} as reviewer.
+  MARKDOWN
+
+  markdown(message)
+end
