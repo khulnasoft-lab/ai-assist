@@ -157,19 +157,23 @@ async def test_missing_authenication(
 async def test_custom_models_enabled_token_limiting(
     mock_client: TestClient,
     request_body: dict,
-    search_results: list[dict],
     mock_config,
 ):
     mock_config.custom_models.enabled = True
     time_now = time()
 
-    mock_results = [
-        SearchResult(
-            id=result["id"],
-            content=result["content"],
-            metadata=result["metadata"],
-        )
-        for result in search_results
+    # Simulate a response with two items, exceeding the token limit
+    search_results = [
+        {
+            "id": "1",
+            "content": "a " * 4000,
+            "metadata": {},
+        },  # 4000 words * 1.4 = 5600 tokens
+        {
+            "id": "2",
+            "content": "a " * 2000,
+            "metadata": {},
+        },  # 2000 words * 1.4 = 2800 tokens
     ]
 
     with patch(
@@ -177,25 +181,32 @@ async def test_custom_models_enabled_token_limiting(
         return_value=search_results,
     ) as mock_search_with_retry:
         with patch("time.time", return_value=time_now):
-            with patch(
-                "ai_gateway.api.v1.search.docs.limit_search_results",
-                return_value=(mock_results, 8000),
-            ) as mock_limit_search_results:
-                response = mock_client.post(
-                    "/search/gitlab-docs",
-                    headers={
-                        "Authorization": "Bearer 12345",
-                        "X-Gitlab-Authentication-Type": "oidc",
-                    },
-                    json=request_body,
-                )
+            response = mock_client.post(
+                "/search/gitlab-docs",
+                headers={
+                    "Authorization": "Bearer 12345",
+                    "X-Gitlab-Authentication-Type": "oidc",
+                },
+                json=request_body,
+            )
+    # Expected Results
+    expected_results = [
+        {
+            "id": "1",
+            "content": "a " * 4000,
+            "metadata": {},
+        }
+    ]
 
     assert response.status_code == 200
+    assert response.json()["response"]["results"] == expected_results
 
     mock_search_with_retry.assert_called_once_with(
         query=request_body["payload"]["query"],
         gl_version=request_body["metadata"]["version"],
-        page_size=DEFAULT_PAGE_SIZE,
+        page_size=request_body["payload"].get("page_size", DEFAULT_PAGE_SIZE),
     )
 
-    mock_limit_search_results.assert_called_once_with(search_results, max_tokens=8000)
+    final_results = response.json()["response"]["results"]
+    assert len(final_results) == 1  # Only one result due to token limiting
+    assert final_results[0]["id"] == "1"  # Validate the included result is correct

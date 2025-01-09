@@ -49,14 +49,22 @@ def limit_search_results(response, max_tokens: int) -> tuple[list[SearchResult],
             break
         token_count += tokens
         results.append(
-            SearchResult(
-                id=result["id"],
-                content=result["content"],
-                metadata=result["metadata"],
-            )
+            {
+                "id": result["id"],
+                "content": result["content"],
+                "metadata": result["metadata"],
+            }
         )
+    search_results = [
+        SearchResult(
+            id=res["id"],
+            content=res["content"],
+            metadata=res["metadata"],
+        )
+        for res in results
+    ]
 
-    return results, token_count
+    return search_results, token_count
 
 
 def log_search_results(
