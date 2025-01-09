@@ -38,6 +38,49 @@ def estimate_token_count(text: str) -> int:
     return int(len(text.split()) * 1.4)
 
 
+def limit_search_results(response, max_tokens: int) -> tuple[list[SearchResult], int]:
+    """Limit search results based on a maximum token count."""
+    token_count = 0
+    results = []
+
+    for result in response:
+        tokens = estimate_token_count(result["content"])
+        if token_count + tokens > max_tokens:
+            break
+        token_count += tokens
+        results.append(
+            SearchResult(
+                id=result["id"],
+                content=result["content"],
+                metadata=result["metadata"],
+            )
+        )
+
+    return results, token_count
+
+
+def log_search_results(
+    custom_models_enabled, search_params, response, results, token_count=None
+):
+    """Log details of the search results."""
+    log_data = {
+        "search_params": search_params,
+        "results_metadata": [res.metadata for res in results],
+        "total_results": len(response),
+        "filtered_results": len(results),
+    }
+
+    if custom_models_enabled:
+        log_data.update(
+            {
+                "custom_models_enabled": custom_models_enabled,
+                "total_tokens": token_count,
+            }
+        )
+
+    request_log.info("Search completed", **log_data)
+
+
 @router.post(
     "/gitlab-docs", response_model=SearchResponse, status_code=status.HTTP_200_OK
 )
@@ -75,56 +118,20 @@ async def docs(
     custom_models_enabled = config.custom_models.enabled
 
     if custom_models_enabled:
-        # Apply token limit (8K tokens)
-        max_tokens = 8000
-        token_count = 0
-        filtered_results = []
-
-        for result in response:
-            tokens = estimate_token_count(result["content"])
-            if token_count + tokens > max_tokens:
-                break
-            token_count += tokens
-            filtered_results.append(
-                SearchResult(
-                    id=result["id"],
-                    content=result["content"],
-                    metadata=result["metadata"],
-                )
+        results, token_count = limit_search_results(response, max_tokens=8000)
+    else:
+        results = [
+            SearchResult(
+                id=res["id"],
+                content=res["content"],
+                metadata=res["metadata"],
             )
+            for res in response
+        ]
+        token_count = None
 
-        request_log.info(
-            "Search completed with token limiting",
-            self_hosted_models_enabled=custom_models_enabled,
-            search_params=search_params,
-            results_metadata=[res["metadata"] for res in response],
-            total_results=len(response),
-            total_tokens=token_count,
-            max_tokens=max_tokens,
-            filtered_results_count=len(filtered_results),
-            filtered_results_ids=[res.id for res in filtered_results],
-        )
-
-        return SearchResponse(
-            response=SearchResponseDetails(
-                results=filtered_results,
-            ),
-            metadata=SearchResponseMetadata(
-                provider=searcher.provider(),
-                timestamp=int(time.time()),
-            ),
-        )
-
-    # When custom models is disabled
-    results = [
-        SearchResult(id=res["id"], content=res["content"], metadata=res["metadata"])
-        for res in response
-    ]
-
-    request_log.info(
-        "Search completed",
-        search_params=search_params,
-        results_metadata=[res["metadata"] for res in response],
+    log_search_results(
+        custom_models_enabled, search_params, response, results, token_count
     )
 
     return SearchResponse(

@@ -151,3 +151,51 @@ async def test_missing_authenication(
     )
 
     assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_custom_models_enabled_token_limiting(
+    mock_client: TestClient,
+    request_body: dict,
+    search_results: list[dict],
+    mock_config,
+):
+    mock_config.custom_models.enabled = True
+    time_now = time()
+
+    mock_results = [
+        SearchResult(
+            id=result["id"],
+            content=result["content"],
+            metadata=result["metadata"],
+        )
+        for result in search_results
+    ]
+
+    with patch(
+        "ai_gateway.searches.search.VertexAISearch.search_with_retry",
+        return_value=search_results,
+    ) as mock_search_with_retry:
+        with patch("time.time", return_value=time_now):
+            with patch(
+                "ai_gateway.api.v1.search.docs.limit_search_results",
+                return_value=(mock_results, 8000),
+            ) as mock_limit_search_results:
+                response = mock_client.post(
+                    "/search/gitlab-docs",
+                    headers={
+                        "Authorization": "Bearer 12345",
+                        "X-Gitlab-Authentication-Type": "oidc",
+                    },
+                    json=request_body,
+                )
+
+    assert response.status_code == 200
+
+    mock_search_with_retry.assert_called_once_with(
+        query=request_body["payload"]["query"],
+        gl_version=request_body["metadata"]["version"],
+        page_size=DEFAULT_PAGE_SIZE,
+    )
+
+    mock_limit_search_results.assert_called_once_with(search_results, max_tokens=8000)
