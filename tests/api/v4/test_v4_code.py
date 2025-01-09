@@ -94,12 +94,14 @@ class TestEditorContentGenerationStream:
         (
             "prompt_id",
             "model_provider",
+            "prompt_version",
             "expected_model_metadata",
         ),
         [
             (
                 None,
                 "vertex-ai",
+                None,
                 {
                     "engine": "vertex-ai",
                     "name": "code-bison@002",
@@ -108,6 +110,7 @@ class TestEditorContentGenerationStream:
             (
                 None,
                 "anthropic",
+                None,
                 {
                     "engine": "anthropic",
                     "name": "claude-2.0",
@@ -116,6 +119,7 @@ class TestEditorContentGenerationStream:
             (
                 "code_suggestions/generations",
                 None,
+                "1.0.0",
                 {
                     "engine": "agent",
                     "name": "Claude 3 Code Generations Agent",
@@ -131,6 +135,7 @@ class TestEditorContentGenerationStream:
         route: str,
         prompt_id: Optional[str],
         model_provider: Optional[str],
+        prompt_version: Optional[str],
         expected_model_metadata: dict,
     ):
         payload = {
@@ -138,8 +143,9 @@ class TestEditorContentGenerationStream:
             "content_above_cursor": "# Create a fast binary search\n",
             "content_below_cursor": "\n",
             "language_identifier": "python",
-            "model_provider": model_provider,
             "prompt_id": prompt_id,
+            "model_provider": model_provider,
+            "prompt_version": prompt_version,
             "stream": True,
         }
 
