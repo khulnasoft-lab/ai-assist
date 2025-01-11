@@ -22,10 +22,28 @@ echo "------------------------------------------------------- Validating -------
 echo "------------------------------------------------------- Exporting Variables -------------------------------------------------------"
 source "${STEPS_DIR}"/export_variables.sh
 echo "------------------------------------------------------- Parsing -------------------------------------------------------"
+echo "***** Ruby parser to $GITLAB_DOCS_JSONL_EXPORT_PATH *****"
 "${STEPS_DIR}"/parse.rb
+echo
+JSONL_PYTHON="$PWD/docs-python.jsonl"
+echo "***** Python parser to $JSONL_PYTHON *****"
+GITLAB_DOCS_JSONL_EXPORT_PATH="$JSONL_PYTHON" "$STEPS_DIR"/parse.py
 
 echo "------------------------------------------------------- Comparing Results -------------------------------------------------------"
+echo "***** Validate checksum of generated ${GITLAB_DOCS_JSONL_EXPORT_PATH}..."
 cp "${SCRIPT_DIR}/testdata/${TEST_FILE}" "${TEST_CLONE}/"
 cd ${TEST_CLONE}
 sha256sum -c ${TEST_FILE}
 cd -
+
+echo "***** Count chunked files..."
+echo "ruby: $(jq .metadata.source < "${GITLAB_DOCS_JSONL_EXPORT_PATH}" | uniq | wc -l)"
+echo "python: $(jq .metadata.source < "${JSONL_PYTHON}" | uniq | wc -l)"
+diff -u3 <(jq .metadata.source < "${GITLAB_DOCS_JSONL_EXPORT_PATH}" | uniq) <(jq .metadata.source < "${JSONL_PYTHON}" | uniq)
+
+echo "***** Check titles match..."
+# reformat JSONL for readability and diffing
+jq . < "${GITLAB_DOCS_JSONL_EXPORT_PATH}" > /tmp/ruby.jsonl
+jq . < "${JSONL_PYTHON}" > /tmp/python.jsonl
+
+"${SCRIPT_DIR}"/test_titles.sh
