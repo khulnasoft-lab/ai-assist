@@ -1192,20 +1192,20 @@ grpc = ["grpcio (>=1.38.0,<2.0dev)", "grpcio-status (>=1.38.0,<2.0.dev0)"]
 
 [[package]]
 name = "google-cloud-discoveryengine"
-version = "0.13.5"
+version = "0.13.10"
 description = "Google Cloud Discoveryengine API client library"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google_cloud_discoveryengine-0.13.5-py3-none-any.whl", hash = "sha256:93f466edc1842abcf66339a40cbdfc7f3928c57c403ce0a38e20af01059948c0"},
-    {file = "google_cloud_discoveryengine-0.13.5.tar.gz", hash = "sha256:4a3bc9cc625ddd015922cbb5b5e1f2eaa79a82b737a9783c4e927852ab5c1e07"},
+    {file = "google_cloud_discoveryengine-0.13.10-py3-none-any.whl", hash = "sha256:54726d442c742188a25c2b8590174f9ff67191208bb5e4a6225b659d05e36ac7"},
+    {file = "google_cloud_discoveryengine-0.13.10.tar.gz", hash = "sha256:3e9627641fec7cd99012754fc93c90e1eb710ff16044914d4d30892e51effb3d"},
 ]
 
 [package.dependencies]
-google-api-core = {version = ">=1.34.1,<2.0.dev0 || >=2.11.dev0,<3.0.0dev", extras = ["grpc"]}
-google-auth = ">=2.14.1,<2.24.0 || >2.24.0,<2.25.0 || >2.25.0,<3.0.0dev"
-proto-plus = ">=1.22.3,<2.0.0dev"
-protobuf = ">=3.20.2,<4.21.0 || >4.21.0,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<6.0.0dev"
+google-api-core = {version = ">=1.34.1,<2.0.dev0 || >=2.11.dev0,<3.0.0", extras = ["grpc"]}
+google-auth = ">=2.14.1,<2.24.0 || >2.24.0,<2.25.0 || >2.25.0,<3.0.0"
+proto-plus = ">=1.22.3,<2.0.0"
+protobuf = ">=3.20.2,<4.21.0 || >4.21.0,<4.21.1 || >4.21.1,<4.21.2 || >4.21.2,<4.21.3 || >4.21.3,<4.21.4 || >4.21.4,<4.21.5 || >4.21.5,<7.0.0"
 
 [[package]]
 name = "google-cloud-profiler"
