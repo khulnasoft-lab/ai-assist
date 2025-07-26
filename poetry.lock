@@ -3686,21 +3686,22 @@ sqlcipher = ["sqlcipher3_binary"]
 
 [[package]]
 name = "sse-starlette"
-version = "2.2.1"
+version = "3.0.0"
 description = "SSE plugin for Starlette"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "sse_starlette-2.2.1-py3-none-any.whl", hash = "sha256:6410a3d3ba0c89e7675d4c273a301d64649c03a5ef1ca101f10b47f895fd0e99"},
-    {file = "sse_starlette-2.2.1.tar.gz", hash = "sha256:54470d5f19274aeed6b2d473430b08b4b379ea851d953b11d7f1c4a2c118b419"},
+    {file = "sse_starlette-3.0.0-py3-none-any.whl", hash = "sha256:43ea0a032f936b3efff683aba55aa235e91b067ee9283beee918d2acce4fbb67"},
+    {file = "sse_starlette-3.0.0.tar.gz", hash = "sha256:5318b0bf5aaa23550c9dd88bd3b8c9c2664aa3f94232ccde5e87519244dbc6b8"},
 ]
 
 [package.dependencies]
 anyio = ">=4.7.0"
-starlette = ">=0.41.3"
 
 [package.extras]
-examples = ["fastapi"]
+daphne = ["daphne (>=4.2.0)"]
+examples = ["aiosqlite (>=0.21.0)", "fastapi (>=0.115.12)", "sqlalchemy[asyncio] (>=2.0.41)", "starlette (>=0.41.3)", "uvicorn (>=0.34.0)"]
+granian = ["granian (>=2.3.1)"]
 uvicorn = ["uvicorn (>=0.34.0)"]
 
 [[package]]
@@ -4561,4 +4562,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.11.0"
-content-hash = "534172fcc6b0a8e0169e6979867e36795cef85e5d946906e8639724f7a7dc2c8"
+content-hash = "581c3b08ccf7c5511b830e7c401ea3192f04787f579a728da4611996caf05f3e"
