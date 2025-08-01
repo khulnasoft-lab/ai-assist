@@ -990,22 +990,20 @@ tqdm = ["tqdm"]
 
 [[package]]
 name = "gitlab-cloud-connector"
-version = "1.7.0"
+version = "3.4.0"
 description = "Cloud Connector library for Python backends"
 optional = false
 python-versions = ">=3.11,<4.0"
 files = [
-    {file = "gitlab_cloud_connector-1.7.0-py3-none-any.whl", hash = "sha256:326ac8ba663e908d2a1a1c14b24dffbafc2ef841b78eb97188c8f4cbf443f4de"},
-    {file = "gitlab_cloud_connector-1.7.0.tar.gz", hash = "sha256:f39affcb050e2360986e7f0b5e6e094d9c4ab4f69b8020c54bc63a936dea64bf"},
+    {file = "gitlab_cloud_connector-3.4.0-py3-none-any.whl", hash = "sha256:97e3abd48f19abd56bfeec58c4b01086aad0fa4160975dce597a52248029468b"},
+    {file = "gitlab_cloud_connector-3.4.0.tar.gz", hash = "sha256:6a3ccca10b73a4872bea57389dff82f7659603458bfa81a7cd3401a439423784"},
 ]
 
 [package.dependencies]
-pydantic = ">=2.8.2,<3.0.0"
 python-jose = {version = ">=3.3.0,<4.0.0", extras = ["cryptography"]}
-pyyaml = ">=6.0.1,<7.0.0"
+pyyaml = ">=6.0.2,<7.0.0"
 requests = ">=2.28.1,<3.0.0"
-responses = ">=0.25.0,<0.26.0"
-structlog = ">=24.0.0,<25.0.0"
+structlog = ">=24.0.0,<26.0.0"
 
 [package.source]
 type = "legacy"
@@ -4561,4 +4559,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.11.0"
-content-hash = "534172fcc6b0a8e0169e6979867e36795cef85e5d946906e8639724f7a7dc2c8"
+content-hash = "8110e953cf4be821294d3ada45bcfc28e357f1b96db074ba09e09f2a4a8d484c"
